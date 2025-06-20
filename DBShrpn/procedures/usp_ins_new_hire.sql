@@ -1,12 +1,12 @@
 USE DBShrpn
 GO
-/****** Object:  StoredProcedure dbo.usp_ins_new_hire    Script Date: 4/1/2025 4:33:00 PM ******/
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE procedure dbo.usp_ins_new_hire
+CREATE OR ALTER PROCEDURE dbo.usp_ins_new_hire
 (
 	@p_userid						varchar(30),
 	@p_batchname					varchar(08),
@@ -30,7 +30,7 @@ BEGIN
     DECLARE @w_msg_text						varchar(255)
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
-    DECLARE @w_severity_cd					tinyint	
+    DECLARE @w_severity_cd					tinyint
     DECLARE @w_fatal_error					char(01)
     DECLARE @w_trace_sw						char(01)
 
@@ -52,7 +52,7 @@ BEGIN
     DECLARE @ee_next_eff_date datetime
     DECLARE @ee_prior_eff_date	datetime
 
-    -- 
+    --
     -- Disabled tracing logic since table doesn't exist - CJP 6/12/2025
     -- SELECT @w_trace_sw = 'N'
 
@@ -222,7 +222,7 @@ BEGIN
     DECLARE @w_emp_workers_comp_cvg_cd			    char(01)        = ''
 
 
-    -- This section declares the interface values from Global HR  
+    -- This section declares the interface values from Global HR
     DECLARE	@event_id_01							char(02)
             @emp_id_01								char(15),
             @eff_date_01							char(10),
@@ -248,12 +248,12 @@ BEGIN
             @employment_info_chg_reason_cd_03		char(05),
             @emp_location_code_03					char(10),
             @emp_status_code_5						char(02),
-            @reason_code_5							char(02),	
-            @emp_expected_return_date_5				char(10),	
-            @pay_through_date_5						char(10),	
-            @emp_death_date_5						char(10),	
-            @consider_for_rehire_ind_5				char(01),	
-            @pay_element_desc_06					char(20),	
+            @reason_code_5							char(02),
+            @emp_expected_return_date_5				char(10),
+            @pay_through_date_5						char(10),
+            @emp_death_date_5						char(10),
+            @consider_for_rehire_ind_5				char(01),
+            @pay_element_desc_06					char(20),
             @emp_calculation_06						char(15)
 
 
@@ -285,18 +285,18 @@ BEGIN
     , employment_info_chg_reason_cd_03	        char(05) NULL
     , emp_location_code_03				        char(10) NULL
     , emp_status_code_5					        char(02) NULL
-    , reason_code_5						        char(02) NULL	
-    , emp_expected_return_date_5			    char(10) NULL	
-    , pay_through_date_5					    char(10) NULL	
-    , emp_death_date_5					        char(10) NULL	
-    , consider_for_rehire_ind_5			        char(01) NULL	
-    , pay_element_desc_06					    char(20) NULL	
+    , reason_code_5						        char(02) NULL
+    , emp_expected_return_date_5			    char(10) NULL
+    , pay_through_date_5					    char(10) NULL
+    , emp_death_date_5					        char(10) NULL
+    , consider_for_rehire_ind_5			        char(01) NULL
+    , pay_element_desc_06					    char(20) NULL
     , emp_calculation_06					    char(15) NULL
     )
 
 
     INSERT INTO #ghr_employee_events_temp1    ---#t0
-    SELECT * 
+    SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE (event_id_01 = '01')
 
@@ -305,12 +305,12 @@ BEGIN
 
     SELECT @max = COUNT(ID) FROM #ghr_employee_events_temp1
 
-    DELETE DBShrpn.dbo.ghr_msg_tbl 
+    DELETE DBShrpn.dbo.ghr_msg_tbl
 
     WHILE (@cnt <= @max)
     BEGIN
         SELECT  @w_fatal_error = '0'
-	
+
         SELECT  @event_id_01						=	event_id_01,
                 @emp_id_01							=	emp_id_01,
                 @eff_date_01						=	eff_date_01,
@@ -325,7 +325,7 @@ BEGIN
                 @organization_unit_name_01			=	organization_unit_name_01,
                 @emp_status_classn_code_01			=	emp_status_classn_code_01,
                 @position_title_01					=	position_title_01,
-                @employment_type_code_01			=	employment_type_code_01,        
+                @employment_type_code_01			=	employment_type_code_01,
                 @annual_salary_amt_01				=	annual_salary_amt_01,
                 @begin_date_02						=	begin_date_02,
                 @end_date_02						=	end_date_02,
@@ -339,101 +339,101 @@ BEGIN
                 @reason_code_5						=	reason_code_5,
                 @emp_expected_return_date_5			=	emp_expected_return_date_5,
                 @pay_through_date_5					=	pay_through_date_5,
-                @emp_death_date_5					=	emp_death_date_5,	
-                @consider_for_rehire_ind_5			=	consider_for_rehire_ind_5,	
+                @emp_death_date_5					=	emp_death_date_5,
+                @consider_for_rehire_ind_5			=	consider_for_rehire_ind_5,
                 @pay_element_desc_06				=	pay_element_desc_06,
                 @emp_calculation_06					=	emp_calculation_06
-        FROM #ghr_employee_events_temp1 t 
+        FROM #ghr_employee_events_temp1 t
         WHERE (t.ID = @cnt)
-	  
+
         --
         --	This section will validate the interface data
-        -- 
-        
+        --
+
         --
         -- Check to see if the employee exists
-        --	 
- 
+        --
+
         IF  EXISTS (SELECT * FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01)
             BEGIN
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	'01'					
+                    SET activity_status	=	'01'
                 WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		=	'01'
-                        
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00003'					As msg_id,
                         @emp_id_01					As msg_p1,
                         ''							As msg_p2,
                         'Total nbr of employee already exists'	As msg_desc
-                
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00003'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         ''							As msg_p2,
                         'Employee already exists'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose					
+                -- End of Historical Message for reporting purpose
 
                 SELECT  @w_fatal_error = '5'
-                
-                - GOTO BYPASS_EMPLOYEE 
+
+                - GOTO BYPASS_EMPLOYEE
             END
-	
+
             --
             -- Check to see if the employer exists
-            --		
-	
+            --
+
             IF NOT EXISTS (
-                           SELECT * 
-                           FROM DBShrpn.dbo.employer 
+                           SELECT *
+                           FROM DBShrpn.dbo.employer
                            WHERE empl_id = @empl_id_01
                           )
                 BEGIN
                     IF EXISTS (
-                               SELECT * 
-                               FROM DBShrpn.dbo.employer 
+                               SELECT *
+                               FROM DBShrpn.dbo.employer
                                WHERE empl_id = '0' + @empl_id_01
                               )
-		                SELECT @empl_id_01	= '0' + @empl_id_01	
+		                SELECT @empl_id_01	= '0' + @empl_id_01
                     ELSE
 			            BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= '02'					
+                            SET activity_status	= '02'
                             WHERE activity_date	=	@p_activity_date
                             AND emp_id_01		=	@emp_id_01
-                            AND event_id_01		=	'01'			   
-                            
+                            AND event_id_01		=	'01'
+
                             INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                             SELECT 'U00005'					As msg_id,
                                     @emp_id_01					As msg_p1,
                                     @empl_id_01					As msg_p2,
                                     'Employer does not exists - defaulting 99999'	As msg_desc
-                            
-                            -- Historical Message for reporting purpose	
-                            INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                            -- Historical Message for reporting purpose
+                            INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  'U00005'					As msg_id,
                                     '01'						As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01				As eff_date,
-                                    @pay_element_desc_06		As pay_element_id,	
+                                    @pay_element_desc_06		As pay_element_id,
                                     @emp_id_01					As msg_p1,
                                     @empl_id_01					As msg_p2,
                                     'Employer does not exists - defaulting 99999'	As msg_desc,
                                     @p_activity_date			AS activity_date
                             -- End of Historical Message for reporting purpose
-                            
+
                             SELECT @empl_id_01 = '99999'
 
                         END
                 END
-   		
+
         --
         -- Check for the exists of the national id
         --
@@ -441,306 +441,306 @@ BEGIN
         IF	(@national_id_1_01 = '')
             BEGIN
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'					
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'			   
-                    
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00046'						As msg_id,
                         @emp_id_01					As msg_p1,
                         @national_id_1_01			As msg_p2,
                         'NIS nbr is blank - defaulting 99999'  As msg_desc
-                            
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00046'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         @national_id_1_01			As msg_p2,
                         'NIS nbr is blank - defaulting 99999'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose					
-                            
-                SELECT  @national_id_1_01 = '99999'						
-            END	
+                -- End of Historical Message for reporting purpose
+
+                SELECT  @national_id_1_01 = '99999'
+            END
         ELSE
             IF	(@national_id_1_01 = '99999')
-                SELECT @national_id_1_01 = '99999'	
-            ELSE 
+                SELECT @national_id_1_01 = '99999'
+            ELSE
                 BEGIN
                     IF  EXISTS (
-                                SELECT * 
+                                SELECT *
                                 FROM DBShrpn.dbo.individual_personal e
                                 WHERE e.national_id_1 = @national_id_1_01
                                )
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	=	'02'					
+                            SET activity_status	=	'02'
                             WHERE activity_date	=	@p_activity_date
                             AND emp_id_01		=	@emp_id_01
-                            AND event_id_01		=	'01'			   
-                    
+                            AND event_id_01		=	'01'
+
                             INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                             SELECT 'U00006'						As msg_id,
                                     @emp_id_01					As msg_p1,
                                     @national_id_1_01			As msg_p2,
                                     'NIS nbr already exists - defaulting 99999'  As msg_desc
-                            
-                            -- Historical Message for reporting purpose	
-                            INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                            -- Historical Message for reporting purpose
+                            INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  'U00006'					As msg_id,
                                     '01'						As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01				As eff_date,
-                                    @pay_element_desc_06		As pay_element_id,						
+                                    @pay_element_desc_06		As pay_element_id,
                                     @emp_id_01					As msg_p1,
                                     @national_id_1_01			As msg_p2,
                                     'NIS nbr already exists - defaulting 99999'	As msg_desc,
                                     @p_activity_date			AS activity_date
-                            -- End of Historical Message for reporting purpose					
-                            
-                            SELECT @national_id_1_01 = '99999'						
+                            -- End of Historical Message for reporting purpose
+
+                            SELECT @national_id_1_01 = '99999'
                         END
                 END
 
         --
         -- Check to see if the national id is blank
         --
-                
+
         IF  (@national_id_1_01 = '' or @national_id_1_01 = NULL)
             BEGIN
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'					
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'			   
-                
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00007'					As msg_id,
                         @emp_id_01					As msg_p1,
                         ''							As msg_p2,
                         'NIS nbr was blank - defaulting 99999'  As msg_desc
-                        
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00007'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         ''							As msg_p2,
                         'NIS nbr was blank - defaulting 99999'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose										
-                        
-                SELECT @national_id_1_01 = '99999'					
+                -- End of Historical Message for reporting purpose
+
+                SELECT @national_id_1_01 = '99999'
             END
-    
+
         --
         -- Check to see if the unit name exists in the structure table
         --
 
 
         IF NOT EXISTS (
-                       SELECT p.NAME 
+                       SELECT p.NAME
                        FROM DBSosst.dbo.SRG_STRUCTURE s
-                       INNER JOIN DBSosst.dbo.SRG_POINT p ON 
-                       p.GROUP_ID		= s.GROUP_ID AND 
+                       INNER JOIN DBSosst.dbo.SRG_POINT p ON
+                       p.GROUP_ID		= s.GROUP_ID AND
                        p.STRUCTURE_ID	= s.STRUCTURE_ID
                        WHERE s.NAME =  @organization_chart_name_01
                          AND p.NAME =	@organization_unit_name_01
                       )
             BEGIN
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'					
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'			   
-                
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00008'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @organization_unit_name_01	As msg_p2,
                         'Unit name was missing - defaulting 99999'  As msg_desc
-                        
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00008'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         @organization_unit_name_01	As msg_p2,
                         'Unit name was missing - defaulting 99999'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose						
-                        
-                SELECT @organization_unit_name_01 = '99999'					
+                -- End of Historical Message for reporting purpose
+
+                SELECT @organization_unit_name_01 = '99999'
             END
 
         --
         --	Check to see if pay group id exists
         --
         IF NOT EXISTS(
-                      SELECT * 
-                      FROM	DBShrpn.dbo.pay_group 
+                      SELECT *
+                      FROM	DBShrpn.dbo.pay_group
                       WHERE	pay_group_id = @pay_group_id_03
                      )
             BEGIN
-                        
+
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	= '02'					
+                SET activity_status	= '02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'		   
-                            
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00020'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @pay_group_id_03			As msg_p2,
                         'Pay Group does not exists'	As msg_desc
-                            
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00020'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         @pay_group_id_03			As msg_p2,
                         'Pay Group does not exists'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose										
-                            
+                -- End of Historical Message for reporting purpose
+
                 SELECT	@pay_group_id_03 = ' '
-                
+
                 SELECT  @w_fatal_error = '5'
             END
-			
+
         --
         --	Check to see if the pay element control group is blank, If blank add 99999
-        --	
-	
+        --
+
         IF  (@pay_element_ctrl_grp_id_03 = '' or @pay_element_ctrl_grp_id_03 = NULL or @pay_element_ctrl_grp_id_03 = ' ')
             BEGIN
-                    
-                UPDATE DBShrpn.dbo.ghr_employee_events_aud 
-                SET activity_status	=	'02'					
+
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'			   
-                
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00031'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @emp_id_01					As msg_p2,
                         'Pay Element Group Control was blank for employee'  As msg_desc
-                        
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00031'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         @pay_element_ctrl_grp_id_03	As msg_p2,
                         'Pay Element Group Control was blank for employee'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose					
-                        
-                SELECT @pay_element_ctrl_grp_id_03 = ' '					
-            END	
-			
+                -- End of Historical Message for reporting purpose
+
+                SELECT @pay_element_ctrl_grp_id_03 = ' '
+            END
+
         --
         --	Check to see if pay element control group exists
         --
         IF NOT EXISTS(
-                      SELECT * 
-                      FROM	DBShrpn.dbo.pay_element_ctrl_grp 
+                      SELECT *
+                      FROM	DBShrpn.dbo.pay_element_ctrl_grp
                       WHERE	pay_element_ctrl_grp_id = @pay_element_ctrl_grp_id_03
                      )
             BEGIN
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'					
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'		   
-                            
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00021'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @pay_element_ctrl_grp_id_03	As msg_p2,
                         'Pay Element Control Group does not exists'	As msg_desc
-                            
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00021'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @emp_id_01					As msg_p1,
                         @pay_element_ctrl_grp_id_03	As msg_p2,
                         'Pay Element Control Group does not exists'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose						
-                            
+                -- End of Historical Message for reporting purpose
+
                 SELECT	@pay_element_ctrl_grp_id_03 = ''
-            END 
+            END
         --
         --
         --  Make sure that frequency is semi monthly starting April 1 of 2023
         --
-        --	
+        --
         SELECT @pay_frequency_code	= pay_frequency_code
-        FROM DBShrpn.dbo.pay_group 
+        FROM DBShrpn.dbo.pay_group
         WHERE pay_group_id = @pay_group_id_03
 
 --
         IF @pay_frequency_code <> 'SEMI'
             BEGIN
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'					
+                SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                 AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'01'		   
-                            
+                AND event_id_01		=	'01'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00048'					As msg_id,
                         @pay_group_id_03			As msg_p1,
                         @emp_id_01              	As msg_p2,
                         'After April 1, 2023,Pay Group, @1, must be semi-monthly.'	As msg_desc
-                            
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00048'					As msg_id,
                         '01'						As event_id,
                         @emp_id_01 					As emp_id,
                         @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,						
+                        @pay_element_desc_06		As pay_element_id,
                         @pay_group_id_03			As msg_p1,
                         @emp_id_01              	As msg_p2,
                         'After April 1, 2023,Pay Group, ' + RTRIM(@pay_group_id_03) + ' , must be semi-monthly.'	As msg_desc,
                         @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose						
-                            
+                -- End of Historical Message for reporting purpose
+
                 IF GETDATE() > '20230331' SELECT	@w_fatal_error = '5'
-                
+
             END
-        
-        
+
+
         IF  @w_fatal_error = '5'
             GOTO BYPASS_EMPLOYEE
 
-	
+
         --
         --	Setup Section
         --
@@ -755,36 +755,36 @@ BEGIN
         ELSE
             SELECT	@w_assigned_to_code		=	'P',
                     @w_job_or_pos_id		=	'99999',
-                    @w_pd_salary_tm_pd_id	=	'SEMI'				
+                    @w_pd_salary_tm_pd_id	=	'SEMI'
 
 
         --
         -- Find the tax entity
         --
         SELECT @tax_entity_id = tax_entity_id
-        FROM DBShrpn.dbo.empl_tax_entity 
+        FROM DBShrpn.dbo.empl_tax_entity
         WHERE empl_id = @empl_id_01
-  
+
         --
         -- Check to see if the person is over 16 years of age
         --
-                        
+
         --
         -- Opbtain the next individual number
         --
 
         SELECT @ind_idx = CONVERT(char(10),gen_indiv_id_last_nbr + 1) FROM DBSentp.dbo.entp_human_resources_plcy  with (holdlock)
-    
+
         UPDATE DBSentp.dbo.entp_human_resources_plcy
         SET gen_indiv_id_last_nbr = CONVERT(float,@ind_idx)
         WHERE display_name_format = 'LNMCOMFNMFMNSMN'
 
-			
+
         SELECT @annual_salary = CAST(@annual_salary_amt_01 As Money)
         SELECT @display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
 
-					 
-        EXEC DBShrpn.dbo.usp_ins_hemp 
+
+        EXEC DBShrpn.dbo.usp_ins_hemp
             @empl_id_01,
             @emp_id_01,
             @ind_idx,
@@ -842,7 +842,7 @@ BEGIN
             @w_standard_work_pd_id,
             @w_overtime_status_code,
             @w_pay_on_reported_hrs_ind,
-            @w_work_shift_code, 
+            @w_work_shift_code,
             @tax_entity_id,
             @time_reporting_meth_code_03,
             @pay_group_id_03,
@@ -913,7 +913,7 @@ BEGIN
             @w_tax_auth_type_code_4,
             @w_tax_auth_type_code_5,
             @w_reg_reporting_unit_code,
-            @w_emp_workers_comp_cvg_cd       
+            @w_emp_workers_comp_cvg_cd
 
 
         SELECT	@i_emp_id				=	emp_id,
@@ -923,7 +923,7 @@ BEGIN
                 @i_next_eff_date		=	next_eff_date,
                 @i_prior_eff_date		=	prior_eff_date,
                 @i_standard_work_pd_id	=	standard_work_pd_id,
-                @i_standard_work_hrs	=	standard_work_hrs	
+                @i_standard_work_hrs	=	standard_work_hrs
         FROM DBShrpn.dbo.emp_assignment	ea
         WHERE emp_id   = @emp_id_01
           and eff_date = (
@@ -931,25 +931,25 @@ BEGIN
                           FROM DBShrpn.dbo.emp_assignment t
                           WHERE	t.emp_id =	ea.emp_id
                          )
- 
+
         --	SELECT @pay_frequency_code	= pay_frequency_code
         --      FROM DBShrpn.dbo.pay_group WHERE pay_group_id = @pay_group_id_03
-       
+
       	--- If blank, then default: SEMI ---
-	 
-        SELECT CASE 
-        IF @pay_frequency_code = ''	SELECT	@pay_frequency_code		=	'SEMI'      
-        
-        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52 
+
+        SELECT CASE
+        IF @pay_frequency_code = ''	SELECT	@pay_frequency_code		=	'SEMI'
+
+        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52
         ELSE
         IF	@pay_frequency_code	= 'BIWK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 26
         ELSE
-        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 24	
-        ELSE 
+        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 24
+        ELSE
         IF	@pay_frequency_code	= 'MONTH'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 12
 
         SELECT	@i_hourly_rate_amt	=	CAST(@annual_salary AS MONEY) / @i_yearly_std_work_hrs
-        
+
         IF	@pay_frequency_code	= 'WEEK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 52
         ELSE
         IF	@pay_frequency_code	= 'BIWK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 26
@@ -957,7 +957,7 @@ BEGIN
         IF	@pay_frequency_code	= 'SEMI'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 24
         ELSE
         IF	@pay_frequency_code	= 'MONTH'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 12
-	 
+
         UPDATE	DBShrpn.dbo.emp_assignment
             SET	annual_salary_amt	=	CAST(@annual_salary_amt_01 AS MONEY),
                 hourly_pay_rate		=	@i_hourly_rate_amt,
@@ -965,13 +965,13 @@ BEGIN
                 pd_salary_tm_pd_id  = 	@pay_frequency_code
         WHERE	emp_id				=	@i_emp_id
             AND	assigned_to_code	=	@i_assigned_to_code
-            AND	job_or_pos_id		=	@i_job_or_pos_id	
-            AND	eff_date			=	@i_eff_date 
+            AND	job_or_pos_id		=	@i_job_or_pos_id
+            AND	eff_date			=	@i_eff_date
             AND	next_eff_date		=	@i_next_eff_date
             AND	prior_eff_date		=	@i_prior_eff_date
-		
 
-	
+
+
         SELECT @ee_emp_id         = emp_id
              , @ee_eff_date		  = eff_date
              , @ee_next_eff_date  = next_eff_date
@@ -991,21 +991,21 @@ BEGIN
             FROM	DBShrpn.dbo.emp_employment ee
             WHERE  emp_id		=	@ee_emp_id
             AND  eff_date	=	@ee_eff_date
-		  
+
         --
         -- Update the position since could be a new position with a new hire
         --
-									  
+
         SELECT @individual_id = individual_id FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01
-        
+
         UPDATE	DBShrpn.dbo.individual_personal
             SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
-        WHERE individual_id	=	@individual_id 			
+        WHERE individual_id	=	@individual_id
 
 --
 
         /*
-            
+
             SELECT  @event_id_01,
                     @emp_id_01,
                     @eff_date_01,
@@ -1033,14 +1033,14 @@ BEGIN
                     @reason_code_5,
                     @emp_expected_return_date_5,
                     @pay_through_date_5,
-                    @emp_death_date_5,	
-                    @consider_for_rehire_ind_5,	
+                    @emp_death_date_5,
+                    @consider_for_rehire_ind_5,
                     @pay_element_desc_06,
                     @emp_calculation_06
-        */			
-	
+        */
+
 	    BYPASS_EMPLOYEE:
-				  
+
 	    SELECT @cnt = @cnt + 1
 
     END  -- Error Loop
@@ -1058,7 +1058,7 @@ BEGIN
     SELECT @w_msg_text = msg_text
          , @w_msg_text_2= msg_text_2
          , @w_msg_text_3 = msg_text_3
-         , @w_severity_cd = severity_cd 
+         , @w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master
     WHERE msg_id = 'U00000'
 
@@ -1071,9 +1071,9 @@ BEGIN
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00000'
 
-    IF @special_value_exists <> 0 
-        SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))  
-    
+    IF @special_value_exists <> 0
+        SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))
+
     SELECT @w_msg_text_2 = ''
 
 
@@ -1082,9 +1082,9 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- End of Sending notification of warning message U00000
@@ -1094,10 +1094,10 @@ BEGIN
     -- Send notification of warning message U00009  -- < BEGINING OF WARNING MESSAGES: >
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00009'
 
-    SELECT @max = COUNT(*)  
+    SELECT @max = COUNT(*)
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE event_id_01 = '01'
 
@@ -1113,9 +1113,9 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- End of Sending notification of warning message U00009
@@ -1125,7 +1125,7 @@ BEGIN
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master
     WHERE msg_id = 'U00011'
 
@@ -1141,30 +1141,30 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3 
+        @w_msg_text_3
 
     --
     -- Send notification of warning message U00000  -- Total Global HR New Hire:
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00001'
-    
+
     SET @max = 0
-    SELECT @max = COUNT(*)  
+    SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE event_id_01 = '01'
-    
+
     SELECT @maxx = CAST(@max As CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00001'
 
-    IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))  
+    IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))
     SELECT @w_msg_text_2 = ''
 
     IF @max <> 0
@@ -1173,22 +1173,22 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
 
     --
     -- Send notification of warning message U00003
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00003'
-    
+
     SELECT @max		= 0
     SELECT @max		= COUNT(*) FROM DBShrpn.dbo.ghr_msg_tbl WHERE msg_id = 'U00003'
     SELECT @maxx	= CAST(@max AS CHAR(6))
- 
+
 
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
@@ -1202,15 +1202,15 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
         @w_msg_text_3
-  
+
     SELECT @cnt = @cnt + 1;
 
     --
-    --	End of warning message U00003 
-    -- 
+    --	End of warning message U00003
+    --
 
     --
     -- Send notification of warning message U00005
@@ -1232,58 +1232,58 @@ BEGIN
          , @w_msg_text_2= msg_text_2
          , @w_msg_text_3 = msg_text_3
          , @w_severity_cd = severity_cd
-    FROM DBSCOMMON.dbo.message_master 
+    FROM DBSCOMMON.dbo.message_master
     WHERE msg_id = 'U00005'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00005'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 
-        FROM DBShrpn.dbo.ghr_message_temp_1 t1 
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2
+        FROM DBShrpn.dbo.ghr_message_temp_1 t1
         WHERE t1.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
 
-        IF @special_value_exists <> 0 
+        IF @special_value_exists <> 0
             SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@msg_p2))
 
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@2',@w_msg_text,1)
 
-        IF @special_value_exists <> 0 
+        IF @special_value_exists <> 0
             SELECT @w_msg_text = REPLACE(@w_msg_text,'@2',RTRIM(@msg_p1))
 
         SELECT @w_msg_text_2 = ''
 
-        EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2 
+        EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
             @p_userid,
             @p_batchname,
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
         SELECT @w_msg_text = msg_text
              , @w_msg_text_2= msg_text_2
              , @w_msg_text_3 = msg_text_3
-             , @w_severity_cd = severity_cd 
-        FROM DBSCOMMON.dbo.message_master 
+             , @w_severity_cd = severity_cd
+        FROM DBSCOMMON.dbo.message_master
         WHERE msg_id = 'U00005'
-            
+
         SELECT @cnt = @cnt + 1;
 
     END
@@ -1307,18 +1307,18 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00006'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00006'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -1343,13 +1343,13 @@ BEGIN
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
-        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
         FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00006'
-            
+
         SELECT @cnt = @cnt + 1;
 
     END
@@ -1372,24 +1372,24 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00007'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00007'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
 
-    SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 
-    FROM DBShrpn.dbo.ghr_message_temp_1 t1 
+    SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2
+    FROM DBShrpn.dbo.ghr_message_temp_1 t1
     WHERE t1.ID = @cnt
 
     SELECT @special_value_exists = 0
@@ -1410,13 +1410,13 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
         @w_msg_text_3
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00007'
-        
+
     SELECT @cnt = @cnt + 1;
 
     END
@@ -1439,18 +1439,18 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00008'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00008'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
-    
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -1468,19 +1468,19 @@ BEGIN
 
         SELECT @w_msg_text_2 =''
 
-        EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2 
+        EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
             @p_userid,
             @p_batchname,
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
-        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
         FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00008'
-        
+
         SELECT @cnt = @cnt + 1;
 
     END -- End of Message Loop
@@ -1500,18 +1500,18 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00031'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00031'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -1534,13 +1534,13 @@ BEGIN
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
-        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
         FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00031'
-        
+
         SELECT @cnt = @cnt + 1;
 
     END -- End of Message Loop
@@ -1561,19 +1561,19 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --	SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00020'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00020'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -1596,14 +1596,14 @@ BEGIN
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
-        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
         --    SELECT *
         FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00020'
-        
+
         SELECT @cnt = @cnt + 1;
 
     END -- End of Message Loop
@@ -1623,18 +1623,18 @@ BEGIN
         msg_desc						char(255) NOT NULL
     )
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00021'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_1	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_1
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00021'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_1
- 
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -1657,14 +1657,14 @@ BEGIN
             @p_qualifier,
             @msg_id ,
             @w_severity_cd,
-            @w_msg_text, 
+            @w_msg_text,
             @w_msg_text_2,
             @w_msg_text_3
 
-        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+        SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
         --    SELECT *
         FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00021'
-        
+
         SELECT @cnt = @cnt + 1;
 
     END -- End of Message Loop
@@ -1675,7 +1675,7 @@ BEGIN
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
@@ -1691,15 +1691,15 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- Send notification of warning message U00010 -- <ENDING OF WARNING MESSAGES: >
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00010'
 
@@ -1715,16 +1715,16 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
 
     --
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
@@ -1740,9 +1740,9 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     -- IF @w_trace_sw = 'Y'
     -- INSERT INTO DBSosxp.dbo.msg SELECT 'End usp_ins_new_hire' AS msg_desc
@@ -1756,14 +1756,8 @@ BEGIN
     -- Clean up temp table
     DROP TABLE #ghr_employee_events_temp1
 
-
 END
-
-
-/****** Object:  StoredProcedure dbo.usp_ins_pay_element    Script Date: 8/26/2024 9:28:01 PM ******/
-IF EXISTS (SELECT * FROM DBShrpn.dbo.sysobjects WHERE name = 'usp_ins_new_hire')
-   DROP PROCEDURE dbo.usp_ins_new_hire
- 
 GO
-ALTER AUTHORIZATION ON dbo.usp_ins_new_hire TO  SCHEMA OWNER 
+
+ALTER AUTHORIZATION ON dbo.usp_ins_new_hire TO  SCHEMA OWNER
 GO

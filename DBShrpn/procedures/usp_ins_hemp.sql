@@ -1,11 +1,10 @@
 USE [DBShrpn]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_ins_hemp]    Script Date: 4/1/2025 4:33:00 PM ******/
+
 SET ANSI_NULLS OFF
 GO
 SET QUOTED_IDENTIFIER OFF
 GO
-
 
 
 CREATE procedure [dbo].[usp_ins_hemp]
@@ -66,7 +65,7 @@ CREATE procedure [dbo].[usp_ins_hemp]
    @p_standard_work_pd_id                  char(5),
    @p_overtime_status_code                 char(2),
    @p_pay_on_reported_hrs_ind              char(1),
-   @p_work_shift_code                      char(5), 
+   @p_work_shift_code                      char(5),
    @p_tax_entity_id                        char(10),
    @p_time_reporting_meth_code             char(1),
    @p_pay_group_id                         char(10),
@@ -137,14 +136,14 @@ CREATE procedure [dbo].[usp_ins_hemp]
    @p_tax_auth_type_code_4                 char(1),
    @p_tax_auth_type_code_5                 char(1),
    @p_reg_reporting_unit_code              char(10),
-   @p_emp_workers_comp_cvg_cd              char(1)        
+   @p_emp_workers_comp_cvg_cd              char(1)
 )
 as
 
 declare @ret int,
     @W_ACTION_DATETIME  char(30)
 
- -- exec @ret = sp_dbs_authenticate if @ret != 0 return 
+ -- exec @ret = sp_dbs_authenticate if @ret != 0 return
 
 /* =================================== */
 /*   ** Insert the INDIVIDUAL data    */
@@ -182,13 +181,13 @@ select @W_ACTION_USER = suser_sname()   /*jhess - changed for 8.0*/
 declare @W_MS             char(3)
 select @W_MS = convert (char(3), datepart(millisecond,getdate()))
 
-if datalength(rtrim(@W_MS)) = 1 
+if datalength(rtrim(@W_MS)) = 1
    begin
      select @W_MS = '00'+substring(@W_MS,1,1)
    end
 else
    begin
-     if datalength(rtrim(@W_MS)) = 2 
+     if datalength(rtrim(@W_MS)) = 2
         begin
           select @W_MS = '0'+substring(@W_MS,1,2)
         end
@@ -197,16 +196,16 @@ else
 select @W_ACTION_DATETIME = convert(char(10), getdate(), 111) + '-' +
                             convert(char(8), getdate(), 108) + ':' + @W_MS
 
-if exists (select * from individual where individual_id = @p_individual_id) 
+if exists (select * from individual where individual_id = @p_individual_id)
    Begin
 --SYBSQL      raiserror 26182 'individual id already exists'
-          raiserror ('26182 individual id already exists',16,0) 
+          raiserror ('26182 individual id already exists',16,0)
      return
    end
 
 select  @w_return_code = 0, @w_autopay_rtn = 0
 
-if @p_time_reporting_meth_code = '1' and @p_pay_group_id <> '' 
+if @p_time_reporting_meth_code = '1' and @p_pay_group_id <> ''
    begin
      Select @w_autopay_pay_element_id = pay_group.regular_earn_pay_element_id
        FROM pay_group
@@ -218,19 +217,19 @@ if @p_time_reporting_meth_code = '1' and @p_pay_group_id <> ''
             @w_auto_rt_tbl_id = rate_tbl_id
        FROM pay_element
       where pay_element.pay_element_id  = @w_autopay_pay_element_id and
-            pay_element.stop_date       > @p_original_hire_date and 
-            (pay_element.eff_date      <= @p_original_hire_date and 
-             pay_element.next_eff_date  > @p_original_hire_date) 
+            pay_element.stop_date       > @p_original_hire_date and
+            (pay_element.eff_date      <= @p_original_hire_date and
+             pay_element.next_eff_date  > @p_original_hire_date)
 
-     if @@rowcount = 0 
+     if @@rowcount = 0
         begin
-          if not exists (Select * 
+          if not exists (Select *
                            from pay_element
                           where pay_element.pay_element_id = @w_autopay_pay_element_id)
              begin
---SYBSQL                Raiserror 49717 'Database corrupt' 
-          raiserror ('49717 Database corrupt ',16,0) 
-               Return 
+--SYBSQL                Raiserror 49717 'Database corrupt'
+          raiserror ('49717 Database corrupt ',16,0)
+               Return
              end
           else
             begin
@@ -238,18 +237,18 @@ if @p_time_reporting_meth_code = '1' and @p_pay_group_id <> ''
             end
         end
 
-     if @w_stop_date = '12/31/2999' 
+     if @w_stop_date = '12/31/2999'
         begin
-          if @w_next_eff_date <> '12/31/2999' 
+          if @w_next_eff_date <> '12/31/2999'
              begin
                select @w_stop_date = pay_element.stop_date
                  from pay_element
                 where pay_element.pay_element_id = @w_autopay_pay_element_id
-                  and pay_element.next_eff_date  = '12/31/2999' 
+                  and pay_element.next_eff_date  = '12/31/2999'
              end
         end
 
-     if @w_stop_date = '12/31/2999' 
+     if @w_stop_date = '12/31/2999'
         select @w_inact_by_pay_element_ind = 'N'
      else
         select @w_inact_by_pay_element_ind = 'Y'
@@ -275,7 +274,7 @@ Select @w_language_code = default_language_code
   From employer
  where empl_id = @p_employer_id
 
-if @p_employer_taxing_ctry_code = 'US' 
+if @p_employer_taxing_ctry_code = 'US'
    Execute usp_ins_hemp_04 @p_tax_authority_id,
                            @p_tax_authority_2,
                            @p_tax_authority_3,
@@ -303,8 +302,8 @@ if @p_employer_taxing_ctry_code = 'US'
                            @w_sui_state_5_ind   OUTPUT,
                            @w_time_pct_5        OUTPUT
 
-if @p_employer_taxing_ctry_code = 'CA' 
-    if (rtrim(@p_tax_authority_id) IS NOT NULL AND rtrim(@p_tax_authority_id)!='')    
+if @p_employer_taxing_ctry_code = 'CA'
+    if (rtrim(@p_tax_authority_id) IS NOT NULL AND rtrim(@p_tax_authority_id)!='')
         Select @w_can_tax_auth_complete = 'Y'
     else
         Select @w_can_tax_auth_complete = 'N'
@@ -439,10 +438,10 @@ values (@p_individual_id,
    ' ',
    0)
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500001 'Error on Individual'
-          raiserror ('500001 Error on Individual',16,0) 
+          raiserror ('500001 Error on Individual',16,0)
      rollback transaction
      return
    end
@@ -558,7 +557,7 @@ insert into individual_personal
    user_text_1,
    user_text_2,
    smoker_ind,   /* A R6.5.02MC SOL520600 gmlls 01/20/2003 */
-   chgstamp,             /* 1020838 */  
+   chgstamp,             /* 1020838 */
    geo_code,             /* 1020838 */
    vets_100A_status_code /* 1020838 */)
 values (
@@ -674,10 +673,10 @@ values (
     '0'                 /*  vets_100A_status_code 1437601  */
    )
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500002 'Error on Individual_personal'
-          raiserror ('500002 Error on Individual_personal',16,0) 
+          raiserror ('500002 Error on Individual_personal',16,0)
      rollback transaction
      return
    end
@@ -739,10 +738,10 @@ values (@p_employee_id,
    ' ',' ',
    0)
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500003 'Error on Employee'
-          raiserror ('500003 Error on Employee',16,0) 
+          raiserror ('500003 Error on Employee',16,0)
      rollback transaction
      return
    end
@@ -877,10 +876,10 @@ values (@p_employee_id,
    ' ',         /* R6.0M - SSA# 23771 */
    0)
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500004 'Error on Emp_employment'
-          raiserror ('500004 Error on Emp_employment',16,0) 
+          raiserror ('500004 Error on Emp_employment',16,0)
      rollback transaction
      return
    end
@@ -915,20 +914,20 @@ values (@p_employee_id,
    'HI',
    0)
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500005 'Error on Emp_status'
-          raiserror ('500005 Error on Emp_status',16,0) 
+          raiserror ('500005 Error on Emp_status',16,0)
      rollback transaction
      return
    end
 
-if (rtrim(@p_pay_grade_code) IS NOT NULL AND rtrim(@p_pay_grade_code)!='') or @p_job_evaluation_points_nbr <> 0 
+if (rtrim(@p_pay_grade_code) IS NOT NULL AND rtrim(@p_pay_grade_code)!='') or @p_job_evaluation_points_nbr <> 0
    select @w_date_in_grade = @p_original_hire_date
 else
    select @w_date_in_grade = '12/31/2999'
 
-if @p_salary_step_nbr <> 0 
+if @p_salary_step_nbr <> 0
    select @w_date_in_step = @p_original_hire_date
 else
    select @w_date_in_step = '12/31/2999'
@@ -969,7 +968,7 @@ insert into emp_assignment
    standard_work_pd_id,
    standard_work_hrs,
    work_tm_code,
-   work_shift_code, 
+   work_shift_code,
    salary_structure_id,
    salary_increase_guideline_id,
    pay_grade_code,
@@ -999,7 +998,7 @@ insert into emp_assignment
    regulatory_reporting_unit_code,
    base_rate_tbl_id,
    base_rate_tbl_entry_code,
-   shift_differential_rate_tbl_id, 
+   shift_differential_rate_tbl_id,
    ref_annual_salary_amt,
    ref_pd_salary_amt,
    ref_pd_salary_tm_pd_id,
@@ -1010,7 +1009,7 @@ insert into emp_assignment
    guaranteed_hourly_pay_rate,
    exception_rate_ind,
    overtime_status_code,
-   shift_differential_status_code, 
+   shift_differential_status_code,
    standard_daily_work_hrs,
    user_amt_1,
    user_amt_2,
@@ -1054,7 +1053,7 @@ values (@p_employee_id,
    @p_standard_work_pd_id,
    @p_standard_work_hrs,
    @p_work_tm_code,
-   @p_work_shift_code, 
+   @p_work_shift_code,
    @p_salary_structure_id,
    @p_salary_incr_guideline_id,
    @p_pay_grade_code,
@@ -1095,21 +1094,21 @@ values (@p_employee_id,
    ' ', 'N',
    0)
 
-if @@error <> 0 
+if @@error <> 0
    begin
 --SYBSQL      Raiserror 500006 'Error on Emp_assignment'
-          raiserror ('500006 Error on Emp_assignment',16,0) 
+          raiserror ('500006 Error on Emp_assignment',16,0)
      rollback transaction
      return
    end
 
-if @p_employer_taxing_ctry_code = 'US' 
-   if not exists (Select tax_authority_id 
+if @p_employer_taxing_ctry_code = 'US'
+   if not exists (Select tax_authority_id
                     From empl_tax_entity_us_tax_auth
                    Where empl_id          = @p_employer_id   and
-                         tax_entity_id    = @p_tax_entity_id and 
-                         tax_authority_id = 'USFED' and 
-                         tax_entity_us_tax_auth_stat_cd = '1') 
+                         tax_entity_id    = @p_tax_entity_id and
+                         tax_authority_id = 'USFED' and
+                         tax_entity_us_tax_auth_stat_cd = '1')
       Select @w_autopay_rtn = 50437  /* 'USFED not established for employer tax entity' */
    else
       begin  /* 'USFED established for employer tax entity' */
@@ -1212,10 +1211,10 @@ if @p_employer_taxing_ctry_code = 'US'
     )
 
 
-   if @@error <> 0 
+   if @@error <> 0
            begin
 --SYBSQL              Raiserror 500007 'Error on emp_us_tax_authority for FED'
-          raiserror ('500007 Error on emp_us_tax_authority for FED',16,0) 
+          raiserror ('500007 Error on emp_us_tax_authority for FED',16,0)
              rollback transaction
              return
            end
@@ -1233,23 +1232,23 @@ if @p_employer_taxing_ctry_code = 'US'
            @w_pr_resident_status_cd        char(1),
            @w_allow_based_on_ded_amt       money
 
-    if (rtrim(@p_tax_authority_id) IS NOT NULL AND rtrim(@p_tax_authority_id)!='')    
+    if (rtrim(@p_tax_authority_id) IS NOT NULL AND rtrim(@p_tax_authority_id)!='')
          begin
             select @w_tax_marital_status_code = @p_tax_marital_status_code
-            if @w_tax_marital_status_code = '2' 
+            if @w_tax_marital_status_code = '2'
            begin
              if @p_tax_authority_id = 'GA' or
                 @p_tax_authority_id = 'DC' or
                 @p_tax_authority_id = 'DE'
                   select @w_tax_marital_status_code = '4'
-                  else if @p_tax_authority_id = 'WV'                 /* r71m-sol#582345 */   
-                  select @w_tax_marital_status_code = '6'      /* r71m-sol#582345 */   
+                  else if @p_tax_authority_id = 'WV'                 /* r71m-sol#582345 */
+                  select @w_tax_marital_status_code = '6'      /* r71m-sol#582345 */
            end
-             else                                                    /* r71m-sol#582345 */    
-              begin                                                  /* r71m-sol#582345 */   
-               if @p_tax_authority_id = 'WV'                         /* r71m-sol#582345 */   
-                  select @w_tax_marital_status_code = '6'            /* r71m-sol#582345 */   
-              end                                                    /* r71m-sol#582345 */   
+             else                                                    /* r71m-sol#582345 */
+              begin                                                  /* r71m-sol#582345 */
+               if @p_tax_authority_id = 'WV'                         /* r71m-sol#582345 */
+                  select @w_tax_marital_status_code = '6'            /* r71m-sol#582345 */
+              end                                                    /* r71m-sol#582345 */
 
             IF @p_tax_authority_id = 'CA' or
            @p_tax_authority_id = 'HI' or
@@ -1260,7 +1259,7 @@ if @p_employer_taxing_ctry_code = 'US'
           ELSE
                 select @w_sdi_status_code = '1'
 
-            if @p_tax_authority_id = 'NJ' 
+            if @p_tax_authority_id = 'NJ'
              begin
              select @w_other_st_tax_1_status_cd  = '2'
                   select @w_other_st_tax_1a_status_cd = '2' /*593964-591400*/
@@ -1269,7 +1268,7 @@ if @p_employer_taxing_ctry_code = 'US'
              select @w_other_st_tax_4_status_cd = '2'
              end
             else
-             if @p_tax_authority_id = 'MT' 
+             if @p_tax_authority_id = 'MT'
                begin
                   select @w_other_st_tax_1_status_cd = '2'
                      select @w_other_st_tax_1a_status_cd = '1' /*593964-591400*/
@@ -1278,7 +1277,7 @@ if @p_employer_taxing_ctry_code = 'US'
                   select @w_other_st_tax_4_status_cd = ' '
                end
               else
-           if @p_tax_authority_id = 'MA' 
+           if @p_tax_authority_id = 'MA'
                  begin
            select @w_other_st_tax_1_status_cd = ' '
                      select @w_other_st_tax_1a_status_cd = '1' /*593964-591400*/
@@ -1296,38 +1295,38 @@ if @p_employer_taxing_ctry_code = 'US'
               end
 
              select @p_income_tax_calc_meth_cd = '01' /* 1055162 */
-             if @p_tax_authority_id = 'PR' 
-			  begin                                   /* 1055162 */    
+             if @p_tax_authority_id = 'PR'
+			  begin                                   /* 1055162 */
                Select @w_pr_resident_status_cd = '1'  /* 1055162,  @p_income_tax_calc_meth_cd = '11' */
-			  end                                     /* 1055162 */   
+			  end                                     /* 1055162 */
              else
-			  begin                                   /* 1055162 */ 
+			  begin                                   /* 1055162 */
 			   Select @w_pr_resident_status_cd = ' '  /* 1055162, @p_income_tax_calc_meth_cd = '01' */
               end                                     /* 1055162 */
 
              /* 1017861 begin */
              if substring(@p_tax_authority_id, 1, 3) = 'PAL' or
                 substring(@p_tax_authority_id, 1, 3) = 'PLS'
-             begin 
+             begin
               select @p_income_tax_calc_meth_cd = '03'
              end
              /* 1017861 end */
-           
+
              Select @w_allow_based_on_ded_amt = 0
 
-             if @p_tax_authority_id = 'CA' 
+             if @p_tax_authority_id = 'CA'
                select @w_wage_plan_code = @p_wage_plan_code
              else
               select @w_wage_plan_code = ' '
-  
+
              if @p_tax_authority_id = 'OR' or @p_tax_authority_id = 'VT'   /* 583778 added VT */
                select @w_emp_health_ins_cvg_cd = @p_emp_health_insurance_cvg_cd
              else
                select @w_emp_health_ins_cvg_cd = ' '
 
-             if @p_tax_authority_id = 'WY' 
+             if @p_tax_authority_id = 'WY'
                begin
-                 select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd   
+                 select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd
                  select @w_emp_workers_comp_class  = @p_emp_workers_comp_class    /* 719749-719473 */
                end
              else
@@ -1339,15 +1338,15 @@ if @p_employer_taxing_ctry_code = 'US'
         /*********************************************************************
             529378 - Add Employee Indiana Advance Earned Income Credit
         **********************************************************************/
-      if @p_tax_authority_id = 'IN' or @p_tax_authority_id = 'WI' /*651802*/  
+      if @p_tax_authority_id = 'IN' or @p_tax_authority_id = 'WI' /*651802*/
        begin
             select @w_other_st_tax_1_status_cd = '1'
        end
       /*1545139 begin*/
-	  else if @p_tax_authority_id = 'MI' 
+	  else if @p_tax_authority_id = 'MI'
        begin
             select @w_other_st_tax_2_status_cd = '1'
-       end 
+       end
       /*1545139 end*/
 
          insert into emp_us_tax_authority
@@ -1416,7 +1415,7 @@ if @p_employer_taxing_ctry_code = 'US'
          income_tax_nbr_joint_dep_exemp, /* 1055162 - PR */
          allowance_based_on_special_ded, /* 1055162 - PR */
          allowance_based_on_deds,	     /* 1055162 - PR */
-		 rec_chg_ind                     /* 1024762 */ 
+		 rec_chg_ind                     /* 1024762 */
         ,visa_type                     /* 1545169 */
 		 )
          values (@p_employee_id,
@@ -1456,38 +1455,38 @@ if @p_employer_taxing_ctry_code = 'US'
          0,'9',0,
          '0',                          /* us_resident_status_cd */ /* R7.0M-ALS#571102 */
          @w_other_st_tax_1a_status_cd, /*593964-591400*/
-         0,                            /*651802-614209*/ 
+         0,                            /*651802-614209*/
          '',                           /* hire_act_status_code 703950 */
          @w_emp_workers_comp_class, ' ', 0,0,0,0,'N'  /* 719749-719473 */  /* 1017861 - PA */ /* 1055162 - PR added 4 0's */ /* 1024762 added 'N' */
         ,'0'                            /* visa_type  1545169 */
          )
 
-        if @@error <> 0 
+        if @@error <> 0
       begin
 --SYBSQL             Raiserror 500008 'Error on emp_us_tax_authority for auth 1'
-          raiserror ('500008 Error on emp_us_tax_authority for auth 1',16,0) 
+          raiserror ('500008 Error on emp_us_tax_authority for auth 1',16,0)
         rollback transaction
         return
       end
       end /* if (rtrim(@p_tax_authority_id) IS NOT NULL AND rtrim(@p_tax_authority_id)!='') */
 
-   if (rtrim(@p_tax_authority_2) IS NOT NULL AND rtrim(@p_tax_authority_2)!='')    
+   if (rtrim(@p_tax_authority_2) IS NOT NULL AND rtrim(@p_tax_authority_2)!='')
          begin
           select @w_tax_marital_status_code = @p_tax_marital_status_code
-          if @w_tax_marital_status_code = '2' 
+          if @w_tax_marital_status_code = '2'
               begin
                 if @p_tax_authority_2 = 'GA' or
                    @p_tax_authority_2 = 'DC' or
                    @p_tax_authority_2 = 'DE'
                      select @w_tax_marital_status_code = '4'
-                     else if @p_tax_authority_2 = 'WV'                /* r71m-sol#582345 */   
-                       select @w_tax_marital_status_code = '6'    /* r71m-sol#582345 */   
+                     else if @p_tax_authority_2 = 'WV'                /* r71m-sol#582345 */
+                       select @w_tax_marital_status_code = '6'    /* r71m-sol#582345 */
               end
-                else                                                  /* r71m-sol#582345 */       
-                 begin                                                /* r71m-sol#582345 */   
-                  if @p_tax_authority_2 = 'WV'                        /* r71m-sol#582345 */   
-                     select @w_tax_marital_status_code = '6'         /* r71m-sol#582345 */   
-                  end                                                 /* r71m-sol#582345 */     
+                else                                                  /* r71m-sol#582345 */
+                 begin                                                /* r71m-sol#582345 */
+                  if @p_tax_authority_2 = 'WV'                        /* r71m-sol#582345 */
+                     select @w_tax_marital_status_code = '6'         /* r71m-sol#582345 */
+                  end                                                 /* r71m-sol#582345 */
 
           IF @p_tax_authority_2 = 'CA' or
               @p_tax_authority_2 = 'HI' or
@@ -1498,7 +1497,7 @@ if @p_employer_taxing_ctry_code = 'US'
           ELSE
                    select @w_sdi_status_code = '1'
 
-         if @p_tax_authority_2 = 'NJ' 
+         if @p_tax_authority_2 = 'NJ'
                 begin
                 select @w_other_st_tax_1_status_cd = '2'
                select @w_other_st_tax_2_status_cd = '2'
@@ -1506,7 +1505,7 @@ if @p_employer_taxing_ctry_code = 'US'
                 select @w_other_st_tax_4_status_cd = '2'
                 end
           else
-               IF @p_tax_authority_2 = 'MT' 
+               IF @p_tax_authority_2 = 'MT'
                   begin
                 select @w_other_st_tax_1_status_cd = '2'
              select @w_other_st_tax_2_status_cd = '2'
@@ -1514,7 +1513,7 @@ if @p_employer_taxing_ctry_code = 'US'
                 select @w_other_st_tax_4_status_cd = ' '
                   end
             else
-              if @p_tax_authority_2 = 'MA' 
+              if @p_tax_authority_2 = 'MA'
                  begin
                   select @w_other_st_tax_1_status_cd = ' '
          select @w_other_st_tax_2_status_cd = '2'
@@ -1530,26 +1529,26 @@ if @p_employer_taxing_ctry_code = 'US'
                   end
 
            select @p_income_tax_calc_meth_cd = '01'   /* 1055162 */
-           if @p_tax_authority_2 = 'PR' 
-			  begin                                   /* 1055162 */    
+           if @p_tax_authority_2 = 'PR'
+			  begin                                   /* 1055162 */
                Select @w_pr_resident_status_cd = '1'  /* 1055162,  @p_income_tax_calc_meth_cd = '11' */
-			  end                                     /* 1055162 */   
+			  end                                     /* 1055162 */
            else
-			  begin                                   /* 1055162 */ 
+			  begin                                   /* 1055162 */
 			   Select @w_pr_resident_status_cd = ' '  /* 1055162, @p_income_tax_calc_meth_cd = '01' */
               end                                     /* 1055162 */
-        
+
            /* 1017861 begin */
            if substring(@p_tax_authority_2, 1, 3) = 'PAL' or
                 substring(@p_tax_authority_2, 1, 3) = 'PLS'
-           begin 
+           begin
               select @p_income_tax_calc_meth_cd = '03'
            end
            /* 1017861 end */
 
       Select @w_allow_based_on_ded_amt = 0
 
-           if @p_tax_authority_2 = 'CA' 
+           if @p_tax_authority_2 = 'CA'
                   select @w_wage_plan_code = @p_wage_plan_code
            else
                   select @w_wage_plan_code = ' '
@@ -1560,7 +1559,7 @@ if @p_employer_taxing_ctry_code = 'US'
                   select @w_emp_health_ins_cvg_cd = ' '
 
            if @p_tax_authority_2 = 'WY'
-              begin 
+              begin
                   select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd
                   select @w_emp_workers_comp_class  = @p_emp_workers_comp_class    /* 719749-719473 */
               end
@@ -1573,15 +1572,15 @@ if @p_employer_taxing_ctry_code = 'US'
       /*********************************************************************
           529378 - Add Employee Indiana Advance Earned Income Credit
       **********************************************************************/
-      if @p_tax_authority_2 = 'IN' or @p_tax_authority_2 = 'WI' /*651802*/ 
+      if @p_tax_authority_2 = 'IN' or @p_tax_authority_2 = 'WI' /*651802*/
          begin
                select @w_other_st_tax_1_status_cd = '1'
          end
       /*1545139 begin */
-	  else if @p_tax_authority_2 = 'MI' 
+	  else if @p_tax_authority_2 = 'MI'
        begin
             select @w_other_st_tax_2_status_cd = '1'
-       end 
+       end
       /*1545139 end */
 
       insert into emp_us_tax_authority
@@ -1650,7 +1649,7 @@ if @p_employer_taxing_ctry_code = 'US'
          income_tax_nbr_joint_dep_exemp, /* 1055162 - PR */
          allowance_based_on_special_ded, /* 1055162 - PR */
          allowance_based_on_deds,	     /* 1055162 - PR */
-         rec_chg_ind                     /* 1024762 */ 
+         rec_chg_ind                     /* 1024762 */
 		 )
 
          values (@p_employee_id,
@@ -1690,36 +1689,36 @@ if @p_employer_taxing_ctry_code = 'US'
          0,'9',0,
          '0',                    /* us_resident_status_cd */ /* R7.0M-ALS#571102 */
          @w_other_st_tax_1a_status_cd,  /*593964-591400*/
-         0,                             /*651802-614209*/ 
+         0,                             /*651802-614209*/
          '',                            /* hire_act_status_code 703950 */
          @w_emp_workers_comp_class, ' ', 0,0,0,0,'N')    /* 719749-719473 */  /* 1017861 - PA */ /* 1055162 - PR added 4 0's */ /* 1024762 added 'N' */
 
-      if @@error <> 0 
+      if @@error <> 0
         begin
 --SYBSQL           Raiserror 500009 'Error on emp_us_tax_authority for auth 2'
-          raiserror ('500009 Error on emp_us_tax_authority for auth 2',16,0) 
+          raiserror ('500009 Error on emp_us_tax_authority for auth 2',16,0)
           rollback transaction
                     return
                   end
       end /* if (rtrim(@p_tax_authority_2) IS NOT NULL AND rtrim(@p_tax_authority_2)!='') */
 
-   if (rtrim(@p_tax_authority_3) IS NOT NULL AND rtrim(@p_tax_authority_3)!='')    
+   if (rtrim(@p_tax_authority_3) IS NOT NULL AND rtrim(@p_tax_authority_3)!='')
       begin
             select @w_tax_marital_status_code = @p_tax_marital_status_code
-            if @w_tax_marital_status_code = '2' 
+            if @w_tax_marital_status_code = '2'
             begin
              if @p_tax_authority_3 = 'GA' or
                  @p_tax_authority_3 = 'DC' or
                  @p_tax_authority_3 = 'DE'
                   select @w_tax_marital_status_code = '4'
-                  else if @p_tax_authority_3 = 'WV'              /* r71m-sol#582345 */   
-                    select @w_tax_marital_status_code = '6'  /* r71m-sol#582345 */   
+                  else if @p_tax_authority_3 = 'WV'              /* r71m-sol#582345 */
+                    select @w_tax_marital_status_code = '6'  /* r71m-sol#582345 */
            end
-             else                                                /* r71m-sol#582345 */    
-              begin                                              /* r71m-sol#582345 */   
-               if @p_tax_authority_3 = 'WV'                      /* r71m-sol#582345 */   
-                select @w_tax_marital_status_code = '6'       /* r71m-sol#582345 */   
-               end                                               /* r71m-sol#582345 */   
+             else                                                /* r71m-sol#582345 */
+              begin                                              /* r71m-sol#582345 */
+               if @p_tax_authority_3 = 'WV'                      /* r71m-sol#582345 */
+                select @w_tax_marital_status_code = '6'       /* r71m-sol#582345 */
+               end                                               /* r71m-sol#582345 */
 
             IF @p_tax_authority_3 = 'CA' or
            @p_tax_authority_3 = 'HI' or
@@ -1730,7 +1729,7 @@ if @p_employer_taxing_ctry_code = 'US'
             ELSE
                 select @w_sdi_status_code = '1'
 
-            if @p_tax_authority_3 = 'NJ' 
+            if @p_tax_authority_3 = 'NJ'
              begin
              select @w_other_st_tax_1_status_cd = '2'
             select @w_other_st_tax_2_status_cd = '2'
@@ -1738,7 +1737,7 @@ if @p_employer_taxing_ctry_code = 'US'
              select @w_other_st_tax_4_status_cd = '2'
              end
             else
-            if @p_tax_authority_3 = 'MT' 
+            if @p_tax_authority_3 = 'MT'
                begin
                   select @w_other_st_tax_1_status_cd = '2'
                select @w_other_st_tax_2_status_cd = '2'
@@ -1746,7 +1745,7 @@ if @p_employer_taxing_ctry_code = 'US'
                   select @w_other_st_tax_4_status_cd = ' '
                end
               else
-           if @p_tax_authority_3 = 'MA' 
+           if @p_tax_authority_3 = 'MA'
                  begin
                 select @w_other_st_tax_1_status_cd = ' '
            select @w_other_st_tax_2_status_cd = '2'
@@ -1762,26 +1761,26 @@ if @p_employer_taxing_ctry_code = 'US'
               end
 
              select @p_income_tax_calc_meth_cd = '01' /* 1055162 */
-             if @p_tax_authority_3 = 'PR' 
-			  begin                                   /* 1055162 */    
+             if @p_tax_authority_3 = 'PR'
+			  begin                                   /* 1055162 */
                Select @w_pr_resident_status_cd = '1'  /* 1055162,  @p_income_tax_calc_meth_cd = '11' */
-			  end                                     /* 1055162 */   
+			  end                                     /* 1055162 */
              else
-			  begin                                   /* 1055162 */ 
+			  begin                                   /* 1055162 */
 			   Select @w_pr_resident_status_cd = ' '  /* 1055162, @p_income_tax_calc_meth_cd = '01' */
               end                                     /* 1055162 */
 
              /* 1017861 begin */
              if substring(@p_tax_authority_3, 1, 3) = 'PAL' or
                 substring(@p_tax_authority_3, 1, 3) = 'PLS'
-             begin 
+             begin
               select @p_income_tax_calc_meth_cd = '03'
              end
              /* 1017861 end */
 
              Select @w_allow_based_on_ded_amt = 0
 
-             if @p_tax_authority_3 = 'CA' 
+             if @p_tax_authority_3 = 'CA'
                 select @w_wage_plan_code = @p_wage_plan_code
              else
                 select @w_wage_plan_code = ' '
@@ -1792,7 +1791,7 @@ if @p_employer_taxing_ctry_code = 'US'
                 select @w_emp_health_ins_cvg_cd = ' '
 
              if @p_tax_authority_3 = 'WY'
-                begin 
+                begin
                   select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd
                   select @w_emp_workers_comp_class  = @p_emp_workers_comp_class    /* 719749-719473 */
                 end
@@ -1805,15 +1804,15 @@ if @p_employer_taxing_ctry_code = 'US'
         /*********************************************************************
          529378 - Add Employee Indiana Advance Earned Income Credit
         **********************************************************************/
-      if @p_tax_authority_3 = 'IN' or @p_tax_authority_3 = 'WI' /*651802*/ 
+      if @p_tax_authority_3 = 'IN' or @p_tax_authority_3 = 'WI' /*651802*/
        begin
             select @w_other_st_tax_1_status_cd = '1'
        end
       /*1545139 begin */
-	  else if @p_tax_authority_3 = 'MI' 
+	  else if @p_tax_authority_3 = 'MI'
        begin
             select @w_other_st_tax_2_status_cd = '1'
-       end 
+       end
       /*1545139 end */
 
          insert into emp_us_tax_authority
@@ -1882,7 +1881,7 @@ if @p_employer_taxing_ctry_code = 'US'
          income_tax_nbr_joint_dep_exemp, /* 1055162 - PR */
          allowance_based_on_special_ded, /* 1055162 - PR */
          allowance_based_on_deds,	     /* 1055162 - PR */
-         rec_chg_ind                     /* 1024762 */ 
+         rec_chg_ind                     /* 1024762 */
 		 )
 
          values (@p_employee_id,
@@ -1922,23 +1921,23 @@ if @p_employer_taxing_ctry_code = 'US'
          0,'9',0,
          '0',                          /* us_resident_status_cd */ /* R7.0M-ALS#571102 */
          @w_other_st_tax_1a_status_cd, /*593964-591400*/
-         0,                            /*651802-614209*/ 
+         0,                            /*651802-614209*/
          '',                           /* hire_act_status_code 703950 */
          @w_emp_workers_comp_class, ' ', 0,0,0,0,'N')     /* 719749-719473 */ /* 1017861 - PA */ /* 1055162 - PR added 4 0's */ /*1024762 added 'N'*/
 
-        if @@error <> 0 
+        if @@error <> 0
       begin
 --SYBSQL         Raiserror 500010 'Error on emp_us_tax_authority for auth 3'
-          raiserror ('500010 Error on emp_us_tax_authority for auth 3',16,0) 
+          raiserror ('500010 Error on emp_us_tax_authority for auth 3',16,0)
             rollback transaction
         return
       end
       end /* if (rtrim(@p_tax_authority_3) IS NOT NULL AND rtrim(@p_tax_authority_3)!='') */
 
-   if (rtrim(@p_tax_authority_4) IS NOT NULL AND rtrim(@p_tax_authority_4)!='')    
+   if (rtrim(@p_tax_authority_4) IS NOT NULL AND rtrim(@p_tax_authority_4)!='')
       begin
             select @w_tax_marital_status_code = @p_tax_marital_status_code
-            if @w_tax_marital_status_code = '2' 
+            if @w_tax_marital_status_code = '2'
            begin
              if @p_tax_authority_4 = 'GA' or
                 @p_tax_authority_4 = 'DC' or
@@ -1951,7 +1950,7 @@ if @p_employer_taxing_ctry_code = 'US'
               begin                                                 /* r71m-sol#582345 */
                if @p_tax_authority_4 = 'WV'                         /* r71m-sol#582345 */
                  select @w_tax_marital_status_code = '6'           /* r71m-sol#582345 */
-              end                                                   /* r71m-sol#582345 */  
+              end                                                   /* r71m-sol#582345 */
 
             IF @p_tax_authority_4 = 'CA' or
            @p_tax_authority_4 = 'HI' or
@@ -1962,7 +1961,7 @@ if @p_employer_taxing_ctry_code = 'US'
             ELSE
          select @w_sdi_status_code = '1'
 
-            if @p_tax_authority_4 = 'NJ' 
+            if @p_tax_authority_4 = 'NJ'
              begin
              select @w_other_st_tax_1_status_cd = '2'
              select @w_other_st_tax_1a_status_cd = '2' /*593964-591400*/
@@ -1971,7 +1970,7 @@ if @p_employer_taxing_ctry_code = 'US'
              select @w_other_st_tax_4_status_cd = '2'
              end
             else
-            if @p_tax_authority_4 = 'MT' 
+            if @p_tax_authority_4 = 'MT'
                begin
                   select @w_other_st_tax_1_status_cd = '2'
                 select @w_other_st_tax_1a_status_cd = '1' /*593964-591400*/
@@ -1980,7 +1979,7 @@ if @p_employer_taxing_ctry_code = 'US'
                   select @w_other_st_tax_4_status_cd = ' '
                end
               else
-           if @p_tax_authority_4 = 'MA' 
+           if @p_tax_authority_4 = 'MA'
                  begin
                     select @w_other_st_tax_1_status_cd = ' '
                 select @w_other_st_tax_1a_status_cd = '1' /*593964-591400*/
@@ -1998,26 +1997,26 @@ if @p_employer_taxing_ctry_code = 'US'
                end
 
              select @p_income_tax_calc_meth_cd = '01' /* 1055162 */
-             if @p_tax_authority_4 = 'PR' 
-			  begin                                   /* 1055162 */    
+             if @p_tax_authority_4 = 'PR'
+			  begin                                   /* 1055162 */
                Select @w_pr_resident_status_cd = '1'  /* 1055162,  @p_income_tax_calc_meth_cd = '11' */
-			  end                                     /* 1055162 */   
+			  end                                     /* 1055162 */
              else
-			  begin                                   /* 1055162 */ 
+			  begin                                   /* 1055162 */
 			   Select @w_pr_resident_status_cd = ' '  /* 1055162, @p_income_tax_calc_meth_cd = '01' */
               end                                     /* 1055162 */
 
              /* 1017861 begin */
              if substring(@p_tax_authority_4, 1, 3) = 'PAL' or
                 substring(@p_tax_authority_4, 1, 3) = 'PLS'
-             begin 
+             begin
               select @p_income_tax_calc_meth_cd = '03'
              end
              /* 1017861 end */
 
              Select @w_allow_based_on_ded_amt = 0
 
-             if @p_tax_authority_4 = 'CA' 
+             if @p_tax_authority_4 = 'CA'
                 select @w_wage_plan_code = @p_wage_plan_code
              else
                 select @w_wage_plan_code = ' '
@@ -2028,7 +2027,7 @@ if @p_employer_taxing_ctry_code = 'US'
                 select @w_emp_health_ins_cvg_cd = ' '
 
              if @p_tax_authority_4 = 'WY'
-                begin 
+                begin
                   select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd
                   select @w_emp_workers_comp_class  = @p_emp_workers_comp_class    /* 719749-719473 */
                 end
@@ -2041,16 +2040,16 @@ if @p_employer_taxing_ctry_code = 'US'
         /*********************************************************************
          529378 - Add Employee Indiana Advance Earned Income Credit
         **********************************************************************/
-      if @p_tax_authority_4 = 'IN' or @p_tax_authority_4 = 'WI' /*651802*/ 
+      if @p_tax_authority_4 = 'IN' or @p_tax_authority_4 = 'WI' /*651802*/
        begin
             select @w_other_st_tax_1_status_cd = '1'
        end
-      /*1545139 beging*/ 
-	  else if @p_tax_authority_4 = 'MI'                 
+      /*1545139 beging*/
+	  else if @p_tax_authority_4 = 'MI'
 	   begin
             select @w_other_st_tax_2_status_cd = '1'
        end
-      /*1545139 end*/ 
+      /*1545139 end*/
 
         insert into emp_us_tax_authority
          (emp_id,
@@ -2118,7 +2117,7 @@ if @p_employer_taxing_ctry_code = 'US'
          income_tax_nbr_joint_dep_exemp, /* 1055162 - PR */
          allowance_based_on_special_ded, /* 1055162 - PR */
          allowance_based_on_deds,	     /* 1055162 - PR */
-         rec_chg_ind                     /* 1024762 */ 
+         rec_chg_ind                     /* 1024762 */
          )
 
          values (@p_employee_id,
@@ -2158,23 +2157,23 @@ if @p_employer_taxing_ctry_code = 'US'
          0,'9',0,
          '0',                          /* us_resident_status_cd */ /* R7.0M-ALS#571102 */
          @w_other_st_tax_1a_status_cd, /*593964-591400*/
-         0,                            /*651802-614209*/ 
+         0,                            /*651802-614209*/
          '',                           /* hire_act_status_code 703950 */
          @w_emp_workers_comp_class, ' ',0,0,0,0,'N')    /* 719749-719473 */ /* 1017861 - PA */ /* 1055162 - PR added 4 0's */ /*1024762 added 'N'*/
- 
-        if @@error <> 0 
+
+        if @@error <> 0
       begin
 --SYBSQL         Raiserror 500011 'Error on emp_us_tax_authority for auth 4'
-          raiserror ('500011 Error on emp_us_tax_authority for auth 4',16,0) 
+          raiserror ('500011 Error on emp_us_tax_authority for auth 4',16,0)
         rollback transaction
         return
       end
       end /* if (rtrim(@p_tax_authority_4) IS NOT NULL AND rtrim(@p_tax_authority_4)!='') */
 
-   if (rtrim(@p_tax_authority_5) IS NOT NULL AND rtrim(@p_tax_authority_5)!='')    
+   if (rtrim(@p_tax_authority_5) IS NOT NULL AND rtrim(@p_tax_authority_5)!='')
       begin
             select @w_tax_marital_status_code = @p_tax_marital_status_code
-            if @w_tax_marital_status_code = '2' 
+            if @w_tax_marital_status_code = '2'
       begin
              if @p_tax_authority_5 = 'GA' or
                  @p_tax_authority_5 = 'DC' or
@@ -2183,11 +2182,11 @@ if @p_employer_taxing_ctry_code = 'US'
                   else if @p_tax_authority_5 = 'WV'                 /* r71m-sol#582345 */
                   select @w_tax_marital_status_code = '6'     /* r71m-sol#582345 */
            end
-             else                                                   /* r71m-sol#582345 */     
-              begin                                                 /* r71m-sol#582345 */   
+             else                                                   /* r71m-sol#582345 */
+              begin                                                 /* r71m-sol#582345 */
                if @p_tax_authority_5 = 'WV'                         /* r71m-sol#582345 */
-                 select @w_tax_marital_status_code = '6'           /* r71m-sol#582345 */   
-              end                                                   /* r71m-sol#582345 */    
+                 select @w_tax_marital_status_code = '6'           /* r71m-sol#582345 */
+              end                                                   /* r71m-sol#582345 */
 
             IF @p_tax_authority_5 = 'CA' or
            @p_tax_authority_5 = 'HI' or
@@ -2198,7 +2197,7 @@ if @p_employer_taxing_ctry_code = 'US'
             ELSE
          select @w_sdi_status_code = '1'
 
-            if @p_tax_authority_5 = 'NJ' 
+            if @p_tax_authority_5 = 'NJ'
              begin
              select @w_other_st_tax_1_status_cd = '2'
                     select @w_other_st_tax_1a_status_cd ='2'  /*593964-591400*/
@@ -2207,7 +2206,7 @@ if @p_employer_taxing_ctry_code = 'US'
              select @w_other_st_tax_4_status_cd = '2'
              end
             else
-            if @p_tax_authority_5 = 'MT' 
+            if @p_tax_authority_5 = 'MT'
                begin
                     select @w_other_st_tax_1_status_cd = '2'
                        select @w_other_st_tax_1a_status_cd ='1'  /*593964-591400*/
@@ -2216,7 +2215,7 @@ if @p_employer_taxing_ctry_code = 'US'
                     select @w_other_st_tax_4_status_cd = ' '
                end
               else
-           if @p_tax_authority_5 = 'MA' 
+           if @p_tax_authority_5 = 'MA'
                  begin
                 select @w_other_st_tax_1_status_cd = ' '
                        select @w_other_st_tax_1a_status_cd ='1'  /*593964-591400*/
@@ -2234,26 +2233,26 @@ if @p_employer_taxing_ctry_code = 'US'
               end
 
              select @p_income_tax_calc_meth_cd = '01' /* 1055162 */
-             if @p_tax_authority_5 = 'PR' 
-			  begin                                   /* 1055162 */    
+             if @p_tax_authority_5 = 'PR'
+			  begin                                   /* 1055162 */
                Select @w_pr_resident_status_cd = '1'  /* 1055162,  @p_income_tax_calc_meth_cd = '11' */
-			  end                                     /* 1055162 */   
+			  end                                     /* 1055162 */
              else
-			  begin                                   /* 1055162 */ 
+			  begin                                   /* 1055162 */
 			   Select @w_pr_resident_status_cd = ' '  /* 1055162, @p_income_tax_calc_meth_cd = '01' */
               end                                     /* 1055162 */
 
              /* 1017861 begin */
              if substring(@p_tax_authority_5, 1, 3) = 'PAL' or
                 substring(@p_tax_authority_5, 1, 3) = 'PLS'
-             begin 
+             begin
               select @p_income_tax_calc_meth_cd = '03'
              end
              /* 1017861 end */
 
              Select @w_allow_based_on_ded_amt = 0
 
-             if @p_tax_authority_5 = 'CA' 
+             if @p_tax_authority_5 = 'CA'
                 select @w_wage_plan_code = @p_wage_plan_code
              else
                 select @w_wage_plan_code = ' '
@@ -2264,7 +2263,7 @@ if @p_employer_taxing_ctry_code = 'US'
                 select @w_emp_health_ins_cvg_cd = ' '
 
              if @p_tax_authority_5 = 'WY'
-                begin 
+                begin
                   select @w_emp_workers_comp_cvg_cd = @p_emp_workers_comp_cvg_cd
                   select @w_emp_workers_comp_class  = @p_emp_workers_comp_class    /* 719749-719473 */
                 end
@@ -2272,21 +2271,21 @@ if @p_employer_taxing_ctry_code = 'US'
                 begin
                   select @w_emp_workers_comp_cvg_cd = ' '
                   select @w_emp_workers_comp_class  = ' '                          /* 719749-719473 */
-                end 
+                end
 
         /*********************************************************************
          529378 - Add Employee Indiana Advance Earned Income Credit
         **********************************************************************/
-      if @p_tax_authority_5 = 'IN' or @p_tax_authority_5 = 'WI' /*651802*/ 
+      if @p_tax_authority_5 = 'IN' or @p_tax_authority_5 = 'WI' /*651802*/
        begin
             select @w_other_st_tax_1_status_cd = '1'
        end
-      /*1545139 beging*/ 
-	  else if @p_tax_authority_5 = 'MI'                 
+      /*1545139 beging*/
+	  else if @p_tax_authority_5 = 'MI'
 	   begin
             select @w_other_st_tax_2_status_cd = '1'
        end
-      /*1545139 end*/ 
+      /*1545139 end*/
 
          insert into emp_us_tax_authority
          (emp_id,
@@ -2354,7 +2353,7 @@ if @p_employer_taxing_ctry_code = 'US'
          income_tax_nbr_joint_dep_exemp, /* 1055162 - PR */
          allowance_based_on_special_ded, /* 1055162 - PR */
          allowance_based_on_deds,	     /* 1055162 - PR */
-		 rec_chg_ind                     /* 1024762 */ 
+		 rec_chg_ind                     /* 1024762 */
 		 )
 
       values (@p_employee_id,
@@ -2394,14 +2393,14 @@ if @p_employer_taxing_ctry_code = 'US'
          0,'9',0,
          '0',                           /* us_resident_status_cd */ /* R7.0M-ALS#571102 */
          @w_other_st_tax_1a_status_cd,  /*593964-591400*/
-         0,                             /*651802-614209*/ 
+         0,                             /*651802-614209*/
          '',                            /* hire_act_status_code 703950 */
          @w_emp_workers_comp_class, ' ',0,0,0,0,'N')    /* 719749-719473 */ /* 1017861 - PA */ /* 1055162 - PR added 4 0's */ /*1024762 added 'N'*/
 
-        if @@error <> 0 
+        if @@error <> 0
          begin
 --SYBSQL              Raiserror 500012 'Error on emp_us_tax_authority for auth 5'
-          raiserror ('500012 Error on emp_us_tax_authority for auth 5',16,0) 
+          raiserror ('500012 Error on emp_us_tax_authority for auth 5',16,0)
              rollback transaction
            return
       end
@@ -2432,11 +2431,11 @@ Execute usp_ins_hemp_02     @p_employer_taxing_ctry_code,
                             @p_rc   OUTPUT,
                             @p_ret_mess OUTPUT
 
-if @p_rc > 500000 
+if @p_rc > 500000
     Begin
 --SYBSQL         Raiserror @p_rc @p_ret_mess
-         select @p_ret_mess = @p_rc + ' ' + @p_ret_mess 
-          raiserror (@p_ret_mess,16,0) 
+         select @p_ret_mess = @p_rc + ' ' + @p_ret_mess
+          raiserror (@p_ret_mess,16,0)
         rollback transaction
         return
     End
@@ -2455,13 +2454,13 @@ values
 
 Delete work_emp_pay_element_aud
  Where user_id              = @W_ACTION_USER
-   and action_date          = @W_ACTION_DATETIME 
-   and activity_action_code = 'HIREEMP' 
-   and emp_id               = @p_employee_id 
-   and empl_id              = @p_employer_id 
-   and pay_element_id       = @w_autopay_pay_element_id 
-   and eff_date             = @p_original_hire_date 
-/* END AUDIT SECTION ==========================================*/ 
+   and action_date          = @W_ACTION_DATETIME
+   and activity_action_code = 'HIREEMP'
+   and emp_id               = @p_employee_id
+   and empl_id              = @p_employer_id
+   and pay_element_id       = @w_autopay_pay_element_id
+   and eff_date             = @p_original_hire_date
+/* END AUDIT SECTION ==========================================*/
 /* Set up the work employee pay element audit table            */
 /* ============================================================*/
 
@@ -2480,10 +2479,10 @@ values
 
 Delete work_emp_employment_aud
  Where user_id              = @W_ACTION_USER
-   and action_date          = @W_ACTION_DATETIME 
-   and activity_action_code = 'HIREEMP' 
-   and emp_id               = @p_employee_id 
-   and eff_date             = @p_original_hire_date 
+   and action_date          = @W_ACTION_DATETIME
+   and activity_action_code = 'HIREEMP'
+   and emp_id               = @p_employee_id
+   and eff_date             = @p_original_hire_date
 
 insert into work_emp_assignment_aud
    (user_id,activity_action_code,action_date,emp_id,assigned_to_code,job_or_pos_id,
@@ -2495,12 +2494,12 @@ values
 
 Delete work_emp_assignment_aud
  Where user_id              = @W_ACTION_USER
-   and activity_action_code = 'HIREEMP' 
-   and action_date          = @W_ACTION_DATETIME 
-   and emp_id               = @p_employee_id 
-   and assigned_to_code     = @p_assigned_to_code 
-   and job_or_pos_id        = @p_job_or_pos_id 
-   and eff_date             = @p_original_hire_date 
+   and activity_action_code = 'HIREEMP'
+   and action_date          = @W_ACTION_DATETIME
+   and emp_id               = @p_employee_id
+   and assigned_to_code     = @p_assigned_to_code
+   and job_or_pos_id        = @p_job_or_pos_id
+   and eff_date             = @p_original_hire_date
 
 insert into work_emp_status_aud
    (user_id, activity_action_code, action_date, emp_id,status_change_date,
@@ -2511,11 +2510,11 @@ values
 
 Delete work_emp_status_aud
  Where user_id              = @W_ACTION_USER
-   and action_date          = @W_ACTION_DATETIME 
-   and activity_action_code = 'HIREEMP' 
-   and emp_id               = @p_employee_id 
-   and status_change_date   = @p_original_hire_date 
-/* END AUDIT SECTION ==========================================*/ 
+   and action_date          = @W_ACTION_DATETIME
+   and activity_action_code = 'HIREEMP'
+   and emp_id               = @p_employee_id
+   and status_change_date   = @p_original_hire_date
+/* END AUDIT SECTION ==========================================*/
 /* Set up the work audit tables                            */
 /* ============================================================*/
 
@@ -2525,14 +2524,14 @@ commit transaction
 *   sol# 172180 - moved following code from before audit section  *
 *******************************************************************/
 --if @p_rc > 1
---    Select @p_rc, @w_complete_ind, @w_can_tax_auth_complete 
+--    Select @p_rc, @w_complete_ind, @w_can_tax_auth_complete
 --else
 --    Select @w_autopay_rtn, @w_complete_ind, @w_can_tax_auth_complete
 /******************************************************************/
 
- 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_ins_hemp] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_ins_hemp] TO  SCHEMA OWNER
 GO

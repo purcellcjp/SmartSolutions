@@ -19,7 +19,7 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 
 	--DECLARE @ret int EXEC @ret = sp_dbs_authenticate if @ret != 0 RETURN
 	-- Exec [dbo].[usp_sel_employee_events] 'DBS'
-	--WAITFOR DELAY '00:01';  
+	--WAITFOR DELAY '00:01';
 	-- DECLARE @USER_ID			char(30)
 	DECLARE @w_activity_date	datetime
 	DECLARE @w_inputfile		varchar(254)
@@ -29,32 +29,32 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 	DECLARE @w_userid			varchar(30)
 	DECLARE @w_batchname		varchar(08)
 	DECLARE @w_qualifier		varchar(30)
- 
+
 	--SET @USER_ID = 'JGROSS'
 	-- Find the Batch name and qualifer for the job running the Bulk Copy
     SELECT	@w_userid		=	[psc_userid]
 		   ,@w_batchname	=	[psc_batchname]
 		   ,@w_qualifier	=	[psc_qualifier]
-      FROM [DBSpscb].[dbo].[psc_step] 
-     WHERE [psc_userid]		= @USER_ID 
+      FROM [DBSpscb].[dbo].[psc_step]
+     WHERE [psc_userid]		= @USER_ID
        AND [psc_pgm_parms]	= 'ghr_EMPLOYEE_EVENTS'
-	
+
 	SET		@w_activity_status	= '00'
 	SET		@w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
-	
+
 	SELECT  @w_wflow_userid = @USER_ID
-	
+
 	SELECT  @w_inputfile	=	batch_parameter_3
-     --       @w_wflow_userid		=	batch_parameter_7	
+     --       @w_wflow_userid		=	batch_parameter_7
 	FROM	DBSentp.dbo.batch_parameters
 	WHERE   batch_parameter_key = 'ghr_EMPLOYEE_EVENTS'
-	
+
 	--SELECT @w_inputfile,@w_wflow_userid,@activity_status
-	
+
 	INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
-    SELECT	
+    SELECT
 		   [event_id_01]
-		 , [emp_id_01] 
+		 , [emp_id_01]
 		 , [eff_date_01]
 		 , [first_name_01]
 		 , [first_middle_name_01]
@@ -78,22 +78,22 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 		 , [employment_info_chg_reason_cd_03]
 		 , [emp_location_code_03]
 		 , [emp_status_code_5]
-		 , [reason_code_5]	
-		 , [emp_expected_return_date_5]	
-		 , [pay_through_date_5]	
-		 , [emp_death_date_5]	
-		 , [consider_for_rehire_ind_5]	
-		 , [pay_element_desc_06]	
+		 , [reason_code_5]
+		 , [emp_expected_return_date_5]
+		 , [pay_through_date_5]
+		 , [emp_death_date_5]
+		 , [consider_for_rehire_ind_5]
+		 , [pay_element_desc_06]
 		 , [emp_calculation_06]
 		 , @w_activity_date		As activity_date
 		 , @w_wflow_userid		As activity_user
-		 , @w_activity_status		As activity_status 
+		 , @w_activity_status		As activity_status
     FROM DBShrpn.dbo.ghr_employee_events ee
     WHERE NOT EXISTS (SELECT * FROM DBShrpn.dbo.ghr_employee_events_aud t
                        WHERE t.[event_id_01]	=   ee.[event_id_01]
                          AND t.[emp_id_01]		=	ee.[emp_id_01]
                          AND t.[activity_date]	=	@w_activity_date)
-                         
+
 
 	IF  EXISTS (SELECT [event_id_01] FROM DBShrpn.dbo.ghr_employee_events WHERE [event_id_01] = '01' )
 		BEGIN
@@ -104,7 +104,7 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_wflow_userid,
 					@w_activity_status,
 					@w_status
-		END  
+		END
 
 
 
@@ -117,12 +117,12 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_wflow_userid,
 					@w_activity_status,
 					@w_status
-		END 
-	
-	
-	 
-	
-	
+		END
+
+
+
+
+
 	IF  EXISTS (SELECT [event_id_01] FROM DBShrpn.dbo.ghr_employee_events WHERE [event_id_01] = '03' )
 		BEGIN
 			EXEC	DBShrpn.dbo.usp_perform_transfer @w_userid,
@@ -133,8 +133,8 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_activity_status,
 					@w_status
 		END
-		
- 				
+
+
 
 	IF  EXISTS (SELECT [event_id_01] FROM DBShrpn.dbo.ghr_employee_events WHERE [event_id_01] = '04' )
 		BEGIN
@@ -145,7 +145,7 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_wflow_userid,
 					@w_activity_status,
 					@w_status
-		END    
+		END
 
 	IF  EXISTS (SELECT [event_id_01] FROM DBShrpn.dbo.ghr_employee_events WHERE [event_id_01] = '05' )
 		BEGIN
@@ -156,12 +156,12 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_wflow_userid,
 					@w_activity_status,
 					@w_status
-		END 				
+		END
 
-		
+
 	IF  EXISTS (SELECT [event_id_01] FROM DBShrpn.dbo.ghr_employee_events WHERE [event_id_01] = '06' )
 		BEGIN
-			EXEC DBShrpn.dbo.usp_ins_pay_element 
+			EXEC DBShrpn.dbo.usp_ins_pay_element
                     @w_userid,
 					@w_batchname,
 					@w_qualifier,
@@ -169,17 +169,17 @@ CREATE procedure [dbo].[usp_sel_employee_events]
 					@w_wflow_userid,
 					@w_activity_status,
 					@w_status
-		END 
+		END
 
 	 DELETE [DBShrpn].[dbo].[ghr_employee_events]
- 
 
-    
+
+
 End
 
 
 
- 
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_sel_employee_events] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_sel_employee_events] TO  SCHEMA OWNER
 GO
