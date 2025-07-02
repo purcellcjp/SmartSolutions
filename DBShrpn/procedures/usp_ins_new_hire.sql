@@ -937,7 +937,7 @@ BEGIN
 
       	--- If blank, then default: SEMI ---
 
-        SELECT CASE
+        
         IF @pay_frequency_code = ''	SELECT	@pay_frequency_code		=	'SEMI'
 
         IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52
