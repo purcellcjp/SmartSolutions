@@ -309,6 +309,7 @@ BEGIN
 
     WHILE (@cnt <= @max)
     BEGIN
+
         SELECT  @w_fatal_error = '0'
 
         SELECT  @event_id_01						=	event_id_01,
@@ -383,7 +384,7 @@ BEGIN
 
                 SELECT  @w_fatal_error = '5'
 
-                - GOTO BYPASS_EMPLOYEE
+                -- GOTO BYPASS_EMPLOYEE
             END
 
             --
@@ -704,7 +705,8 @@ BEGIN
         FROM DBShrpn.dbo.pay_group
         WHERE pay_group_id = @pay_group_id_03
 
---
+/*  -- CJP N/A to GOSL
+
         IF @pay_frequency_code <> 'SEMI'
             BEGIN
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
@@ -736,6 +738,7 @@ BEGIN
 
             END
 
+*/
 
         IF  @w_fatal_error = '5'
             GOTO BYPASS_EMPLOYEE
@@ -746,7 +749,7 @@ BEGIN
         --
 
         --
-        --	Default the correct job or possition code based on the type of employee
+        --	Default the correct job or position code based on the type of employee
         --
         IF EXISTS(SELECT * FROM DBShrpn.dbo.employer WHERE empl_id = @empl_id_01 AND name like 'Pen%')
             SELECT	@w_assigned_to_code		=	'J',
@@ -937,39 +940,38 @@ BEGIN
 
       	--- If blank, then default: SEMI ---
 
-        
-        IF @pay_frequency_code = ''	SELECT	@pay_frequency_code		=	'SEMI'
 
-        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52
-        ELSE
-        IF	@pay_frequency_code	= 'BIWK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 26
-        ELSE
-        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 24
-        ELSE
-        IF	@pay_frequency_code	= 'MONTH'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 12
+        IF @pay_frequency_code = ''
+            SET @pay_frequency_code = 'SEMI'
 
-        SELECT	@i_hourly_rate_amt	=	CAST(@annual_salary AS MONEY) / @i_yearly_std_work_hrs
+        SELECT @i_yearly_std_work_hrs = CASE @pay_frequency_code
+                                          WHEN 'WEEK' THEN @i_standard_work_hrs * 52
+                                          WHEN 'BIWK' THEN @i_standard_work_hrs * 26
+                                          WHEN 'MONTH' THEN @i_standard_work_hrs * 12
+                                          ELSE @i_standard_work_hrs * 24    -- SEMI
+                                        END
 
-        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 52
-        ELSE
-        IF	@pay_frequency_code	= 'BIWK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 26
-        ELSE
-        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 24
-        ELSE
-        IF	@pay_frequency_code	= 'MONTH'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 12
+        SELECT	@i_hourly_rate_amt = CAST(@annual_salary AS MONEY) / @i_yearly_std_work_hrs
+
+        SELECT @i_period_amt = CASE @pay_frequency_code
+                                          WHEN 'WEEK' THEN CAST(@annual_salary_amt_01 AS MONEY) / 52
+                                          WHEN 'BIWK' THEN CAST(@annual_salary_amt_01 AS MONEY) / 26
+                                          WHEN 'MONTH' THEN CAST(@annual_salary_amt_01 AS MONEY) / 12
+                                          ELSE CAST(@annual_salary_amt_01 AS MONEY) / 24    -- SEMI
+                                        END
+
 
         UPDATE	DBShrpn.dbo.emp_assignment
-            SET	annual_salary_amt	=	CAST(@annual_salary_amt_01 AS MONEY),
-                hourly_pay_rate		=	@i_hourly_rate_amt,
-                pd_salary_amt		=	@i_period_amt,
-                pd_salary_tm_pd_id  = 	@pay_frequency_code
-        WHERE	emp_id				=	@i_emp_id
-            AND	assigned_to_code	=	@i_assigned_to_code
-            AND	job_or_pos_id		=	@i_job_or_pos_id
-            AND	eff_date			=	@i_eff_date
-            AND	next_eff_date		=	@i_next_eff_date
-            AND	prior_eff_date		=	@i_prior_eff_date
-
+        SET	annual_salary_amt  = CAST(@annual_salary_amt_01 AS MONEY)
+          , hourly_pay_rate    = @i_hourly_rate_amt
+          , pd_salary_amt      = @i_period_amt
+          , pd_salary_tm_pd_id = @pay_frequency_code
+        WHERE emp_id = @i_emp_id
+          AND assigned_to_code	= @i_assigned_to_code
+          AND job_or_pos_id		= @i_job_or_pos_id
+          AND eff_date			= @i_eff_date
+          AND next_eff_date		= @i_next_eff_date
+          AND prior_eff_date    = @i_prior_eff_date
 
 
         SELECT @ee_emp_id         = emp_id
@@ -1049,6 +1051,16 @@ BEGIN
     -- Notify the users of all the issues
     --
 
+
+declare @v_tbl_message_master TABLE
+    ( num             tinyint           NOT NULL
+    , msg_id          char(10)          NOT NULL
+    , severity_cd     tinyint           NOT NULL
+    , msg_text        varchar(255)      NOT NULL
+    , msg_text_2      varchar(255)      NOT NULL
+    , msg_text_3      varchar(255)      NOT NULL
+    , is_header       char(1)           NOT NULL
+    )
 
 
     --
