@@ -75,50 +75,7 @@ BEGIN
     --exec @ret = sp_dbs_authenticate
     --if @ret != 0 return -1
 
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_employee_events_temp2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_employee_events_temp2]
 
-
-    CREATE TABLE [dbo].[ghr_employee_events_temp2](
-        [ID]									[int]	IDENTITY(1,1) NOT NULL,
-        [event_id_01]							[char](02) NULL,
-        [emp_id_01]								[char](15) NULL,
-        [eff_date_01]							[char](10) NULL,
-        [first_name_01]							[char](25) NULL,
-        [first_middle_name_01]					[char](25) NULL,
-        [last_name_01]							[char](30) NULL,
-        [empl_id_01]							[char](10) NULL,
-        [national_id_1_type_code_01]			[char](05) NULL,
-        [national_id_1_01]						[char](20) NULL,
-        [organization_group_id_01]				[char](05) NULL,
-        [organization_chart_name_01]			[varchar](64) NULL,
-        [organization_unit_name_01]				[varchar](240) NULL,
-        [emp_status_classn_code_01]				[char](02) NULL,
-        [position_title_01]						[char](60) NULL,
-        [employment_type_code_01]				[char](05) NULL,
-        [annual_salary_amt_01]					[char](15) NULL,
-        [begin_date_02]							[char](10) NULL,
-        [end_date_02]							[char](10) NULL,
-        [pay_status_code_03]					[char](01) NULL,
-        [pay_group_id_03]						[char](10) NULL,
-        [pay_element_ctrl_grp_id_03]			[char](10) NULL,
-        [time_reporting_meth_code_03]			[char](01) NULL,
-        [employment_info_chg_reason_cd_03]		[char](05) NULL,
-        [emp_location_code_03]					[char](10) NULL,
-        [emp_status_code_5]						[char](02) NULL,
-        [reason_code_5]							[char](02) NULL,
-        [emp_expected_return_date_5]			[char](10) NULL,
-        [pay_through_date_5]					[char](10) NULL,
-        [emp_death_date_5]						[char](10) NULL,
-        [consider_for_rehire_ind_5]				[char](01) NULL,
-        [pay_element_desc_06]					[char](20) NULL,
-        [emp_calculation_06]					[char](15) NULL
-    )
-
-    INSERT INTO DBShrpn.dbo.ghr_employee_events_temp2    ---#t0
-    SELECT *
-    FROM DBShrpn.dbo.ghr_employee_events
-    WHERE [event_id_01] = '02'
 
     DECLARE @max			INT
     DECLARE @maxx			CHAR(06)
@@ -170,49 +127,55 @@ BEGIN
 
 
 
-    SET @cnt = 1
+    -- Set first loop number
+    SELECT @cnt = MIN(ID)
+    FROM #ghr_employee_events_temp
+    WHERE (event_id_01 = '02')
 
-    SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_employee_events_temp2
+    -- Set last ID number
+    SELECT @max = COUNT(ID)
+    FROM #ghr_employee_events_temp
+    WHERE (event_id_01 = '02')
 
-    DELETE DBShrpn.dbo.ghr_msg_tbl
+    DELETE #tbl_ghr_msg
 
     WHILE (@cnt <= @max)
     BEGIN
         SELECT  @w_fatal_error = '0'
 
-        SELECT  @event_id_01						=	event_id_01,
-                @emp_id_01							=	emp_id_01,
-                @eff_date_01						=	eff_date_01,
-                @first_name_01						=	first_name_01,
-                @first_middle_name_01				=	first_middle_name_01,
-                @last_name_01						=	last_name_01,
-                @empl_id_01							=	empl_id_01,
-                @national_id_1_type_code_01			=	national_id_1_type_code_01,
-                @national_id_1_01					=	national_id_1_01,
-                @organization_group_id_01			=	organization_group_id_01,
-                @organization_chart_name_01			=	organization_chart_name_01,
-                @organization_unit_name_01			=	organization_unit_name_01,
-                @emp_status_classn_code_01			=	emp_status_classn_code_01,
-                @position_title_01					=	position_title_01,
-                @employment_type_code_01			=	employment_type_code_01,
-                @annual_salary_amt_01				=	annual_salary_amt_01,
-                @begin_date_02						=	begin_date_02,
-                @end_date_02						=	end_date_02,
-                @pay_status_code_03					=	pay_status_code_03,
-                @pay_group_id_03					=	pay_group_id_03,
-                @pay_element_ctrl_grp_id_03			=	pay_element_ctrl_grp_id_03,
-                @time_reporting_meth_code_03		=	time_reporting_meth_code_03,
-                @employment_info_chg_reason_cd_03	=	employment_info_chg_reason_cd_03,
-                @emp_location_code_03				=	emp_location_code_03,
-                @emp_status_code_5					=	emp_status_code_5,
-                @reason_code_5						=	reason_code_5,
-                @emp_expected_return_date_5			=	emp_expected_return_date_5,
-                @pay_through_date_5					=	pay_through_date_5,
-                @emp_death_date_5					=	emp_death_date_5,
-                @consider_for_rehire_ind_5			=	consider_for_rehire_ind_5,
-                @pay_element_desc_06				=	pay_element_desc_06,
-                @emp_calculation_06					=	emp_calculation_06
-        FROM DBShrpn.dbo.ghr_employee_events_temp2 t
+        SELECT  @event_id_01						=	t.event_id_01,
+                @emp_id_01							=	t.emp_id_01,
+                @eff_date_01						=	t.eff_date_01,
+                @first_name_01						=	t.first_name_01,
+                @first_middle_name_01				=	t.first_middle_name_01,
+                @last_name_01						=	t.last_name_01,
+                @empl_id_01							=	t.empl_id_01,
+                @national_id_1_type_code_01			=	t.national_id_1_type_code_01,
+                @national_id_1_01					=	t.national_id_1_01,
+                @organization_group_id_01			=	t.organization_group_id_01,
+                @organization_chart_name_01			=	t.organization_chart_name_01,
+                @organization_unit_name_01			=	t.organization_unit_name_01,
+                @emp_status_classn_code_01			=	t.emp_status_classn_code_01,
+                @position_title_01					=	t.position_title_01,
+                @employment_type_code_01			=	t.employment_type_code_01,
+                @annual_salary_amt_01				=	t.annual_salary_amt_01,
+                @begin_date_02						=	t.begin_date_02,
+                @end_date_02						=	t.end_date_02,
+                @pay_status_code_03					=	t.pay_status_code_03,
+                @pay_group_id_03					=	t.pay_group_id_03,
+                @pay_element_ctrl_grp_id_03			=	t.pay_element_ctrl_grp_id_03,
+                @time_reporting_meth_code_03		=	t.time_reporting_meth_code_03,
+                @employment_info_chg_reason_cd_03	=	t.employment_info_chg_reason_cd_03,
+                @emp_location_code_03				=	t.emp_location_code_03,
+                @emp_status_code_5					=	t.emp_status_code_5,
+                @reason_code_5						=	t.reason_code_5,
+                @emp_expected_return_date_5			=	t.emp_expected_return_date_5,
+                @pay_through_date_5					=	t.pay_through_date_5,
+                @emp_death_date_5					=	t.emp_death_date_5,
+                @consider_for_rehire_ind_5			=	t.consider_for_rehire_ind_5,
+                @pay_element_desc_06				=	t.pay_element_desc_06,
+                @emp_calculation_06					=	t.emp_calculation_06
+        FROM #ghr_employee_events_temp t
         WHERE t.ID = @cnt
 
         --
@@ -290,7 +253,7 @@ BEGIN
                 AND emp_id_01		=	@emp_id_01
                 AND event_id_01		=	'02'
 
-            INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+            INSERT INTO #tbl_ghr_msg
             SELECT 'U00027'					As msg_id,
                     @eff_date_01				As msg_p1,
                     @emp_id_01					As msg_p2,
@@ -327,7 +290,7 @@ BEGIN
                 AND emp_id_01		=	@emp_id_01
                 AND event_id_01		=	'02'
 
-                INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+                INSERT INTO #tbl_ghr_msg
                 SELECT 'U00035'					As msg_id,
                     @emp_id_01					As msg_p1,
                     ''							As msg_p2,
@@ -362,7 +325,7 @@ BEGIN
                 AND emp_id_01		=	@emp_id_01
                 AND event_id_01		=	'02'
 
-                INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+                INSERT INTO #tbl_ghr_msg
                 SELECT 'U00012'					As msg_id,
                     @emp_id_01					As msg_p1,
                     ''							As msg_p2,
@@ -399,7 +362,7 @@ BEGIN
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		=	'02'
 
-                INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+                INSERT INTO #tbl_ghr_msg
                 SELECT 'U00041'					As msg_id,
                         @emp_id_01					As msg_p1,
                         ''							As msg_p2,
@@ -436,7 +399,7 @@ BEGIN
             AND emp_id_01		=	@emp_id_01
             AND event_id_01		=	'02'
 
-            INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+            INSERT INTO #tbl_ghr_msg
                 SELECT 'U00020'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @pay_group_id_03			As msg_p2,
@@ -479,7 +442,7 @@ BEGIN
             AND emp_id_01		=	@emp_id_01
             AND event_id_01		=	'02'
 
-            INSERT INTO DBShrpn.dbo.ghr_msg_tbl
+            INSERT INTO #tbl_ghr_msg
                 SELECT 'U00048'					As msg_id,
                         @pay_group_id_03			As msg_p1,
                         @emp_id_01              	As msg_p2,
@@ -729,11 +692,24 @@ BEGIN
         --
         -- Update the position since could be a new position with a new salary
         --
-        SELECT @individual_id = individual_id FROM [DBShrpn].[dbo].[employee] WHERE emp_id = @emp_id_01
+        SELECT @individual_id = individual_id
+        FROM [DBShrpn].[dbo].[employee]
+        WHERE emp_id = @emp_id_01
 
-        UPDATE	[DBShrpn].[dbo].[individual_personal]
-            SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
-        WHERE individual_id	=	@individual_id
+
+        -- UPDATE	[DBShrpn].[dbo].[individual_personal]
+        -- SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
+        -- WHERE individual_id	=	@individual_id
+        ---------------------------------------------------------------------------
+        -- GOSL update NIC and Tax Code
+        ---------------------------------------------------------------------------
+        -- CJP 7/7/2025
+        UPDATE	DBShrpn.dbo.individual_personal
+        SET	user_ind_1 = @nic_flag
+          , user_ind_2 = @tax_flag
+        WHERE (individual_id = @individual_id)
+
+
 
         --
         --
@@ -890,7 +866,7 @@ BEGIN
 
     INSERT INTO DBShrpn.dbo.ghr_message_temp_2
     SELECT *
-    FROM DBShrpn.dbo.ghr_msg_tbl
+    FROM #tbl_ghr_msg
     WHERE msg_id = 'U00012'
 
     SET @cnt = 1
@@ -958,7 +934,7 @@ BEGIN
 
     INSERT INTO DBShrpn.dbo.ghr_message_temp_2
     SELECT *
-    FROM DBShrpn.dbo.ghr_msg_tbl
+    FROM #tbl_ghr_msg
     WHERE msg_id = 'U00020'
 
     SET @cnt = 1
@@ -1022,7 +998,7 @@ BEGIN
 
     INSERT INTO DBShrpn.dbo.ghr_message_temp_2
     SELECT *
-    FROM DBShrpn.dbo.ghr_msg_tbl
+    FROM #tbl_ghr_msg
     WHERE msg_id = 'U00027'
 
     SET @cnt = 1
@@ -1091,7 +1067,7 @@ BEGIN
 
     INSERT INTO DBShrpn.dbo.ghr_message_temp_2
     SELECT *
-    FROM DBShrpn.dbo.ghr_msg_tbl
+    FROM #tbl_ghr_msg
     WHERE msg_id = 'U00035'
 
     SET @cnt = 1
@@ -1161,7 +1137,7 @@ BEGIN
 
     INSERT INTO DBShrpn.dbo.ghr_message_temp_2
     SELECT *
-    FROM DBShrpn.dbo.ghr_msg_tbl
+    FROM #tbl_ghr_msg
     WHERE msg_id = 'U00041'
 
     SET @cnt = 1
