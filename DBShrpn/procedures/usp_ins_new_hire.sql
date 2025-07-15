@@ -89,6 +89,8 @@ BEGIN
     DECLARE @msg_cnt		INT
     DECLARE @individual_id	CHAR(10)
     DECLARE @pay_frequency_code		char(05)
+    DECLARE @annualizing_factor float
+
 
     -- Fields required for new hire
     --DECLARE @w_employer_id                          char(10)        = ''
@@ -100,7 +102,7 @@ BEGIN
     -- DECLARE @w_last_name                            char(30)        = ''
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
-    -- DECLARE @w_emp_display_name                     char(45)        = ''
+    DECLARE @w_emp_display_name                     char(45)        = ''
     DECLARE @w_birth_date                           datetime        = '29991231'
     DECLARE @w_sex_code                             char(01)        = ''
     DECLARE @w_marital_status_code_1                char(05)        = ''
@@ -120,9 +122,9 @@ BEGIN
     DECLARE @w_addr_1_ctry_sub_entity_code          char(09)        = ''
     DECLARE @w_addr_1_postal_code                   char(09)        = ''
     DECLARE @w_addr_1_country_code                  char(02)        = ''
-    DECLARE @w_assigned_to_code                     char(01)        = ''
-    DECLARE @w_job_or_pos_id                        char(10)        = '0000-001'
-    -- DECLARE @w_organization_chart_name              char(64)        = 'GHR-HR'
+    DECLARE @w_assigned_to_code                     char(01)        = 'P'
+    DECLARE @w_job_or_pos_id                        char(10)        = ''
+    DECLARE @w_organization_chart_name              char(64)        = 'HRGOSL'  -- not currently being used
     -- DECLARE @w_organization_unit_name               char(240)       = '99999'
     -- DECLARE @w_emp_status_classn_code               char(02)        = '01'
     DECLARE @w_active_reason_code                   char(05)        = ''
@@ -136,10 +138,11 @@ BEGIN
     DECLARE @w_base_rate_tbl_id                     char(10)        = ''
     DECLARE @w_base_rate_tbl_entry_code             char(08)        = ''
     DECLARE @w_exception_rate_ind                   char(01)        = 'N'
+
     DECLARE @w_hourly_pay_rate                      float           = 0.00
     DECLARE @w_pd_salary_amt                        money           = 0.00
     DECLARE @w_pd_salary_tm_pd_id                   char(05)        = 'MONTH'
-    -- DECLARE @w_annual_salary_amt                    money           = 0.00
+    DECLARE @w_annual_salary_amt                    money           = 0.00
     DECLARE @w_pay_basis_code                       char(01)        = '9'
     DECLARE @w_curr_code                            char(03)        = 'XCD'
     DECLARE @w_work_tm_code                         char(01)        = 'F'
@@ -149,7 +152,7 @@ BEGIN
     DECLARE @w_overtime_status_code                 char(02)        = '99'
     DECLARE @w_pay_on_reported_hrs_ind              char(01)        = 'N'
     DECLARE @w_work_shift_code                      char(05)        = ''
-    -- DECLARE @w_tax_entity_id                        char(10)        = 'TE1-C01'
+    DECLARE @w_tax_entity_id                        char(10)        = 'TE1-C01'
     -- DECLARE @w_time_reporting_meth_code             char(01)        = '1'
     -- DECLARE @w_pay_group_id                         char(10)        = 'ADMP'
     DECLARE @w_clock_nbr                            char(10)        = ''
@@ -736,71 +739,90 @@ BEGIN
         --
         --	Default the correct job or position code based on the type of employee
         --
-        IF EXISTS(SELECT * FROM DBShrpn.dbo.employer WHERE empl_id = @empl_id_01 AND name like 'Pen%')
-            SELECT	@w_assigned_to_code		=	'J',
-                    @w_job_or_pos_id		=	'PENSIONER',
-                    @w_pd_salary_tm_pd_id	=	'SEMI'
-        ELSE
-            SELECT	@w_assigned_to_code		=	'P',
-                    @w_job_or_pos_id		=	'99999',
-                    @w_pd_salary_tm_pd_id	=	'SEMI'
+
+        ---------------------------------------------------------------------------
+        -- Determine Emp Assignment Position - Not provided by HCM
+        ---------------------------------------------------------------------------
+        IF (CHARINDEX'VENUS', (@@SERVERNAME) > 0)
+            IF EXISTS(
+                      SELECT 1
+                      FROM DBShrpn.dbo.employer
+                      WHERE empl_id = @empl_id_01
+                        AND (name LIKE 'PEN%')
+                     )
+                SET @w_job_or_pos_id = 'PEN-0001'
+
+            ELSE
+                SET @w_job_or_pos_id = 'GEN-0001'
+        ELSE   -- Ganymede FORTHCM
+            SET @w_job_or_pos_id = 'FORT-0001'
 
 
-        --
-        -- Find the tax entity
-        --
-        SELECT @tax_entity_id = tax_entity_id
+        ---------------------------------------------------------------------------
+        -- Lookup tax entity
+        ---------------------------------------------------------------------------
+        SELECT @w_tax_entity_id = tax_entity_id
         FROM DBShrpn.dbo.empl_tax_entity
         WHERE empl_id = @empl_id_01
 
-        --
-        -- Check to see if the person is over 16 years of age
-        --
 
-        --
-        -- Obtain the next individual number
-        --
-
+        ---------------------------------------------------------------------------
+        -- Lookup next individual id
+        ---------------------------------------------------------------------------
+        -- Needed for proc usp_ins_hemp
         SELECT @ind_idx = CONVERT(char(10),gen_indiv_id_last_nbr + 1)
         FROM DBSentp.dbo.entp_human_resources_plcy  with (holdlock)
 
+        -- Set next individual id
         UPDATE DBSentp.dbo.entp_human_resources_plcy
-        SET gen_indiv_id_last_nbr = CONVERT(float,@ind_idx)
+        SET gen_indiv_id_last_nbr = CONVERT(float, @ind_idx)
         WHERE display_name_format = 'LNMCOMFNMFMNSMN'
 
 
-        SELECT @annual_salary = CAST(@annual_salary_amt_01 As Money)
-        SELECT @display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
-
-        --	SELECT @pay_frequency_code	= pay_frequency_code
-        --      FROM DBShrpn.dbo.pay_group WHERE pay_group_id = @pay_group_id_03
-
-      	--- If blank, then default: SEMI ---
+        ---------------------------------------------------------------------------
+        -- Calculate Annual Salary from Pay rate
+        ---------------------------------------------------------------------------
 
 
-        IF @pay_frequency_code = ''
-            SET @pay_frequency_code = 'SEMI'
+        -- GOSL will only provide hourly rate
+        SET @w_hourly_pay_rate = CAST(@annual_salary AS MONEY)
+        -- GOSL does not use tm_pd_polict correctly
+        -- Calculate Annual Salary = hourly rate * 2080
+        SET @w_annual_salary_amt = ROUND(@w_hourly_pay_rate * 2080.00, 2)
 
-        SELECT @i_yearly_std_work_hrs = CASE @pay_frequency_code
-                                          WHEN 'WEEK' THEN @i_standard_work_hrs * 52
-                                          WHEN 'BIWK' THEN @i_standard_work_hrs * 26
-                                          WHEN 'MONTH' THEN @i_standard_work_hrs * 12
-                                          ELSE @i_standard_work_hrs * 24    -- SEMI
-                                        END
 
-        SELECT	@i_hourly_rate_amt = CAST(@annual_salary AS MONEY) / @i_yearly_std_work_hrs
-
-        SELECT @i_period_amt = CASE @pay_frequency_code
-                                          WHEN 'WEEK' THEN CAST(@annual_salary_amt_01 AS MONEY) / 52
-                                          WHEN 'BIWK' THEN CAST(@annual_salary_amt_01 AS MONEY) / 26
-                                          WHEN 'MONTH' THEN CAST(@annual_salary_amt_01 AS MONEY) / 12
-                                          ELSE CAST(@annual_salary_amt_01 AS MONEY) / 24    -- SEMI
-                                        END
+        SET @w_emp_display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
 
 
 
+        ---------------------------------------------------------------------------
+        -- Lookup Pay Frequency Code
+        ---------------------------------------------------------------------------
+        -- GOSL not using tm_pd_policy
+        SELECT @pay_frequency_code	= pay_frequency_code
+             , @annualizing_factor = annualizing_factor
+        FROM DBShrpn.dbo.pay_group
+        WHERE pay_group_id = @pay_group_id_03
+
+        IF (@pay_frequency_code = 'MONTH')
+            SELECT @w_pd_salary_amt                 = @annual_salary / @annualizing_factor
+                 , @w_pd_salary_tm_pd_id            = @pay_frequency_code
+                 , @w_standard_work_pd_id           = 'WEEK'
+                 , @w_standard_work_hrs             = 40.0
+                 , @w_standard_daily_work_hrs       = 8.0
+        ELSE    -- BIWK
+            SELECT @w_pd_salary_amt                 = 0.00
+                 , @w_pd_salary_tm_pd_id            = ''
+                 , @w_standard_work_pd_id           = @pay_frequency_code
+                 , @w_standard_work_hrs             = 40.0
+                 , @w_standard_daily_work_hrs       = 8.0
 
 
+
+
+        ---------------------------------------------------------------------------
+        -- Create New Hire
+        ---------------------------------------------------------------------------
         EXEC DBShrpn.dbo.usp_ins_hemp
               @p_employer_id                       = @empl_id_01
             , @p_employee_id                       = @emp_id_01
@@ -811,7 +833,7 @@ BEGIN
             , @p_last_name                         = @last_name_01
             , @p_preferred_name                    = @w_preferred_name
             , @p_name_suffix                       = @w_name_suffix
-            , @p_emp_display_name                  = @display_name
+            , @p_emp_display_name                  = @w_emp_display_name
             , @p_birth_date                        = @w_birth_date
             , @p_sex_code                          = @w_sex_code
             , @p_marital_status_code_1             = @w_marital_status_code_1
@@ -847,10 +869,12 @@ BEGIN
             , @p_base_rate_tbl_id                  = @w_base_rate_tbl_id
             , @p_base_rate_tbl_entry_code          = @w_base_rate_tbl_entry_code
             , @p_exception_rate_ind                = @w_exception_rate_ind
+
             , @p_hourly_pay_rate                   = @w_hourly_pay_rate
             , @p_pd_salary_amt                     = @w_pd_salary_amt
             , @p_pd_salary_tm_pd_id                = @w_pd_salary_tm_pd_id
-            , @p_annual_salary_amt                 = @annual_salary
+            , @p_annual_salary_amt                 = @w_annual_salary_amt
+
             , @p_pay_basis_code                    = @w_pay_basis_code
             , @p_curr_code                         = @w_curr_code
             , @p_work_tm_code                      = @w_work_tm_code
@@ -860,7 +884,7 @@ BEGIN
             , @p_overtime_status_code              = @w_overtime_status_code
             , @p_pay_on_reported_hrs_ind           = @w_pay_on_reported_hrs_ind
             , @p_work_shift_code                   = @w_work_shift_code
-            , @p_tax_entity_id                     = @tax_entity_id
+            , @p_tax_entity_id                     = @w_tax_entity_id
             , @p_time_reporting_meth_code          = @time_reporting_meth_code_03
             , @p_pay_group_id                      = @pay_group_id_03
             , @p_clock_nbr                         = @w_clock_nbr
@@ -933,38 +957,9 @@ BEGIN
             , @p_emp_workers_comp_cvg_cd           = @w_emp_workers_comp_cvg_cd
 
 
-        SELECT	@i_emp_id				=	emp_id,
-                @i_assigned_to_code		=	assigned_to_code,
-                @i_job_or_pos_id		=	job_or_pos_id,
-                @i_eff_date				=	eff_date,
-                @i_next_eff_date		=	next_eff_date,
-                @i_prior_eff_date		=	prior_eff_date,
-                @i_standard_work_pd_id	=	standard_work_pd_id,
-                @i_standard_work_hrs	=	standard_work_hrs
-        FROM DBShrpn.dbo.emp_assignment	ea
-        WHERE emp_id   = @emp_id_01
-          and eff_date = (
-                          SELECT MAX(eff_date)
-                          FROM DBShrpn.dbo.emp_assignment t
-                          WHERE	t.emp_id =	ea.emp_id
-                         )
-
-
-
-
-        UPDATE	DBShrpn.dbo.emp_assignment
-        SET	annual_salary_amt  = CAST(@annual_salary_amt_01 AS MONEY)
-          , hourly_pay_rate    = @i_hourly_rate_amt
-          , pd_salary_amt      = @i_period_amt
-          , pd_salary_tm_pd_id = @pay_frequency_code
-        WHERE emp_id = @i_emp_id
-          AND assigned_to_code	= @i_assigned_to_code
-          AND job_or_pos_id		= @i_job_or_pos_id
-          AND eff_date			= @i_eff_date
-          AND next_eff_date		= @i_next_eff_date
-          AND prior_eff_date    = @i_prior_eff_date
-
-
+        ---------------------------------------------------------------------------
+        -- Lookup Employee Employment Details
+        ---------------------------------------------------------------------------
         SELECT @ee_emp_id         = emp_id
              , @ee_eff_date		  = eff_date
              , @ee_next_eff_date  = next_eff_date
@@ -977,7 +972,7 @@ BEGIN
                              WHERE	t.emp_id =	ee.emp_id
                             )
 
-
+        -- Make sure new record end date = end of time date
         IF	@ee_next_eff_date <> '29991231'
             UPDATE	DBShrpn.dbo.emp_employment
             SET  next_eff_date = '29991231'
@@ -985,15 +980,13 @@ BEGIN
             WHERE  emp_id		=	@ee_emp_id
             AND  eff_date	=	@ee_eff_date
 
-        --
-        -- Update the position since could be a new position with a new hire
-        --
 
         SELECT @individual_id = individual_id
         FROM DBShrpn.dbo.employee
         WHERE emp_id = @emp_id_01
 
         /* Grenada
+        -- GOSL will store it on emp_assignment
         UPDATE	DBShrpn.dbo.individual_personal
         SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
         WHERE individual_id	=	@individual_id
