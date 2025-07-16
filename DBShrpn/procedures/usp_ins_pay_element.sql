@@ -22,6 +22,8 @@ AS
 
 BEGIN
 
+    SET NOCOUNT ON
+
     DECLARE @ret int
     --DECLARE @p_activity_date				datetime
     --DECLARE @p_userid						varchar(30)

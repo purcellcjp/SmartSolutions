@@ -1,4 +1,4 @@
-USE [DBShrpn]
+USE DBShrpn
 GO
 
 SET ANSI_NULLS ON
@@ -7,7 +7,7 @@ SET QUOTED_IDENTIFIER ON
 GO
 
 
-CREATE OR ALTER PROCEDURE [dbo].[usp_ins_salary_change]
+CREATE OR ALTER PROCEDURE dbo.usp_ins_salary_change
 (
 	@p_userid						varchar(30),
 	@p_batchname					varchar(08),
@@ -20,6 +20,8 @@ CREATE OR ALTER PROCEDURE [dbo].[usp_ins_salary_change]
 AS
 
 BEGIN
+
+    SET NOCOUNT ON
 
     DECLARE @ret int
     --DECLARE @p_activity_date				datetime
@@ -54,9 +56,19 @@ BEGIN
     DECLARE	@i_base_rate_tbl_entry_code		char(08)
     DECLARE @i_pd_salary_tm_pd_id			char(05)
 
-    DECLARE @pay_frequency_code				char(05)
     DECLARE	@emp_status_code				CHAR(1)
     DECLARE @rehire_override			    CHAR(01)
+
+    DECLARE @w_hourly_pay_rate                      float           = 0.00
+    DECLARE @w_pd_salary_amt                        money           = 0.00
+    DECLARE @w_pd_salary_tm_pd_id                   char(05)        = 'MONTH'
+    DECLARE @w_annual_salary_amt                    money           = 0.00
+    DECLARE @w_standard_daily_work_hrs              float           = 8
+    DECLARE @w_standard_work_hrs                    float           = 40
+    DECLARE @w_standard_work_pd_id                  char(05)        = 'WEEK'
+    DECLARE @pay_frequency_code		char(05)
+    DECLARE @annualizing_factor float
+
 
     --
     -- Activate these fields when testing this program standalone.
@@ -184,7 +196,13 @@ BEGIN
         --
         -- Override the message if this cycle contains an employee rehire record
         --
-        IF  EXISTS (SELECT * FROM DBShrpn.dbo.ghr_employee_events ee WHERE event_id_01 = '05' AND ee.emp_id_01 = @emp_id_01 AND emp_status_code_5 = 'RH')
+        IF  EXISTS (
+                    SELECT *
+                    FROM DBShrpn.dbo.ghr_employee_events ee
+                    WHERE event_id_01 = '05'
+                      AND ee.emp_id_01 = @emp_id_01
+                      AND emp_status_code_5 = 'RH'
+                   )
             SELECT @rehire_override = '1'
         ELSE
             SELECT @rehire_override = '0'
@@ -196,79 +214,84 @@ BEGIN
         SELECT @emp_status_code	=  emp_status_code
         FROM DBShrpn.dbo.emp_status s
         WHERE s.emp_id = @emp_id_01
-        AND s.status_change_date = (
-                                    SELECT MAX(status_change_date)
-                                    FROM DBShrpn.dbo.emp_status t
-                                    WHERE t.emp_id = s.emp_id
-                                   )
+          AND s.status_change_date = (
+                                      SELECT MAX(status_change_date)
+                                      FROM DBShrpn.dbo.emp_status t
+                                      WHERE t.emp_id = s.emp_id
+                                     )
 
-		IF @emp_status_code = 'T'
+		IF (@emp_status_code = 'T')
             BEGIN
-                IF @rehire_override = '1'
+                IF (@rehire_override = '1')
                     BEGIN
-                            UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= '99'
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id_01		=	@emp_id_01
-                            AND event_id_01		=	'02'
 
-                            SELECT  @w_fatal_error = '5'
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status	= '99'
+                        WHERE activity_date	=	@p_activity_date
+                          AND emp_id_01		=	@emp_id_01
+                          AND event_id_01		=	'02'
+
+                        SET @w_fatal_error = '5'
 
                     END
             END
 
 
         --	Obtain the current record for this employee
-        SELECT	@i_emp_assignment_exists = 'N'
+        SET	@i_emp_assignment_exists = 'N'
 
-        SELECT	@i_emp_id					=	emp_id,
-                @i_assigned_to_code			=	assigned_to_code,
-                @i_job_or_pos_id			=	job_or_pos_id,
-                @i_eff_date					=	eff_date,
-                @i_next_eff_date			=	next_eff_date,
-                @i_prior_eff_date			=	prior_eff_date,
-                @i_standard_work_pd_id		=	standard_work_pd_id,
-                @i_standard_work_hrs		=	standard_work_hrs,
-                @i_work_tm_code				=	work_tm_code,
-                @i_emp_assignment_exists	=	prime_assignment_ind,
-                @i_base_rate_tbl_id			=	base_rate_tbl_id,
-                @i_base_rate_tbl_entry_code	=	base_rate_tbl_entry_code,
-                @i_pd_salary_tm_pd_id		=	pd_salary_tm_pd_id
-        FROM	[DBShrpn].[dbo].[emp_assignment]	ea
-        WHERE	emp_id					=	@emp_id_01
-        AND  eff_date				=	(SELECT	MAX(eff_date) FROM	[DBShrpn].[dbo].[emp_assignment] t
-                                            WHERE	t.emp_id =	ea.emp_id AND prime_assignment_ind	=	'Y')
-        AND	prime_assignment_ind	=	'Y'
+        SELECT	@i_emp_id					= ea.emp_id,
+                @i_assigned_to_code			= ea.assigned_to_code,
+                @i_job_or_pos_id			= ea.job_or_pos_id,
+                @i_eff_date					= ea.eff_date,
+                @i_next_eff_date			= ea.next_eff_date,
+                @i_prior_eff_date			= ea.prior_eff_date,
+                @i_standard_work_pd_id		= ea.standard_work_pd_id,
+                @i_standard_work_hrs		= ea.standard_work_hrs,
+                @i_work_tm_code				= ea.work_tm_code,
+                @i_emp_assignment_exists	= ea.prime_assignment_ind,
+                @i_base_rate_tbl_id			= ea.base_rate_tbl_id,
+                @i_base_rate_tbl_entry_code	= ea.base_rate_tbl_entry_code,
+                @i_pd_salary_tm_pd_id		= ea.pd_salary_tm_pd_id
+        FROM DBShrpn.dbo.emp_assignment	ea
+        WHERE emp_id =	@emp_id_01
+          AND eff_date = (
+                          SELECT MAX(eff_date)
+                          FROM DBShrpn.dbo.emp_assignment t
+                          WHERE	t.emp_id = ea.emp_id
+                            AND prime_assignment_ind = 'Y'
+                         )
+          AND prime_assignment_ind = 'Y'
 
         --
         --	Check to see that the new effective date is greater than the current effective date
         --
-        IF	@i_emp_assignment_exists	=	'Y' AND @i_eff_date > CONVERT(datetime,@eff_date_01,112)
+        IF	(@i_emp_assignment_exists = 'Y') AND
+            (@i_eff_date > CONVERT(datetime, @eff_date_01, 112))
         BEGIN
 
-
-            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'
+            UPDATE DBShrpn.dbo.ghr_employee_events_aud
+            SET activity_status	=	'02'
             WHERE activity_date	=	@p_activity_date
-                AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'02'
+              AND emp_id_01		=	@emp_id_01
+              AND event_id_01	=	'02'
 
             INSERT INTO #tbl_ghr_msg
-            SELECT 'U00027'					As msg_id,
-                    @eff_date_01				As msg_p1,
-                    @emp_id_01					As msg_p2,
-                    'The new effective date for employee must be greater than the current effective date'	As msg_desc
+            SELECT 'U00027'					AS msg_id,
+                    @eff_date_01				AS msg_p1,
+                    @emp_id_01					AS msg_p2,
+                    'The new effective date for employee must be greater than the current effective date'	AS msg_desc
 
             -- Historical Message for reporting purpose
             INSERT INTO DBShrpn.dbo.ghr_historical_message
-            SELECT  'U00027'					As msg_id,
-                    '02'						As event_id,
-                    @emp_id_01 				As emp_id,
-                    @eff_date_01				As eff_date,
-                    @pay_element_desc_06		As pay_element_id,
-                    @emp_id_01					As msg_p1,
-                    ''							As msg_p2,
-                    'The new effective date for employee must be greater than the current effective date'	As msg_desc,
+            SELECT  'U00027'					AS msg_id,
+                    '02'						AS event_id,
+                    @emp_id_01 				AS emp_id,
+                    @eff_date_01				AS eff_date,
+                    @pay_element_desc_06		AS pay_element_id,
+                    @emp_id_01					AS msg_p1,
+                    ''							AS msg_p2,
+                    'The new effective date for employee must be greater than the current effective date'	AS msg_desc,
                     @p_activity_date			AS activity_date
             -- End of Historical Message for reporting purpose
 
@@ -291,21 +314,21 @@ BEGIN
                 AND event_id_01		=	'02'
 
                 INSERT INTO #tbl_ghr_msg
-                SELECT 'U00035'					As msg_id,
-                    @emp_id_01					As msg_p1,
-                    ''							As msg_p2,
-                    'Salary cannot be blank for salary change record'	As msg_desc
+                SELECT 'U00035'					AS msg_id,
+                    @emp_id_01					AS msg_p1,
+                    ''							AS msg_p2,
+                    'Salary cannot be blank for salary change record'	AS msg_desc
 
                 -- Historical Message for reporting purpose
             INSERT INTO DBShrpn.dbo.ghr_historical_message
-            SELECT  'U00035'					As msg_id,
-                    '02'						As event_id,
-                    @emp_id_01 					As emp_id,
-                    @eff_date_01				As eff_date,
-                    @pay_element_desc_06		As pay_element_id,
-                    @emp_id_01					As msg_p1,
-                    @national_id_1_01			As msg_p2,
-                    'Salary cannot be blank for salary change record'	As msg_desc,
+            SELECT  'U00035'					AS msg_id,
+                    '02'						AS event_id,
+                    @emp_id_01 					AS emp_id,
+                    @eff_date_01				AS eff_date,
+                    @pay_element_desc_06		AS pay_element_id,
+                    @emp_id_01					AS msg_p1,
+                    @national_id_1_01			AS msg_p2,
+                    'Salary cannot be blank for salary change record'	AS msg_desc,
                     @p_activity_date			AS activity_date
             -- End of Historical Message for reporting purpose
 
@@ -317,31 +340,36 @@ BEGIN
         --
         -- Check to see if the employee does not exists
         --
-        IF  NOT EXISTS (SELECT * FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01)
+        IF NOT EXISTS (
+                       SELECT *
+                       FROM DBShrpn.dbo.employee
+                       WHERE emp_id = @emp_id_01
+                      )
         BEGIN
-                UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	=	'02'
-                WHERE activity_date	=	@p_activity_date
-                AND emp_id_01		=	@emp_id_01
-                AND event_id_01		=	'02'
 
-                INSERT INTO #tbl_ghr_msg
-                SELECT 'U00012'					As msg_id,
-                    @emp_id_01					As msg_p1,
-                    ''							As msg_p2,
-                    'Employee does not exists'	As msg_desc
+            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
+            SET activity_status	=	'02'
+            WHERE activity_date	=	@p_activity_date
+            AND emp_id_01		=	@emp_id_01
+            AND event_id_01		=	'02'
+
+            INSERT INTO #tbl_ghr_msg
+            SELECT 'U00012'					    AS msg_id,
+                   @emp_id_01					AS msg_p1,
+                   ''							AS msg_p2,
+                   'Employee does not exists'	AS msg_desc
 
                 -- Historical Message for reporting purpose
             INSERT INTO DBShrpn.dbo.ghr_historical_message
-            SELECT  'U00012'					As msg_id,
-                    '02'						As event_id,
-                    @emp_id_01 					As emp_id,
-                    @eff_date_01				As eff_date,
-                    @pay_element_desc_06		As pay_element_id,
-                    @emp_id_01					As msg_p1,
-                    @national_id_1_01			As msg_p2,
-                    'Employee does not exists'	As msg_desc,
-                    @p_activity_date			AS activity_date
+            SELECT 'U00012'					    AS msg_id,
+                   '02'						    AS event_id,
+                   @emp_id_01 					AS emp_id,
+                   @eff_date_01				    AS eff_date,
+                   @pay_element_desc_06		    AS pay_element_id,
+                   @emp_id_01					AS msg_p1,
+                   @national_id_1_01			AS msg_p2,
+                   'Employee does not exists'	AS msg_desc,
+                   @p_activity_date			    AS activity_date
             -- End of Historical Message for reporting purpose
 
             SELECT  @w_fatal_error = '5'
@@ -352,10 +380,14 @@ BEGIN
         --
         --	Check to make sure that salary is not zero.
         --
-        SELECT @annual_salary = CAST(@annual_salary_amt_01 AS MONEY);
+        SET @annual_salary = CAST(@annual_salary_amt_01 AS MONEY);
 
-        IF  (@annual_salary_amt_01 = '0' OR @annual_salary = 0)
+        IF  (
+             (@annual_salary_amt_01 = '0') OR
+             (@annual_salary = 0)
+            )
             BEGIN
+
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
@@ -363,34 +395,38 @@ BEGIN
                     AND event_id_01		=	'02'
 
                 INSERT INTO #tbl_ghr_msg
-                SELECT 'U00041'					As msg_id,
-                        @emp_id_01					As msg_p1,
-                        ''							As msg_p2,
-                        'Salary cannot be zeroed for a Salary Change'	As msg_desc
+                SELECT 'U00041'					AS msg_id,
+                        @emp_id_01					AS msg_p1,
+                        ''							AS msg_p2,
+                        'Salary cannot be zeroed for a Salary Change'	AS msg_desc
 
                 -- Historical Message for reporting purpose
                 INSERT INTO DBShrpn.dbo.ghr_historical_message
-                SELECT  'U00041'					As msg_id,
-                        '02'						As event_id,
-                        @emp_id_01 					As emp_id,
-                        @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,
-                        @emp_id_01					As msg_p1,
-                        @national_id_1_01			As msg_p2,
-                        'Salary cannot be zeroed for a Salary Change'	As msg_desc,
+                SELECT  'U00041'					AS msg_id,
+                        '02'						AS event_id,
+                        @emp_id_01 					AS emp_id,
+                        @eff_date_01				AS eff_date,
+                        @pay_element_desc_06		AS pay_element_id,
+                        @emp_id_01					AS msg_p1,
+                        @national_id_1_01			AS msg_p2,
+                        'Salary cannot be zeroed for a Salary Change'	AS msg_desc,
                         @p_activity_date			AS activity_date
                 -- End of Historical Message for reporting purpose
 
-                SELECT  @w_fatal_error = '5'
+                SET  @w_fatal_error = '5'
 
-                --			 GOTO BYPASS_EMPLOYEE
+                -- GOTO BYPASS_EMPLOYEE
             END
         --
         --
         --	Check to see if pay group id exists
         --
         --
-        IF NOT EXISTS(SELECT * FROM	[DBShrpn].[dbo].[pay_group] WHERE	pay_group_id   = @pay_group_id_03)
+        IF NOT EXISTS (
+                       SELECT *
+                       FROM DBShrpn.dbo.pay_group
+                       WHERE pay_group_id = @pay_group_id_03
+                      )
         BEGIN
 
             UPDATE	DBShrpn.dbo.ghr_employee_events_aud
@@ -400,38 +436,39 @@ BEGIN
             AND event_id_01		=	'02'
 
             INSERT INTO #tbl_ghr_msg
-                SELECT 'U00020'					As msg_id,
-                        @emp_id_01					As msg_p1,
-                        @pay_group_id_03			As msg_p2,
-                        'Pay Group does not exists'	As msg_desc
+            SELECT 'U00020'					AS msg_id,
+                    @emp_id_01					AS msg_p1,
+                    @pay_group_id_03			AS msg_p2,
+                    'Pay Group does not exists'	AS msg_desc
 
-                -- Historical Message for reporting purpose
-                INSERT INTO DBShrpn.dbo.ghr_historical_message
-                SELECT  'U00020'					As msg_id,
-                        '02'						As event_id,
-                        @emp_id_01 					As emp_id,
-                        @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,
-                        @emp_id_01					As msg_p1,
-                        @pay_group_id_03			As msg_p2,
-                        'Pay Group does not exists'	As msg_desc,
-                        @p_activity_date			AS activity_date
-                -- End of Historical Message for reporting purpose
+            -- Historical Message for reporting purpose
+            INSERT INTO DBShrpn.dbo.ghr_historical_message
+            SELECT  'U00020'					AS msg_id,
+                    '02'						AS event_id,
+                    @emp_id_01 					AS emp_id,
+                    @eff_date_01				AS eff_date,
+                    @pay_element_desc_06		AS pay_element_id,
+                    @emp_id_01					AS msg_p1,
+                    @pay_group_id_03			AS msg_p2,
+                    'Pay Group does not exists'	AS msg_desc,
+                    @p_activity_date			AS activity_date
+            -- End of Historical Message for reporting purpose
 
-                SELECT @pay_group_id_03 = ' '
+            SET @pay_group_id_03 = ' '
 
-                SELECT  @w_fatal_error = '5'
+            SET @w_fatal_error = '5'
 
         END
 
+/*
         --
         --
         --  Make sure that frequency is semi monthly starting April 1 of 2023
         --
         --
-        SELECT @pay_frequency_code	= pay_frequency_code
-        FROM [DBShrpn].[dbo].[pay_group]
-        WHERE [pay_group_id] = @pay_group_id_03
+        SELECT @pay_frequency_code = pay_frequency_code
+        FROM DBShrpn.dbo.pay_group
+        WHERE pay_group_id = @pay_group_id_03
 
 
         IF @pay_frequency_code <> 'SEMI'
@@ -443,28 +480,28 @@ BEGIN
             AND event_id_01		=	'02'
 
             INSERT INTO #tbl_ghr_msg
-                SELECT 'U00048'					As msg_id,
-                        @pay_group_id_03			As msg_p1,
-                        @emp_id_01              	As msg_p2,
-                        'After April 1, 2023,Pay Group, @1, must be semi-monthly.'	As msg_desc
+                SELECT 'U00048'					AS msg_id,
+                        @pay_group_id_03			AS msg_p1,
+                        @emp_id_01              	AS msg_p2,
+                        'After April 1, 2023,Pay Group, @1, must be semi-monthly.'	AS msg_desc
 
                 -- Historical Message for reporting purpose
                 INSERT INTO DBShrpn.dbo.ghr_historical_message
-                SELECT  'U00048'					As msg_id,
-                        '02'						As event_id,
-                        @emp_id_01 					As emp_id,
-                        @eff_date_01				As eff_date,
-                        @pay_element_desc_06		As pay_element_id,
-                        @pay_group_id_03			As msg_p1,
-                        @emp_id_01              	As msg_p2,
-                        'After April 1, 2023,Pay Group, ' + RTRIM(@pay_group_id_03) + ' , must be semi-monthly.'	As msg_desc,
+                SELECT  'U00048'					AS msg_id,
+                        '02'						AS event_id,
+                        @emp_id_01 					AS emp_id,
+                        @eff_date_01				AS eff_date,
+                        @pay_element_desc_06		AS pay_element_id,
+                        @pay_group_id_03			AS msg_p1,
+                        @emp_id_01              	AS msg_p2,
+                        'After April 1, 2023,Pay Group, ' + RTRIM(@pay_group_id_03) + ' , must be semi-monthly.'	AS msg_desc,
                         @p_activity_date			AS activity_date
                 -- End of Historical Message for reporting purpose
 
             IF GETDATE() > '20230331' SELECT	@w_fatal_error = '5'
 
         END
-
+*/
 
 	    IF  @w_fatal_error = '5' GOTO BYPASS_EMPLOYEE
 
@@ -505,150 +542,158 @@ BEGIN
         --	Salary table will be removed after a salary change action.
         --
         IF	@i_base_rate_tbl_id	<> ''
-            SELECT	@i_base_rate_tbl_id			=	'',
-                    @i_base_rate_tbl_entry_code	=	''
+            SELECT	@i_base_rate_tbl_id			= '',
+                    @i_base_rate_tbl_entry_code	= ''
 
         --
         --	If the work tm code field is Undefined, then set it to FULL Time Worker
         --
 
         IF	@i_work_tm_code	=	'U'
-            SELECT @i_work_tm_code = 'F'
+            SET @i_work_tm_code = 'F'
 
-        --
-        --	Calculate the hourly rate
-        --
 
-        --	SELECT @pay_frequency_code	= pay_frequency_code
-        --    FROM [DBShrpn].[dbo].[pay_group] WHERE [pay_group_id] = @pay_group_id_03
+        ---------------------------------------------------------------------------
+        -- Calculate Annual Salary from Pay rate
+        ---------------------------------------------------------------------------
 
-      	--- If blank, then default: SEMI ---
 
-        IF @pay_frequency_code = ''	    SELECT @pay_frequency_code		=	'SEMI'
+        -- GOSL will only provide hourly rate
+        SET @w_hourly_pay_rate = CAST(@annual_salary AS MONEY)
+        -- GOSL does not use tm_pd_policy correctly
+        -- Calculate Annual Salary = hourly rate * 2080
+        SET @w_annual_salary_amt = ROUND(@w_hourly_pay_rate * 2080.00, 2)
 
-        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52
-        ELSE
-        IF	@pay_frequency_code	= 'BIWK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 26
-        ELSE
-        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 24
-        ELSE
-        IF	@pay_frequency_code	= 'MONTH'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 12
+        ---------------------------------------------------------------------------
+        -- Lookup Pay Frequency Code
+        ---------------------------------------------------------------------------
+        -- GOSL not using tm_pd_policy
+        SELECT @pay_frequency_code	= pay_frequency_code
+             , @annualizing_factor = annualizing_factor
+        FROM DBShrpn.dbo.pay_group
+        WHERE pay_group_id = @pay_group_id_03
 
-        SELECT	@i_hourly_rate_amt	=	CAST(@annual_salary_amt_01 AS MONEY) / @i_yearly_std_work_hrs
+        IF (@pay_frequency_code = 'MONTH')
+            SELECT @w_pd_salary_amt                 = @annual_salary / @annualizing_factor
+                 , @w_pd_salary_tm_pd_id            = @pay_frequency_code
+                 , @w_standard_work_pd_id           = 'WEEK'
+                 , @w_standard_work_hrs             = 40.0
+                 , @w_standard_daily_work_hrs       = 8.0
+        ELSE    -- BIWK
+            SELECT @w_pd_salary_amt                 = 0.00
+                 , @w_pd_salary_tm_pd_id            = ''
+                 , @w_standard_work_pd_id           = @pay_frequency_code
+                 , @w_standard_work_hrs             = 40.0
+                 , @w_standard_daily_work_hrs       = 8.0
 
-        IF	@pay_frequency_code	= 'WEEK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 52
-        ELSE
-        IF	@pay_frequency_code	= 'BIWK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 26
-        ELSE
-        IF	@pay_frequency_code	= 'SEMI'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 24
-        ELSE
-        IF	@pay_frequency_code	= 'MONTH'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 12
 
-	    -- SELECT	@i_hourly_rate_amt, @i_standard_work_pd_id, @i_yearly_std_work_hrs
 
         -- Check to see if the record key already exists
 
 
-        IF NOT EXISTS (SELECT * FROM DBShrpn.dbo.emp_assignment
-                        WHERE	emp_id				=	@i_emp_id
-                        AND	assigned_to_code	=	@i_assigned_to_code
-                        AND	job_or_pos_id		=	@i_job_or_pos_id
-                        AND	eff_date			=	CAST(@eff_date_01 AS datetime))
+        IF NOT EXISTS (
+                       SELECT 1
+                       FROM DBShrpn.dbo.emp_assignment
+                       WHERE emp_id           = @i_emp_id
+                         AND assigned_to_code = @i_assigned_to_code
+                         AND job_or_pos_id    = @i_job_or_pos_id
+                         AND eff_date         = CAST(@eff_date_01 AS datetime)
+                      )
             BEGIN
-                INSERT  [DBShrpn].[dbo].[emp_assignment]
-                SELECT	[emp_id]
-                        ,[assigned_to_code]
-                        ,[job_or_pos_id]
-                        ,CAST(@eff_date_01 AS datetime) AS	eff_date
-                        ,CAST('2999-12-31' AS datetime) AS	next_eff_date
-                        ,eff_date						AS	prior_eff_date
-                        ,[next_assigned_to_code]
-                        ,[next_job_or_pos_id]
-                        ,[prior_assigned_to_code]
-                        ,[prior_job_or_pos_id]
-                        ,CAST(@eff_date_01 AS datetime) As [begin_date]
-                        ,[end_date]
-                        ,[assignment_reason_code]
-                        ,[organization_chart_name]
-                        ,[organization_unit_name]
-                        ,[organization_group_id]
-                        ,[organization_change_reason_cd]
-                        ,[loc_code]
-                        ,[mgr_emp_id]
-                        ,[official_title_code]
-                        ,[official_title_date]
-                        ,CAST(@eff_date_01 AS datetime)			AS  salary_change_date
-                        ,CAST(@annual_salary_amt_01 AS MONEY)	AS	annual_salary_amt
-                        ,@i_period_amt							AS  pd_salary_amt
-                        ,@pay_frequency_code					AS	pd_salary_tm_pd_id
-                    --	,@i_pd_salary_tm_pd_id					AS	pd_salary_tm_pd_id	      -- MONTH to SEMI
-                        ,@i_hourly_rate_amt						AS	hourly_pay_rate
-                        ,[curr_code]
-                        ,[pay_on_reported_hrs_ind]
-                        ,'SAL'
-                        ,[standard_work_pd_id]
-                        ,[standard_work_hrs]
-                        ,@i_work_tm_code						AS  work_tm_code
-                        ,[work_shift_code]
-                        ,[salary_structure_id]
-                        ,[salary_increase_guideline_id]
-                        ,[pay_grade_code]
-                        ,[pay_grade_date]
-                        ,[job_evaluation_points_nbr]
-                        ,[salary_step_nbr]
-                        ,[salary_step_date]
-                        ,[phone_1_type_code]
-                        ,[phone_1_fmt_code]
-                        ,[phone_1_fmt_delimiter]
-                        ,[phone_1_intl_code]
-                        ,[phone_1_country_code]
-                        ,[phone_1_area_city_code]
-                        ,[phone_1_nbr]
-                        ,[phone_1_extension_nbr]
-                        ,[phone_2_type_code]
-                        ,[phone_2_fmt_code]
-                        ,[phone_2_fmt_delimiter]
-                        ,[phone_2_intl_code]
-                        ,[phone_2_country_code]
-                        ,[phone_2_area_city_code]
-                        ,[phone_2_nbr]
-                        ,[phone_2_extension_nbr]
-                        ,[prime_assignment_ind]
-                        ,[pay_basis_code]
-                        ,[occupancy_code]
-                        ,[regulatory_reporting_unit_code]
-                        ,@i_base_rate_tbl_id					AS	base_rate_tbl_id
-                        ,@i_base_rate_tbl_entry_code			AS	base_rate_tbl_entry_code
-                        ,[shift_differential_rate_tbl_id]
-                        ,[ref_annual_salary_amt]
-                        ,[ref_pd_salary_amt]
-                        ,[ref_pd_salary_tm_pd_id]
-                        ,[ref_hourly_pay_rate]
-                        ,[guaranteed_annual_salary_amt]
-                        ,[guaranteed_pd_salary_amt]
-                        ,[guaranteed_pd_salary_tm_pd_id]
-                        ,[guaranteed_hourly_pay_rate]
-                        ,[exception_rate_ind]
-                        ,[overtime_status_code]
-                        ,[shift_differential_status_code]
-                        ,[standard_daily_work_hrs]
-                        ,[user_amt_1]
-                        ,[user_amt_2]
-                        ,[user_code_1]
-                        ,[user_code_2]
-                        ,[user_date_1]
-                        ,[user_date_2]
-                        ,[user_ind_1]
-                        ,[user_ind_2]
-                        ,[user_monetary_amt_1]
-                        ,[user_monetary_amt_2]
-                        ,[user_monetary_curr_code]
-                        ,[user_text_1]
-                        ,[user_text_2]
-                        ,[unemployment_loc_code]
-                        ,[include_salary_in_autopay_ind]
-                        ,[chgstamp]
-                FROM	[DBShrpn].[dbo].[emp_assignment]
+
+                INSERT DBShrpn.dbo.emp_assignment
+                SELECT SELECT emp_id                                                 -- emp_id                                 char(15)
+                            , assigned_to_code                                       -- assigned_to_code                       char(1)
+                            , job_or_pos_id                                          -- job_or_pos_id                          char(10)
+                            , CAST(@eff_date_01 AS datetime)                         -- eff_date                               datetime
+                            , CAST('2999-12-31' AS datetime)                         -- next_eff_date                          datetime
+                            , eff_date                                               -- prior_eff_date                         datetime
+                            , next_assigned_to_code                                  -- next_assigned_to_code                  char(1)
+                            , next_job_or_pos_id                                     -- next_job_or_pos_id                     char(10)
+                            , prior_assigned_to_code                                 -- prior_assigned_to_code                 char(1)
+                            , prior_job_or_pos_id                                    -- prior_job_or_pos_id                    char(10)
+                            , CAST(@eff_date_01 AS datetime)                         -- begin_date                             datetime
+                            , end_date                                               -- end_date                               datetime
+                            , assignment_reason_code                                 -- assignment_reason_code                 char(5)
+                            , organization_chart_name                                -- organization_chart_name                varchar(
+                            , organization_unit_name                                 -- organization_unit_name                 varchar(
+                            , organization_group_id                                  -- organization_group_id                  int
+                            , organization_change_reason_cd                          -- organization_change_reason_cd          char(5)
+                            , loc_code                                               -- loc_code                               char(10)
+                            , mgr_emp_id                                             -- mgr_emp_id                             char(15)
+                            , official_title_code                                    -- official_title_code                    char(5)
+                            , official_title_date                                    -- official_title_date                    datetime
+                            , CAST(@eff_date_01 AS datetime)                         -- salary_change_date                     datetime
+                            , CAST(@annual_salary_amt_01 AS MONEY)                   -- annual_salary_amt                      money
+                            , @i_period_amt                                          -- pd_salary_amt                          money
+                            , @pay_frequency_code                                    -- pd_salary_tm_pd_id                     char(5)
+                            , @i_hourly_rate_amt                                     -- hourly_pay_rate                        float
+                            , curr_code                                              -- curr_code                              char(3)
+                            , pay_on_reported_hrs_ind                                -- pay_on_reported_hrs_ind                char(1)
+                            , 'SAL'                                                  -- salary_change_type_code                char(5)
+                            , standard_work_pd_id                                    -- standard_work_pd_id                    char(5)
+                            , standard_work_hrs                                      -- standard_work_hrs                      float
+                            , @i_work_tm_code                                        -- work_tm_code                           char(1)
+                            , work_shift_code                                        -- work_shift_code                        char(5)
+                            , salary_structure_id                                    -- salary_structure_id                    char(10)
+                            , salary_increase_guideline_id                           -- salary_increase_guideline_id           char(10)
+                            , pay_grade_code                                         -- pay_grade_code                         char(6)
+                            , pay_grade_date                                         -- pay_grade_date                         datetime
+                            , job_evaluation_points_nbr                              -- job_evaluation_points_nbr              smallint
+                            , salary_step_nbr                                        -- salary_step_nbr                        smallint
+                            , salary_step_date                                       -- salary_step_date                       datetime
+                            , phone_1_type_code                                      -- phone_1_type_code                      char(5)
+                            , phone_1_fmt_code                                       -- phone_1_fmt_code                       char(6)
+                            , phone_1_fmt_delimiter                                  -- phone_1_fmt_delimiter                  char(1)
+                            , phone_1_intl_code                                      -- phone_1_intl_code                      char(4)
+                            , phone_1_country_code                                   -- phone_1_country_code                   char(4)
+                            , phone_1_area_city_code                                 -- phone_1_area_city_code                 char(5)
+                            , phone_1_nbr                                            -- phone_1_nbr                            char(12)
+                            , phone_1_extension_nbr                                  -- phone_1_extension_nbr                  char(5)
+                            , phone_2_type_code                                      -- phone_2_type_code                      char(5)
+                            , phone_2_fmt_code                                       -- phone_2_fmt_code                       char(6)
+                            , phone_2_fmt_delimiter                                  -- phone_2_fmt_delimiter                  char(1)
+                            , phone_2_intl_code                                      -- phone_2_intl_code                      char(4)
+                            , phone_2_country_code                                   -- phone_2_country_code                   char(4)
+                            , phone_2_area_city_code                                 -- phone_2_area_city_code                 char(5)
+                            , phone_2_nbr                                            -- phone_2_nbr                            char(12)
+                            , phone_2_extension_nbr                                  -- phone_2_extension_nbr                  char(5)
+                            , prime_assignment_ind                                   -- prime_assignment_ind                   char(1)
+                            , pay_basis_code                                         -- pay_basis_code                         char(1)
+                            , occupancy_code                                         -- occupancy_code                         char(1)
+                            , regulatory_reporting_unit_code                         -- regulatory_reporting_unit_code         char(10)
+                            , @i_base_rate_tbl_id                                    -- base_rate_tbl_id                       char(10)
+                            , @i_base_rate_tbl_entry_code                            -- base_rate_tbl_entry_code               char(8)
+                            , shift_differential_rate_tbl_id                         -- shift_differential_rate_tbl_id         char(10)
+                            , ref_annual_salary_amt                                  -- ref_annual_salary_amt                  money
+                            , ref_pd_salary_amt                                      -- ref_pd_salary_amt                      money
+                            , ref_pd_salary_tm_pd_id                                 -- ref_pd_salary_tm_pd_id                 char(5)
+                            , ref_hourly_pay_rate                                    -- ref_hourly_pay_rate                    float
+                            , guaranteed_annual_salary_amt                           -- guaranteed_annual_salary_amt           money
+                            , guaranteed_pd_salary_amt                               -- guaranteed_pd_salary_amt               money
+                            , guaranteed_pd_salary_tm_pd_id                          -- guaranteed_pd_salary_tm_pd_id          char(5)
+                            , guaranteed_hourly_pay_rate                             -- guaranteed_hourly_pay_rate             float
+                            , exception_rate_ind                                     -- exception_rate_ind                     char(1)
+                            , overtime_status_code                                   -- overtime_status_code                   char(2)
+                            , shift_differential_status_code                         -- shift_differential_status_code         char(2)
+                            , standard_daily_work_hrs                                -- standard_daily_work_hrs                money
+                            , user_amt_1                                             -- user_amt_1                             float
+                            , user_amt_2                                             -- user_amt_2                             float
+                            , user_code_1                                            -- user_code_1                            char(5)
+                            , user_code_2                                            -- user_code_2                            char(5)
+                            , user_date_1                                            -- user_date_1                            datetime
+                            , user_date_2                                            -- user_date_2                            datetime
+                            , user_ind_1                                             -- user_ind_1                             char(1)
+                            , user_ind_2                                             -- user_ind_2                             char(1)
+                            , user_monetary_amt_1                                    -- user_monetary_amt_1                    money
+                            , user_monetary_amt_2                                    -- user_monetary_amt_2                    money
+                            , user_monetary_curr_code                                -- user_monetary_curr_code                char(3)
+                            , user_text_1                                            -- user_text_1                            char(50)
+                            , user_text_2                                            -- user_text_2                            char(50)
+                            , unemployment_loc_code                                  -- unemployment_loc_code                  char(10)
+                            , include_salary_in_autopay_ind                          -- include_salary_in_autopay_ind          char(1)
+                            , chgstamp                                               -- chgstamp                               smallint
+                FROM DBShrpn.dbo.emp_assignment
                 WHERE	emp_id				=	@i_emp_id
                 AND		assigned_to_code	=	@i_assigned_to_code
                 AND		job_or_pos_id		=	@i_job_or_pos_id
@@ -656,11 +701,9 @@ BEGIN
                 AND		next_eff_date		=	@i_next_eff_date
                 AND		prior_eff_date		=	@i_prior_eff_date
 
-            -- INSERT INTO [DBSosxp].[dbo].[msg]
-            -- Select ' @i_emp_id= ' + @i_emp_id + ' @i_assigned_to_code= ' + @i_assigned_to_code + ' @i_job_or_pos_id= ' + @i_job_or_pos_id + ' @i_eff_date= ' + CAST(@i_eff_date AS char(20)) + ' @i_next_eff_date= ' + CAST(@i_next_eff_date AS char(20)) + ' @i_prior_eff_date= ' + CAST(@i_prior_eff_date AS char(20))
 
-                UPDATE [DBShrpn].[dbo].[emp_assignment]
-                SET		next_eff_date		=	CAST(@eff_date_01 AS datetime) --, [end_date] = CAST(@eff_date_01 AS datetime)
+                UPDATE DBShrpn.dbo.emp_assignment
+                SET		next_eff_date		=	CAST(@eff_date_01 AS datetime) --, end_date = CAST(@eff_date_01 AS datetime)
                 WHERE	emp_id				=	@i_emp_id
                 AND		assigned_to_code	=	@i_assigned_to_code
                 AND		job_or_pos_id		=	@i_job_or_pos_id
@@ -671,8 +714,8 @@ BEGIN
             END
 		ELSE
 			BEGIN
-			    --    INSERT INTO [DBSosxp].[dbo].[msg] Select ' Update '
-                UPDATE [DBShrpn].[dbo].[emp_assignment]
+
+                UPDATE DBShrpn.dbo.emp_assignment
                 SET		annual_salary_amt			=	CAST(@annual_salary_amt_01 AS MONEY),
                         hourly_pay_rate				=	@i_hourly_rate_amt,
                         salary_change_date			=	CAST(@eff_date_01 AS datetime),
@@ -693,11 +736,11 @@ BEGIN
         -- Update the position since could be a new position with a new salary
         --
         SELECT @individual_id = individual_id
-        FROM [DBShrpn].[dbo].[employee]
+        FROM DBShrpn.dbo.employee
         WHERE emp_id = @emp_id_01
 
 
-        -- UPDATE	[DBShrpn].[dbo].[individual_personal]
+        -- UPDATE	DBShrpn.dbo.individual_personal
         -- SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
         -- WHERE individual_id	=	@individual_id
         ---------------------------------------------------------------------------
@@ -736,8 +779,8 @@ BEGIN
     SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
-    WHERE [event_id_01] = '02'
-    SELECT @maxx = CAST(@max As CHAR(06))
+    WHERE event_id_01 = '02'
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00014'
@@ -768,8 +811,8 @@ BEGIN
     SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
-    WHERE [event_id_01] = '02'
-    SELECT @maxx = CAST(@max As CHAR(06))
+    WHERE event_id_01 = '02'
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00009'
@@ -797,7 +840,7 @@ BEGIN
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
-    SELECT @maxx = CAST(@max As CHAR(06))
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00011'
@@ -824,8 +867,8 @@ BEGIN
     SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
-    WHERE [event_id_01] = '02'
-    SELECT @maxx = CAST(@max As CHAR(06))
+    WHERE event_id_01 = '02'
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00015'
@@ -848,16 +891,16 @@ BEGIN
     -- Send notification of warning message U00012 -- Employee does not exists Message
     --
 
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_message_temp_2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_message_temp_2]
+    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_message_temp_2') AND type in (N'U'))
+        DROP TABLE dbo.ghr_message_temp_2
 
 
-    CREATE TABLE [dbo].[ghr_message_temp_2](
-        [ID]							[int] IDENTITY(1,1) NOT NULL,
-        [msg_id]						[char](15)	NOT NULL,
-        [msg_p1]						[char](15)	NOT NULL,
-        [msg_p2]						[char](15)	NOT NULL,
-        [msg_desc]						[char](255) NOT NULL
+    CREATE TABLE dbo.ghr_message_temp_2(
+        ID							int IDENTITY(1,1) NOT NULL,
+        msg_id						char(15)	NOT NULL,
+        msg_p1						char(15)	NOT NULL,
+        msg_p2						char(15)	NOT NULL,
+        msg_desc						char(255) NOT NULL
     )
 
 
@@ -877,11 +920,11 @@ BEGIN
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t1 WHERE t1.[ID] = @cnt
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t1 WHERE t1.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
-        SELECT @maxx = CAST(@max As CHAR(06))
+        SELECT @maxx = CAST(@max AS CHAR(06))
 
         IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@msg_p1))
 
@@ -916,16 +959,16 @@ BEGIN
     --
     -- Send notification of warning message U00020 -- Pay Group, @1, does not exists for employee, @2 - defaulting 99999
     --
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_message_temp_2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_message_temp_2]
+    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_message_temp_2') AND type in (N'U'))
+        DROP TABLE dbo.ghr_message_temp_2
 
 
-    CREATE TABLE [dbo].[ghr_message_temp_2](
-        [ID]							[int] IDENTITY(1,1) NOT NULL,
-        [msg_id]						[char](15)	NOT NULL,
-        [msg_p1]						[char](15)	NOT NULL,
-        [msg_p2]						[char](15)	NOT NULL,
-        [msg_desc]						[char](255) NOT NULL
+    CREATE TABLE dbo.ghr_message_temp_2(
+        ID							int IDENTITY(1,1) NOT NULL,
+        msg_id						char(15)	NOT NULL,
+        msg_p1						char(15)	NOT NULL,
+        msg_p2						char(15)	NOT NULL,
+        msg_desc						char(255) NOT NULL
     )
 
     SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
@@ -945,7 +988,7 @@ BEGIN
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.[ID] = @cnt
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
@@ -980,16 +1023,16 @@ BEGIN
     -- Send notification of warning message U00027 -- The new effective date, @1 , for employee, @2, must be greater than the current effective date
     --
 
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_message_temp_2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_message_temp_2]
+    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_message_temp_2') AND type in (N'U'))
+        DROP TABLE dbo.ghr_message_temp_2
 
 
-    CREATE TABLE [dbo].[ghr_message_temp_2](
-        [ID]							[int] IDENTITY(1,1) NOT NULL,
-        [msg_id]						[char](15)	NOT NULL,
-        [msg_p1]						[char](15)	NOT NULL,
-        [msg_p2]						[char](15)	NOT NULL,
-        [msg_desc]						[char](255) NOT NULL
+    CREATE TABLE dbo.ghr_message_temp_2(
+        ID							int IDENTITY(1,1) NOT NULL,
+        msg_id						char(15)	NOT NULL,
+        msg_p1						char(15)	NOT NULL,
+        msg_p2						char(15)	NOT NULL,
+        msg_desc						char(255) NOT NULL
     )
 
 
@@ -1009,7 +1052,7 @@ BEGIN
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.[ID] = @cnt
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
@@ -1049,16 +1092,16 @@ BEGIN
     -- Send notification of warning message U00035 -- Salary cannot be blank for salary change record. Employee ID: @1
     --
 
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_message_temp_2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_message_temp_2]
+    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_message_temp_2') AND type in (N'U'))
+        DROP TABLE dbo.ghr_message_temp_2
 
 
-    CREATE TABLE [dbo].[ghr_message_temp_2](
-        [ID]							[int] IDENTITY(1,1) NOT NULL,
-        [msg_id]						[char](15)	NOT NULL,
-        [msg_p1]						[char](15)	NOT NULL,
-        [msg_p2]						[char](15)	NOT NULL,
-        [msg_desc]						[char](255) NOT NULL
+    CREATE TABLE dbo.ghr_message_temp_2(
+        ID							int IDENTITY(1,1) NOT NULL,
+        msg_id						char(15)	NOT NULL,
+        msg_p1						char(15)	NOT NULL,
+        msg_p2						char(15)	NOT NULL,
+        msg_desc						char(255) NOT NULL
     )
 
 
@@ -1078,11 +1121,11 @@ BEGIN
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t1 WHERE t1.[ID] = @cnt
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t1 WHERE t1.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
-        SELECT @maxx = CAST(@max As CHAR(06))
+        SELECT @maxx = CAST(@max AS CHAR(06))
 
         IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@msg_p1))
 
@@ -1119,16 +1162,16 @@ BEGIN
     -- Send notification of warning message U00041 -- Salary cannot be zeroed for a Salary Change
     --
 
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ghr_message_temp_2]') AND type in (N'U'))
-        DROP TABLE [dbo].[ghr_message_temp_2]
+    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_message_temp_2') AND type in (N'U'))
+        DROP TABLE dbo.ghr_message_temp_2
 
 
-    CREATE TABLE [dbo].[ghr_message_temp_2](
-        [ID]							[int] IDENTITY(1,1) NOT NULL,
-        [msg_id]						[char](15)	NOT NULL,
-        [msg_p1]						[char](15)	NOT NULL,
-        [msg_p2]						[char](15)	NOT NULL,
-        [msg_desc]						[char](255) NOT NULL
+    CREATE TABLE dbo.ghr_message_temp_2(
+        ID							int IDENTITY(1,1) NOT NULL,
+        msg_id						char(15)	NOT NULL,
+        msg_p1						char(15)	NOT NULL,
+        msg_p2						char(15)	NOT NULL,
+        msg_desc						char(255) NOT NULL
     )
 
 
@@ -1148,11 +1191,11 @@ BEGIN
     WHILE (@cnt <= @max)
     BEGIN
 
-        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.[ID] = @cnt
+        SELECT @msg_id = msg_id, @msg_p1 = msg_p1, @msg_p2 = msg_p2 FROM DBShrpn.dbo.ghr_message_temp_2 t2 WHERE t2.ID = @cnt
 
         SELECT @special_value_exists = 0
         SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
-        SELECT @maxx = CAST(@max As CHAR(06))
+        SELECT @maxx = CAST(@max AS CHAR(06))
 
         IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@msg_p1))
 
@@ -1193,7 +1236,7 @@ BEGIN
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
-    SELECT @maxx = CAST(@max As CHAR(06))
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00011'
@@ -1217,7 +1260,7 @@ BEGIN
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00010'
 
-    SELECT @maxx = CAST(@max As CHAR(06))
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00010'
@@ -1241,7 +1284,7 @@ BEGIN
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
-    SELECT @maxx = CAST(@max As CHAR(06))
+    SELECT @maxx = CAST(@max AS CHAR(06))
     SELECT @special_value_exists = 0
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00011'
@@ -1267,5 +1310,5 @@ END
 GO
 
 
-ALTER AUTHORIZATION ON [dbo].[usp_ins_salary_change] TO  SCHEMA OWNER
+ALTER AUTHORIZATION ON dbo.usp_ins_salary_change TO  SCHEMA OWNER
 GO

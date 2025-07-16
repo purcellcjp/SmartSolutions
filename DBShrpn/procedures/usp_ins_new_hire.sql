@@ -21,6 +21,8 @@ AS
 
 BEGIN
 
+    SET NOCOUNT ON
+
     DECLARE @ret int
     --DECLARE @p_activity_date				datetime
     --DECLARE @p_userid						varchar(30)
@@ -743,7 +745,7 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Determine Emp Assignment Position - Not provided by HCM
         ---------------------------------------------------------------------------
-        IF (CHARINDEX'VENUS', (@@SERVERNAME) > 0)
+        IF (CHARINDEX('VENUS', @@SERVERNAME) > 0)
             IF EXISTS(
                       SELECT 1
                       FROM DBShrpn.dbo.employer
@@ -786,7 +788,7 @@ BEGIN
 
         -- GOSL will only provide hourly rate
         SET @w_hourly_pay_rate = CAST(@annual_salary AS MONEY)
-        -- GOSL does not use tm_pd_polict correctly
+        -- GOSL does not use tm_pd_policy correctly
         -- Calculate Annual Salary = hourly rate * 2080
         SET @w_annual_salary_amt = ROUND(@w_hourly_pay_rate * 2080.00, 2)
 
@@ -805,11 +807,18 @@ BEGIN
         WHERE pay_group_id = @pay_group_id_03
 
         IF (@pay_frequency_code = 'MONTH')
-            SELECT @w_pd_salary_amt                 = @annual_salary / @annualizing_factor
-                 , @w_pd_salary_tm_pd_id            = @pay_frequency_code
-                 , @w_standard_work_pd_id           = 'WEEK'
-                 , @w_standard_work_hrs             = 40.0
-                 , @w_standard_daily_work_hrs       = 8.0
+            IF (@pay_group_id_03 = 'MONTHLY2')
+                SELECT @w_pd_salary_amt                 = 0.00
+                     , @w_pd_salary_tm_pd_id            = ''
+                     , @w_standard_work_pd_id           = @pay_frequency_code
+                     , @w_standard_work_hrs             = 168.0     -- need a real default value
+                     , @w_standard_daily_work_hrs       = 8.0
+            ELSE
+                SELECT @w_pd_salary_amt                 = @annual_salary / @annualizing_factor
+                     , @w_pd_salary_tm_pd_id            = @pay_frequency_code
+                     , @w_standard_work_pd_id           = 'WEEK'
+                     , @w_standard_work_hrs             = 40.0
+                     , @w_standard_daily_work_hrs       = 8.0
         ELSE    -- BIWK
             SELECT @w_pd_salary_amt                 = 0.00
                  , @w_pd_salary_tm_pd_id            = ''

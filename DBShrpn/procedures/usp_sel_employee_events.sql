@@ -15,6 +15,8 @@ AS
 
 BEGIN
 
+    SET NOCOUNT ON
+
     DECLARE @w_activity_date	datetime
           , @w_inputfile		varchar(254)
           , @w_wflow_userid		varchar(30)
@@ -27,59 +29,59 @@ BEGIN
 
     CREATE TABLE #ghr_employee_events_temp
     (
-      ID									    int	IDENTITY(11) NOT NULL
-    , event_id_01							    char(02)        NULL
-    , emp_id_01							        char(15)        NULL
-    , eff_date_01							    char(10)        NULL
-    , first_name_01						        char(25)        NULL
-    , first_middle_name_01				        char(25)        NULL
-    , last_name_01						        char(30)        NULL
-    , empl_id_01							    char(10)        NULL
-    , national_id_1_type_code_01			    char(05)        NULL
-    , national_id_1_01					        char(20)        NULL
-    , organization_group_id_01			        char(05)        NULL
-    , organization_chart_name_01			    varchar(64)     NULL
-    , organization_unit_name_01			        varchar(240)    NULL
-    , emp_status_classn_code_01			        char(02)        NULL
-    , position_title_01					        char(60)        NULL
-    , employment_type_code_01				    char(05)        NULL
-    , annual_salary_amt_01				        char(15)        NULL
-    , begin_date_02						        char(10)        NULL
-    , end_date_02							    char(10)        NULL
-    , pay_status_code_03					    char(01)        NULL
-    , pay_group_id_03						    char(10)        NULL
-    , pay_element_ctrl_grp_id_03			    char(10)        NULL
-    , time_reporting_meth_code_03			    char(01)        NULL
-    , employment_info_chg_reason_cd_03	        char(05)        NULL
-    , emp_location_code_03				        char(10)        NULL
-    , emp_status_code_5					        char(02)        NULL
-    , reason_code_5						        char(02)        NULL
-    , emp_expected_return_date_5			    char(10)        NULL
-    , pay_through_date_5					    char(10)        NULL
-    , emp_death_date_5					        char(10)        NULL
-    , consider_for_rehire_ind_5			        char(01)        NULL
-    , pay_element_desc_06					    char(20)        NULL
-    , emp_calculation_06					    char(15)        NULL
-    , tax_flag                                  char(1)         NULL    -- individual_personal.ind_2
-    , nic_flag                                  char(1)         NULL    -- individual_personal.ind_1
-    , tax_ceiling_amt                           char(15)        NULL    -- employee.user_monetary_amt_1
-    , labor_grp_code                            char(50)        NULL    -- emp_assignment.user_text_1
+      ID									    int	IDENTITY(11)    NOT NULL
+    , event_id_01							    char(02)            NULL
+    , emp_id_01							        char(15)            NULL
+    , eff_date_01							    char(10)            NULL
+    , first_name_01						        char(25)            NULL
+    , first_middle_name_01				        char(25)            NULL
+    , last_name_01						        char(30)            NULL
+    , empl_id_01							    char(10)            NULL
+    , national_id_1_type_code_01			    char(05)            NULL
+    , national_id_1_01					        char(20)            NULL
+    , organization_group_id_01			        char(05)            NULL
+    , organization_chart_name_01			    varchar(64)         NULL
+    , organization_unit_name_01			        varchar(240)        NULL
+    , emp_status_classn_code_01			        char(02)            NULL
+    , position_title_01					        char(60)            NULL
+    , employment_type_code_01				    char(05)            NULL
+    , annual_salary_amt_01				        char(15)            NULL
+    , begin_date_02						        char(10)            NULL
+    , end_date_02							    char(10)            NULL
+    , pay_status_code_03					    char(01)            NULL
+    , pay_group_id_03						    char(10)            NULL
+    , pay_element_ctrl_grp_id_03			    char(10)            NULL
+    , time_reporting_meth_code_03			    char(01)            NULL
+    , employment_info_chg_reason_cd_03	        char(05)            NULL
+    , emp_location_code_03				        char(10)            NULL
+    , emp_status_code_5					        char(02)            NULL
+    , reason_code_5						        char(02)            NULL
+    , emp_expected_return_date_5			    char(10)            NULL
+    , pay_through_date_5					    char(10)            NULL
+    , emp_death_date_5					        char(10)            NULL
+    , consider_for_rehire_ind_5			        char(01)            NULL
+    , pay_element_desc_06					    char(20)            NULL
+    , emp_calculation_06					    char(15)            NULL
+    , tax_flag                                  char(1)             NULL    -- individual_personal.ind_2
+    , nic_flag                                  char(1)             NULL    -- individual_personal.ind_1
+    , tax_ceiling_amt                           char(15)            NULL    -- employee.user_monetary_amt_1
+    , labor_grp_code                            char(50)            NULL    -- emp_assignment.user_text_1
     )
 
 
 CREATE TABLE #tbl_ghr_msg
     (
-	  msg_id                                    char(15)        NOT NULL
-	, msg_p1                                    char(15)        NOT NULL
-	, msg_p2                                    char(15)        NOT NULL
-	, msg_desc                                  char(255)       NOT NULL
+	  msg_id                                    char(15)            NOT NULL
+	, msg_p1                                    char(15)            NOT NULL
+	, msg_p2                                    char(15)            NOT NULL
+	, msg_desc                                  char(255)           NOT NULL
     )
 
 
 	-- Find the Batch name and qualifer for the job running the Bulk Copy
-    SELECT @w_userid		=	psc_userid
-		 , @w_batchname	=	psc_batchname
-		 , @w_qualifier	=	psc_qualifier
+    SELECT @w_userid        =	psc_userid
+		 , @w_batchname	    =	psc_batchname
+		 , @w_qualifier	    =	psc_qualifier
     FROM DBSpscb.dbo.psc_step
     WHERE psc_userid		= @USER_ID
       AND psc_pgm_parms	= 'GHR_EMPLOYEE_EVENTS'

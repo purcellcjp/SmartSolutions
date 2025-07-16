@@ -21,6 +21,8 @@ AS
 
 BEGIN
 
+    SET NOCOUNT ON
+
     DECLARE @ret int
     --DECLARE @p_activity_date				datetime
     --DECLARE @p_userid						varchar(30)
@@ -32,7 +34,7 @@ BEGIN
     DECLARE @w_msg_text						varchar(255)
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
-    DECLARE @w_severity_cd					tinyint	
+    DECLARE @w_severity_cd					tinyint
     DECLARE @w_fatal_error					char(01)
     DECLARE @w_trace_sw						char(01)
 
@@ -96,19 +98,19 @@ BEGIN
         [employment_info_chg_reason_cd_03]		[char](05) NULL,
         [emp_location_code_03]					[char](10) NULL,
         [emp_status_code_5]						[char](02) NULL,
-        [reason_code_5]							[char](02) NULL,	
-        [emp_expected_return_date_5]			[char](10) NULL,	
-        [pay_through_date_5]					[char](10) NULL,	
-        [emp_death_date_5]						[char](10) NULL,	
-        [consider_for_rehire_ind_5]				[char](01) NULL,	
-        [pay_element_desc_06]					[char](20) NULL,	
+        [reason_code_5]							[char](02) NULL,
+        [emp_expected_return_date_5]			[char](10) NULL,
+        [pay_through_date_5]					[char](10) NULL,
+        [emp_death_date_5]						[char](10) NULL,
+        [consider_for_rehire_ind_5]				[char](01) NULL,
+        [pay_element_desc_06]					[char](20) NULL,
         [emp_calculation_06]					[char](15) NULL
     )
 
     INSERT INTO DBShrpn.dbo.ghr_employee_events_temp4    ---#t0
-    SELECT * 
+    SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
-    WHERE [event_id_01] = '04' 
+    WHERE [event_id_01] = '04'
 
     DECLARE @max			INT
     DECLARE @maxx			CHAR(06)
@@ -123,7 +125,7 @@ BEGIN
     DECLARE @msg_p2			CHAR(15)
     DECLARE @msg_cnt		INT
 
-    -- This section declares the interface values from Global HR  
+    -- This section declares the interface values from Global HR
     DECLARE	@event_id_01							char(02),
                 @emp_id_01								char(15),
                 @eff_date_01							char(10),
@@ -149,24 +151,24 @@ BEGIN
                 @employment_info_chg_reason_cd_03		char(05),
                 @emp_location_code_03					char(10),
                 @emp_status_code_5						char(02),
-                @reason_code_5							char(02),	
-                @emp_expected_return_date_5				char(10),	
-                @pay_through_date_5						char(10),	
-                @emp_death_date_5						char(10),	
-                @consider_for_rehire_ind_5				char(01),	
-                @pay_element_desc_06					char(20),	
+                @reason_code_5							char(02),
+                @emp_expected_return_date_5				char(10),
+                @pay_through_date_5						char(10),
+                @emp_death_date_5						char(10),
+                @consider_for_rehire_ind_5				char(01),
+                @pay_element_desc_06					char(20),
                 @emp_calculation_06						char(15)
-			
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_employee_events_temp4
 
-    DELETE DBShrpn.dbo.ghr_msg_tbl 
+    DELETE DBShrpn.dbo.ghr_msg_tbl
 
     WHILE (@cnt <= @max)
     BEGIN
         SELECT  @w_fatal_error = '0'
-        
+
         SELECT  @event_id_01						=	event_id_01,
                 @emp_id_01							=	emp_id_01,
                 @eff_date_01						=	eff_date_01,
@@ -181,7 +183,7 @@ BEGIN
                 @organization_unit_name_01			=	organization_unit_name_01,
                 @emp_status_classn_code_01			=	emp_status_classn_code_01,
                 @position_title_01					=	position_title_01,
-                @employment_type_code_01			=	employment_type_code_01,        
+                @employment_type_code_01			=	employment_type_code_01,
                 @annual_salary_amt_01				=	annual_salary_amt_01,
                 @begin_date_02						=	begin_date_02,
                 @end_date_02						=	end_date_02,
@@ -195,55 +197,55 @@ BEGIN
                 @reason_code_5						=	reason_code_5,
                 @emp_expected_return_date_5			=	emp_expected_return_date_5,
                 @pay_through_date_5					=	pay_through_date_5,
-                @emp_death_date_5					=	emp_death_date_5,	
-                @consider_for_rehire_ind_5			=	consider_for_rehire_ind_5,	
+                @emp_death_date_5					=	emp_death_date_5,
+                @consider_for_rehire_ind_5			=	consider_for_rehire_ind_5,
                 @pay_element_desc_06				=	pay_element_desc_06,
                 @emp_calculation_06					=	emp_calculation_06
         FROM DBShrpn.dbo.ghr_employee_events_temp4 t WHERE t.ID = @cnt
-	  
+
         --
         --	This section will validate the interface data
-        -- 
+        --
 
         --
         -- Check to see if the employee does not exists
-        --	 
- 
+        --
+
         IF  NOT EXISTS (SELECT * FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01)
             BEGIN
                 UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	'02'					
+                    SET activity_status	=	'02'
                 WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'04'			    
-                        
+                    AND event_id_01		=	'04'
+
                 INSERT INTO DBShrpn.dbo.ghr_msg_tbl
                 SELECT 'U00012'					As msg_id,
                         @emp_id_01					As msg_p1,
                         @emp_id_01					As msg_p2,
                         'Employee does not exists'	As msg_desc
-                        
-                -- Historical Message for reporting purpose	
-                INSERT INTO DBShrpn.dbo.ghr_historical_message	
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
                 SELECT  'U00012'						As msg_id,
                         '04'							As event_id,
                         @emp_id_01 						As emp_id,
                         @eff_date_01					As eff_date,
-                        @pay_element_desc_06			As pay_element_id,					
+                        @pay_element_desc_06			As pay_element_id,
                         @emp_id_01						As msg_p1,
                         @emp_id_01						As msg_p2,
                         'Employee does not exists'		As msg_desc,
                         @p_activity_date				AS activity_date
-                -- End of Historical Message for reporting purpose						
-                        
+                -- End of Historical Message for reporting purpose
+
                 SELECT  @w_fatal_error = '5'
-                
-                -- GOTO BYPASS_EMPLOYEE 
+
+                -- GOTO BYPASS_EMPLOYEE
             END
 
    	    IF  @w_fatal_error = '5' GOTO BYPASS_EMPLOYEE
-		
-        /*	
+
+        /*
             SELECT  @event_id_01,
                     @emp_id_01,
                     @eff_date_01,
@@ -271,41 +273,41 @@ BEGIN
                     @reason_code_5,
                     @emp_expected_return_date_5,
                     @pay_through_date_5,
-                    @emp_death_date_5,	
-                    @consider_for_rehire_ind_5,	
+                    @emp_death_date_5,
+                    @consider_for_rehire_ind_5,
                     @pay_element_desc_06,
                     @emp_calculation_06
-                    
+
             SELECT @last_name_01
-        */	
+        */
 
         SELECT @individual_id = individual_id FROM [DBShrpn].[dbo].[employee] WHERE emp_id = @emp_id_01
 
-        SELECT @prior_last_name = last_name FROM [DBShrpn].[dbo].[individual] WHERE individual_id = @individual_id        
-        
+        SELECT @prior_last_name = last_name FROM [DBShrpn].[dbo].[individual] WHERE individual_id = @individual_id
+
         UPDATE	[DBShrpn].[dbo].[individual]
         SET	first_name			=	RTRIM(@first_name_01),
                 first_middle_name   =   RTRIM(@first_middle_name_01),
                 last_name			=	RTRIM(@last_name_01),
-                prior_last_name		=	RTRIM(@prior_last_name), 
+                prior_last_name		=	RTRIM(@prior_last_name),
                 pay_to_name			=	RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
-                WHERE individual_id = @individual_id 
-        
+                WHERE individual_id = @individual_id
+
         UPDATE	[DBShrpn].[dbo].[employee]
-            SET	emp_display_name	=	RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)  
-        WHERE emp_id = @emp_id_01 
-	  
+            SET	emp_display_name	=	RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
+        WHERE emp_id = @emp_id_01
+
         --
         -- Update the title of the employee
         --
-	
+
 		UPDATE	[DBShrpn].[dbo].[individual_personal]
 		   SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
-		 WHERE individual_id	=	@individual_id 	  
+		 WHERE individual_id	=	@individual_id
 
-	
+
 	    BYPASS_EMPLOYEE:
-				  
+
 	    SELECT @cnt = @cnt + 1
 
     END -- end of while loop
@@ -318,10 +320,10 @@ BEGIN
     -- Send notification of warning message U00013  -- < Name Change Section (4) >
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00013'
 
-    SELECT @max = COUNT(*)  
+    SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE [event_id_01] = '04'
@@ -337,9 +339,9 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- End of Sending notification of warning message U00000
@@ -349,11 +351,11 @@ BEGIN
     -- Send notification of warning message U00009  -- < BEGINING OF WARNING MESSAGES: >
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00009'
 
-    SELECT @max = COUNT(*)  
+    SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE [event_id_01] = '04'
@@ -369,9 +371,9 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- End of Sending notification of warning message U00009
@@ -381,7 +383,7 @@ BEGIN
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
@@ -397,19 +399,19 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3 
+        @w_msg_text_3
 
     --
     -- Send notification of warning message U00016  -- Total Global HR Salary Change:
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00016'
 
-    SELECT @max = COUNT(*)  
+    SELECT @max = COUNT(*)
     --  SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
     WHERE [event_id_01] = '04'
@@ -418,7 +420,7 @@ BEGIN
     SELECT @special_value_exists = CHARINDEX('@1',@w_msg_text,1)
     SELECT @msg_id = 'U00016'
 
-    IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))  
+    IF @special_value_exists <> 0 SELECT @w_msg_text = REPLACE(@w_msg_text,'@1',RTRIM(@maxx))
     SELECT @w_msg_text_2 = ''
 
     EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2 @p_userid,
@@ -426,10 +428,10 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
-    
+        @w_msg_text_3
+
     --
     -- Send notification of warning message U00013 -- Employee does not exists Message
     --
@@ -447,18 +449,18 @@ BEGIN
     )
 
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00013'
 
-    INSERT INTO DBShrpn.dbo.ghr_message_temp_4	
-    SELECT * 
+    INSERT INTO DBShrpn.dbo.ghr_message_temp_4
+    SELECT *
     FROM DBShrpn.dbo.ghr_msg_tbl
     WHERE msg_id = 'U00013'
-    
+
     SET @cnt = 1
 
     SELECT @max = COUNT(ID) FROM DBShrpn.dbo.ghr_message_temp_4
-    
+
 
     WHILE (@cnt <= @max)
     BEGIN
@@ -483,25 +485,25 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
         @w_msg_text_3
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00013'
-        
+
     SELECT @cnt = @cnt + 1;
 
     END
     --
-    --	End of warning message U00003 
-    -- 
+    --	End of warning message U00003
+    --
 
     --
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
@@ -517,15 +519,15 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     --
     -- Send notification of warning message U00010 -- <ENDING OF WARNING MESSAGES: >
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00010'
 
@@ -541,16 +543,16 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
 
     --
     -- Send notification of warning message U00011 -- Blank Line
     --
 
-    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd 
+    SELECT @w_msg_text = msg_text,@w_msg_text_2= msg_text_2,@w_msg_text_3 = msg_text_3,@w_severity_cd = severity_cd
     --  SELECT *
     FROM DBSCOMMON.dbo.message_master WHERE msg_id = 'U00011'
 
@@ -566,17 +568,17 @@ BEGIN
         @p_qualifier,
         @msg_id ,
         @w_severity_cd,
-        @w_msg_text, 
+        @w_msg_text,
         @w_msg_text_2,
-        @w_msg_text_3  
+        @w_msg_text_3
 
     -- IF @w_trace_sw = 'Y'
-    --    INSERT INTO DBSosxp.dbo.msg SELECT 'End usp_ins_name_change' AS msg_desc    
+    --    INSERT INTO DBSosxp.dbo.msg SELECT 'End usp_ins_name_change' AS msg_desc
 
     -- SELECT @p_status = 0
 
 END
 GO
 
-ALTER AUTHORIZATION ON [dbo].[usp_ins_name_change] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_ins_name_change] TO  SCHEMA OWNER
 GO
