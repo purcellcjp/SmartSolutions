@@ -1014,12 +1014,14 @@ BEGIN
                 @i_prior_eff_date		=	prior_eff_date
         FROM	[DBShrpn].[dbo].[emp_assignment]	ea
         WHERE	emp_id					=	@emp_id_01
+        AND prime_assignment_ind	=	'Y'
         AND  eff_date				=	(
                                          SELECT	MAX(eff_date)
                                          FROM [DBShrpn].[dbo].[emp_assignment] t
                                          WHERE t.emp_id =	ea.emp_id
-                                           AND prime_assignment_ind	=	'Y')
                                            AND prime_assignment_ind	=	'Y'
+                                        )
+
 
 
         --	SELECT @pay_frequency_code	= pay_frequency_code

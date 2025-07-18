@@ -68,17 +68,21 @@ BEGIN
     , labor_grp_code                            char(50)            NULL    -- emp_assignment.user_text_1
     )
 
-
+-- CJP declare in each event procedure???
 CREATE TABLE #tbl_ghr_msg
     (
 	  msg_id                                    char(15)            NOT NULL
 	, msg_p1                                    char(15)            NOT NULL
+    , msg_p1_spec_char                          char(2)             NOT NULL
+    , msg_p1_field                              varchar(255)        NOT NULL
 	, msg_p2                                    char(15)            NOT NULL
-	, msg_desc                                  char(255)           NOT NULL
+    , msg_p2_spec_char                          char(2)             NOT NULL
+    , msg_p2_field                              varchar(255)        NOT NULL
+    , msg_desc                                  char(255)           NOT NULL
     )
 
 
-	-- Find the Batch name and qualifer for the job running the Bulk Copy
+	-- Find the Batch name and qualifier for the job running the Bulk Copy
     SELECT @w_userid        =	psc_userid
 		 , @w_batchname	    =	psc_batchname
 		 , @w_qualifier	    =	psc_qualifier
@@ -195,13 +199,13 @@ CREATE TABLE #tbl_ghr_msg
 	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '01' )
     BEGIN
         EXEC DBShrpn.dbo.usp_ins_new_hire
-                @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
+              @p_userid          = @w_userid
+            , @p_batchname       = @w_batchname
+            , @p_qualifier       = @w_qualifier
+            , @p_activity_date   = @w_activity_date
+            , @p_user_id         = @w_wflow_userid
+            , @p_activity_status = @w_activity_status
+            , @p_status          = @w_status
     END
 
 
