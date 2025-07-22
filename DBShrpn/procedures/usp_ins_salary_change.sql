@@ -139,6 +139,15 @@ BEGIN
 
 
 
+    CREATE TABLE #tbl_ghr_msg
+        (
+          msg_id                                    char(15)            NOT NULL
+        , msg_p1                                    char(15)            NOT NULL
+        , msg_p2                                    char(15)            NOT NULL
+        , msg_desc                                  char(255)           NOT NULL
+        )
+
+
     -- Set first loop number
     SELECT @cnt = MIN(ID)
     FROM #ghr_employee_events_temp

@@ -1,21 +1,35 @@
-USE DBShrpn
+USE DBShrpn;
 GO
 
-
-SET ANSI_NULLS OFF
+SET ANSI_NULLS OFF;
 GO
-SET QUOTED_IDENTIFIER OFF
+SET QUOTED_IDENTIFIER OFF;
 GO
 
-CREATE OR ALTER PROCEDURE dbo.usp_sel_employee_events
+IF OBJECT_ID(N'dbo.usp_sel_employee_events', N'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_sel_employee_events
+    IF OBJECT_ID(N'dbo.usp_sel_employee_events') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_sel_employee_events >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_sel_employee_events >>>'
+END
+GO
+
+CREATE PROCEDURE dbo.usp_sel_employee_events
 (
-    @USER_ID      char(30)
+    @p_user_id      char(30)
 )
 AS
 
 BEGIN
 
     SET NOCOUNT ON
+
+    DECLARE @ErrorMessage       nvarchar(4000)
+    DECLARE @ErrorSeverity      int
+    DECLARE @ErrorState         int
+    DECLARE @v_ret_val          int = 0
 
     DECLARE @w_activity_date	datetime
           , @w_inputfile		varchar(254)
@@ -29,7 +43,7 @@ BEGIN
 
     CREATE TABLE #ghr_employee_events_temp
     (
-      ID									    int	IDENTITY(11)    NOT NULL
+      ID									    int	IDENTITY(1,1)   NOT NULL
     , event_id_01							    char(02)            NULL
     , emp_id_01							        char(15)            NULL
     , eff_date_01							    char(10)            NULL
@@ -66,235 +80,254 @@ BEGIN
     , nic_flag                                  char(1)             NULL    -- individual_personal.ind_1
     , tax_ceiling_amt                           char(15)            NULL    -- employee.user_monetary_amt_1
     , labor_grp_code                            char(50)            NULL    -- emp_assignment.user_text_1
-    )
-
--- CJP declare in each event procedure???
-CREATE TABLE #tbl_ghr_msg
-    (
-	  msg_id                                    char(15)            NOT NULL
-	, msg_p1                                    char(15)            NOT NULL
-    , msg_p1_spec_char                          char(2)             NOT NULL
-    , msg_p1_field                              varchar(255)        NOT NULL
-	, msg_p2                                    char(15)            NOT NULL
-    , msg_p2_spec_char                          char(2)             NOT NULL
-    , msg_p2_field                              varchar(255)        NOT NULL
-    , msg_desc                                  char(255)           NOT NULL
+    , file_source                               char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
     )
 
 
-	-- Find the Batch name and qualifier for the job running the Bulk Copy
-    SELECT @w_userid        =	psc_userid
-		 , @w_batchname	    =	psc_batchname
-		 , @w_qualifier	    =	psc_qualifier
-    FROM DBSpscb.dbo.psc_step
-    WHERE psc_userid		= @USER_ID
-      AND psc_pgm_parms	= 'GHR_EMPLOYEE_EVENTS'
+    BEGIN TRY
+
+		IF (@p_user_id = '')
+			SET @p_user_id = SYSTEM_USER
+
+        -- Find the Batch name and qualifier for the job running the Bulk Copy
+        SELECT @w_userid        =	psc_userid
+            , @w_batchname	    =	psc_batchname
+            , @w_qualifier	    =	psc_qualifier
+        FROM DBSpscb.dbo.psc_step
+        WHERE psc_userid		= @p_user_id
+        AND psc_pgm_parms	= 'GHR_EMPLOYEE_EVENTS'
 
 
-	SET @w_activity_status	= '00'
-	SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
-	SET @w_wflow_userid = @USER_ID
+        SET @w_activity_status	= '00'
+        SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
+        SET @w_wflow_userid = @p_user_id
 
 
-	SELECT @w_inputfile	=	batch_parameter_3
-	FROM DBSentp.dbo.batch_parameters
-	WHERE batch_parameter_key = 'GHR_EMPLOYEE_EVENTS'
+        SELECT @w_inputfile	=	batch_parameter_3
+        FROM DBSentp.dbo.batch_parameters
+        WHERE batch_parameter_key = 'GHR_EMPLOYEE_EVENTS'
 
 
-    INSERT INTO #ghr_employee_events_temp
-    SELECT event_id_01
-		 , emp_id_01
-		 , eff_date_01
-		 , first_name_01
-		 , first_middle_name_01
-		 , last_name_01
-		 , empl_id_01
-		 , national_id_1_type_code_01
-		 , national_id_1_01
-		 , organization_group_id_01
-		 , organization_chart_name_01
-		 , organization_unit_name_01
-		 , emp_status_classn_code_01
-		 , position_title_01
-		 , employment_type_code_01
-		 , annual_salary_amt_01
-		 , begin_date_02
-		 , end_date_02
-		 , pay_status_code_03
-		 , pay_group_id_03
-		 , pay_element_ctrl_grp_id_03
-		 , time_reporting_meth_code_03
-		 , employment_info_chg_reason_cd_03
-		 , emp_location_code_03
-		 , emp_status_code_5
-		 , reason_code_5
-		 , emp_expected_return_date_5
-		 , pay_through_date_5
-		 , emp_death_date_5
-		 , consider_for_rehire_ind_5
-		 , pay_element_desc_06
-		 , emp_calculation_06
-         , tax_flag
-         , nic_flag
-         , tax_ceiling_amt
-         , labor_grp_code
-    FROM DBShrpn.dbo.ghr_employee_events
-    ORDER BY event_id_01
-           , emp_id_01
+        INSERT INTO #ghr_employee_events_temp
+        SELECT event_id_01
+            , emp_id_01
+            , eff_date_01
+            , first_name_01
+            , first_middle_name_01
+            , last_name_01
+            , empl_id_01
+            , national_id_1_type_code_01
+            , national_id_1_01
+            , organization_group_id_01
+            , organization_chart_name_01
+            , organization_unit_name_01
+            , emp_status_classn_code_01
+            , position_title_01
+            , employment_type_code_01
+            , annual_salary_amt_01
+            , begin_date_02
+            , end_date_02
+            , pay_status_code_03
+            , pay_group_id_03
+            , pay_element_ctrl_grp_id_03
+            , time_reporting_meth_code_03
+            , employment_info_chg_reason_cd_03
+            , emp_location_code_03
+            , emp_status_code_5
+            , reason_code_5
+            , emp_expected_return_date_5
+            , pay_through_date_5
+            , emp_death_date_5
+            , consider_for_rehire_ind_5
+            , pay_element_desc_06
+            , emp_calculation_06
+            , tax_flag
+            , nic_flag
+            , tax_ceiling_amt
+            , labor_grp_code
+            , file_source
+        FROM DBShrpn.dbo.ghr_employee_events
+        ORDER BY event_id_01
+            , emp_id_01
 
 
-	INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
-    SELECT event_id_01
-		 , emp_id_01
-		 , eff_date_01
-		 , first_name_01
-		 , first_middle_name_01
-		 , last_name_01
-		 , empl_id_01
-		 , national_id_1_type_code_01
-		 , national_id_1_01
-		 , organization_group_id_01
-		 , organization_chart_name_01
-		 , organization_unit_name_01
-		 , emp_status_classn_code_01
-		 , position_title_01
-		 , employment_type_code_01
-		 , annual_salary_amt_01
-		 , begin_date_02
-		 , end_date_02
-		 , pay_status_code_03
-		 , pay_group_id_03
-		 , pay_element_ctrl_grp_id_03
-		 , time_reporting_meth_code_03
-		 , employment_info_chg_reason_cd_03
-		 , emp_location_code_03
-		 , emp_status_code_5
-		 , reason_code_5
-		 , emp_expected_return_date_5
-		 , pay_through_date_5
-		 , emp_death_date_5
-		 , consider_for_rehire_ind_5
-		 , pay_element_desc_06
-		 , emp_calculation_06
-         , tax_flag
-         , nic_flag
-         , tax_ceiling_amt
-         , labor_grp_code
-		 , @w_activity_date		    AS activity_date
-		 , @w_wflow_userid		    AS activity_user
-		 , @w_activity_status		AS activity_status
-    FROM DBShrpn.dbo.ghr_employee_events ee
-    WHERE NOT EXISTS (
-                      SELECT 1
-                      FROM DBShrpn.dbo.ghr_employee_events_aud t
-                      WHERE t.event_id_01	=   ee.event_id_01
-                        AND t.emp_id_01		=	ee.emp_id_01
-                        AND t.activity_date	=	@w_activity_date
-                     )
+        INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
+        SELECT event_id_01
+            , emp_id_01
+            , eff_date_01
+            , first_name_01
+            , first_middle_name_01
+            , last_name_01
+            , empl_id_01
+            , national_id_1_type_code_01
+            , national_id_1_01
+            , organization_group_id_01
+            , organization_chart_name_01
+            , organization_unit_name_01
+            , emp_status_classn_code_01
+            , position_title_01
+            , employment_type_code_01
+            , annual_salary_amt_01
+            , begin_date_02
+            , end_date_02
+            , pay_status_code_03
+            , pay_group_id_03
+            , pay_element_ctrl_grp_id_03
+            , time_reporting_meth_code_03
+            , employment_info_chg_reason_cd_03
+            , emp_location_code_03
+            , emp_status_code_5
+            , reason_code_5
+            , emp_expected_return_date_5
+            , pay_through_date_5
+            , emp_death_date_5
+            , consider_for_rehire_ind_5
+            , pay_element_desc_06
+            , emp_calculation_06
+            , tax_flag
+            , nic_flag
+            , tax_ceiling_amt
+            , labor_grp_code
+            , file_source
+            , @w_activity_date		    AS activity_date
+            , @w_wflow_userid		    AS activity_user
+            , @w_activity_status		AS activity_status
+        FROM DBShrpn.dbo.ghr_employee_events ee
+        WHERE NOT EXISTS (
+                        SELECT 1
+                        FROM DBShrpn.dbo.ghr_employee_events_aud t
+                        WHERE t.event_id_01	=   ee.event_id_01
+                            AND t.emp_id_01		=	ee.emp_id_01
+                            AND t.activity_date	=	@w_activity_date
+                        )
 
 
-    ---------------------------------------------------------------------------
-    -- New Hires
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '01' )
-    BEGIN
-        EXEC DBShrpn.dbo.usp_ins_new_hire
-              @p_userid          = @w_userid
-            , @p_batchname       = @w_batchname
-            , @p_qualifier       = @w_qualifier
-            , @p_activity_date   = @w_activity_date
-            , @p_user_id         = @w_wflow_userid
-            , @p_activity_status = @w_activity_status
-            , @p_status          = @w_status
-    END
+        ---------------------------------------------------------------------------
+        -- New Hires
+        ---------------------------------------------------------------------------
+
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '01' )
+        BEGIN
+
+			EXEC DBShrpn.dbo.usp_ins_new_hire
+                @p_userid          = @w_userid
+                , @p_batchname       = @w_batchname
+                , @p_qualifier       = @w_qualifier
+                , @p_activity_date   = @w_activity_date
+                , @p_user_id         = @w_wflow_userid
+                , @p_activity_status = @w_activity_status
+                , @p_status          = @w_status
+        END
+
+    /*
+        ---------------------------------------------------------------------------
+        -- Salary Change
+        ---------------------------------------------------------------------------
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '02' )
+        BEGIN
+            EXEC	DBShrpn.dbo.usp_ins_salary_change @w_userid,
+                    @w_batchname,
+                    @w_qualifier,
+                    @w_activity_date,
+                    @w_wflow_userid,
+                    @w_activity_status,
+                    @w_status
+        END
 
 
-    ---------------------------------------------------------------------------
-    -- Salary Change
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '02' )
-    BEGIN
-        EXEC	DBShrpn.dbo.usp_ins_salary_change @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
-    END
+        ---------------------------------------------------------------------------
+        -- Employee Transfer
+        ---------------------------------------------------------------------------
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '03' )
+        BEGIN
+            EXEC	DBShrpn.dbo.usp_perform_transfer @w_userid,
+                    @w_batchname,
+                    @w_qualifier,
+                    @w_activity_date,
+                    @w_wflow_userid,
+                    @w_activity_status,
+                    @w_status
+        END
 
 
-    ---------------------------------------------------------------------------
-    -- Employee Transfer
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '03' )
-    BEGIN
-        EXEC	DBShrpn.dbo.usp_perform_transfer @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
-    END
+        ---------------------------------------------------------------------------
+        -- Name Change
+        ---------------------------------------------------------------------------
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '04' )
+        BEGIN
+            EXEC	DBShrpn.dbo.usp_ins_name_change @w_userid,
+                    @w_batchname,
+                    @w_qualifier,
+                    @w_activity_date,
+                    @w_wflow_userid,
+                    @w_activity_status,
+                    @w_status
+        END
 
 
-    ---------------------------------------------------------------------------
-    -- Name Change
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '04' )
-    BEGIN
-        EXEC	DBShrpn.dbo.usp_ins_name_change @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
-    END
+        ---------------------------------------------------------------------------
+        -- Status Change
+        ---------------------------------------------------------------------------
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '05' )
+        BEGIN
+            EXEC	DBShrpn.dbo.usp_ins_status_change @w_userid,
+                    @w_batchname,
+                    @w_qualifier,
+                    @w_activity_date,
+                    @w_wflow_userid,
+                    @w_activity_status,
+                    @w_status
+        END
 
 
-    ---------------------------------------------------------------------------
-    -- Status Change
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '05' )
-    BEGIN
-        EXEC	DBShrpn.dbo.usp_ins_status_change @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
-    END
+        ---------------------------------------------------------------------------
+        -- Pay Element
+        ---------------------------------------------------------------------------
+        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '06' )
+        BEGIN
+            EXEC DBShrpn.dbo.usp_ins_pay_element
+                    @w_userid,
+                    @w_batchname,
+                    @w_qualifier,
+                    @w_activity_date,
+                    @w_wflow_userid,
+                    @w_activity_status,
+                    @w_status
+        END
 
+    */
 
-    ---------------------------------------------------------------------------
-    -- Pay Element
-    ---------------------------------------------------------------------------
-	IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '06' )
-    BEGIN
-        EXEC DBShrpn.dbo.usp_ins_pay_element
-                @w_userid,
-                @w_batchname,
-                @w_qualifier,
-                @w_activity_date,
-                @w_wflow_userid,
-                @w_activity_status,
-                @w_status
-    END
+    END TRY
+    BEGIN CATCH
 
+      SELECT @ErrorMessage  = LEFT(ERROR_MESSAGE(), 1024),
+             @ErrorSeverity = ERROR_SEVERITY(),
+             @ErrorState    = ERROR_STATE(),
+             @v_ret_val     = -1
 
-	 TRUNCATE TABLE DBShrpn.dbo.ghr_employee_events;
+        SELECT @ErrorMessage  AS err_msg
+            , @ErrorSeverity AS err_sev
+            , @ErrorState    AS err_state
+
+    END CATCH
+
+    -- Cleear import table
+    TRUNCATE TABLE DBShrpn.dbo.ghr_employee_events;
 
     -- Clean up temp table
     DROP TABLE #ghr_employee_events_temp
-    DROP TABLE #tbl_ghr_msg
 
+    RETURN @v_ret_val
 
 END
 GO
 
 
 ALTER AUTHORIZATION ON dbo.usp_sel_employee_events TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_sel_employee_events', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_sel_employee_events >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_sel_employee_events >>>'
 GO
