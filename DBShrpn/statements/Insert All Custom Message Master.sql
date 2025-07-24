@@ -1,0 +1,72 @@
+USE [DBSCOMMON]
+GO
+
+DELETE FROM dbo.message_master
+WHERE (msg_id LIKE 'U%')
+GO
+
+
+INSERT [dbo].[message_master] ([msg_id], [severity_cd], [user_def], [msg_text], [msg_text_2], [msg_text_3], [help_context], [help_file_id], [pscm_flag], [CHGSTAMP])
+VALUES
+  (N'U00000', 1, 0, N'< NEW HIRE SECTION (1) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00001', 1, 0, N'Total Global HR New Hire: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00002', 1, 0, N'< ENCOUNTERED THE FOLLOWING ERRORS: >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00003', 1, 0, N'Total number of employees that already exist: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00005', 1, 0, N'Employer (@1) does not exist for employee: @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00006', 1, 0, N'This employee, @1, NIS ID already exists - defaulting to 99999. NIS ID is: @2.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00007', 1, 0, N'NIS ID was blank for employee, @1 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00008', 1, 0, N'Unit name (@1) was missing for employee, @2 - defaulting to 999999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00009', 1, 0, N'< BEGINNING OF ERROR MESSAGES: >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00010', 1, 0, N'<ENDING OF ERROR MESSAGES: >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00011', 1, 0, N' ', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00012', 1, 0, N'Employee, @1, does not exists.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00013', 1, 0, N'< NAME CHANGE SECTION (4) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00014', 1, 0, N'< SALARY CHANGE SECTION (2) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00015', 1, 0, N'Total Global HR Salary Changes: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00016', 1, 0, N'Total Global HR Name Changes: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00017', 1, 0, N'< EMPLOYEE TRANSFER SECTION (3) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00018', 1, 0, N'Total Global HR Employee Transfer: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00019', 1, 0, N'Total Global HR Status Changes: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00020', 1, 0, N'Pay Group, @1, does not exists for employee, @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00021', 1, 0, N'Pay Element Control Group, @1 does not exists for employee, @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00022', 1, 0, N'The current status is @1. Cannot rehire an employee, @2, without a current terminated status.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00023', 1, 0, N'< STATUS CHANGE SECTION (5) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00024', 1, 0, N'Cannot Inactivate an employee, @1, if the current status is not active.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00025', 1, 0, N'Cannot Reactivate an employee, @1, if the current status is not inactive.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00026', 1, 0, N'The current status is @1. To Reactivate an employee, @2, the current status must be inactive.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00027', 1, 0, N'The new effective date, @1, for employee, @2, must be greater than the current effective date.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00028', 1, 0, N'< PAY ELEMENT SECTION (6) >', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00029', 1, 0, N'Total Global HR Pay Elements Read: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00030', 1, 0, N'The Begin Date, @1, cannot be greater than the pay through date for employee, @2.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00031', 1, 0, N'Pay Element Group was blank for employee, @1 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00032', 1, 0, N'The rehire date must be greater than the termination date for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00033', 1, 0, N'The Reactivation date must be greater than the inactivation date - By passing the employee: @1', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00034', 1, 0, N'Cannot transfer an employee to the same employer. New Employer is @1 - By passing this employee: @2', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00035', 1, 0, N'Salary cannot be blank for salary change record for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00036', 1, 0, N'Transfer date must be greater than default position effective date for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00037', 1, 0, N'New Status Effective date must be greater than current effective date for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00038', 1, 0, N'Existing payments have not been updated into the accumulator for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00039', 1, 0, N'Employer ID, @1, does not exists - bypassing record.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00040', 1, 0, N'Pay Element Control Group cannot be blank for employee, @1, - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00041', 1, 0, N'Salary cannot be zero for a Salary Change for employee: @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00042', 1, 0, N'Cannot terminate employee, @1, if the current status is not active or inactive.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00043', 1, 0, N'Rehire date must be greater than current employee employment effective date for employee: @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00044', 1, 0, N'Cannot transfer employee, @1, to a pensioner employer.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00045', 1, 0, N'Terminated employee, @1, cannot be transferred.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00046', 1, 0, N'NIS ID is blank - defaulting to 99999 for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00047', 1, 0, N'The stop date must be the same or later than the employee pay element effective date for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00048', 1, 0, N'After April 1, 2023,Pay Group, @1, must be semi-monthly.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00049', 1, 0, N'Invalid pay element id, @2.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00050', 1, 0, N'Employer id, @2, does not match the current employer id.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00051', 1, 0, N'Pay element id, @2, has never been assigned to this employee.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00052', 1, 0, N'Bank ID, @2, does not exists.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00053', 1, 0, N'The interface effective date, @2  must be equal or greater current effective date.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00054', 1, 0, N'Must setup direct deposit (DD1) after: New Hire, Rehire, or Transfer to New Legal Entity', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00055', 1, 0, N'To rehire, the current employee status must be terminated', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00100', 1, 0, N'WARNING: Invalid Employment Type code, @1, for employee @2.', N'', N'', 0, N'', 0, 0)
+GO
+
+select *
+dbo.message_master
+WHERE (msg_id LIKE 'U%')
+GO

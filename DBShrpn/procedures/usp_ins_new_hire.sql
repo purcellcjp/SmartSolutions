@@ -33,11 +33,11 @@ BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @v_step_position                         varchar(255) = 'Begin Procedure'
-
-    DECLARE @ErrorMessage                            nvarchar(4000)
-    DECLARE @ErrorSeverity                           int
-    DECLARE @ErrorState                              int
+    DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+    DECLARE @v_EVENT_ID                     char(2)             = '01'
+    DECLARE @ErrorMessage                   nvarchar(4000)
+    DECLARE @ErrorSeverity                  int
+    DECLARE @ErrorState                     int
 
     DECLARE @v_ret_val                      int = 0
     DECLARE @w_msg_text						varchar(255)
@@ -64,6 +64,7 @@ BEGIN
     DECLARE @ee_eff_date datetime
     DECLARE @ee_next_eff_date datetime
     DECLARE @ee_prior_eff_date	datetime
+
 
     --
     -- Disabled tracing logic since table doesn't exist - CJP 6/12/2025
@@ -106,6 +107,7 @@ BEGIN
 
 
     -- Fields required for new hire
+
     --DECLARE @w_employer_id                          char(10)        = ''
     -- DECLARE @w_employee_id                          char(15)        = ''
     -- DECLARE @w_individual_id                        char(10)        = ''--'566'    --This number must be obtained from the table
@@ -113,6 +115,7 @@ BEGIN
     -- DECLARE @w_first_name                           char(25)        = ''
     -- DECLARE @w_first_middle_name                    char(25)        = ''
     -- DECLARE @w_last_name                            char(30)        = ''
+    DECLARE @v_DISPLAY_NAME_FORMAT                  char(33)        = 'LNMCOMSFXFNMFMNSMI'  -- Unique to client
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
     DECLARE @w_emp_display_name                     char(45)        = ''
@@ -328,6 +331,7 @@ BEGIN
                         ,'U00021'
                         ,'U00031'
                         ,'U00046'
+                        ,'U00100'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -341,103 +345,106 @@ BEGIN
                         ,'U00021'
                         ,'U00031'
                         ,'U00046'
+                        ,'U00100'
                         ))
 
 
-        SET @v_step_position = 'ghr_employee_events_temp'
 
-        --INSERT INTO #ghr_employee_events_temp
-        SELECT *
-        FROM DBShrpn.dbo.ghr_employee_events
-        WHERE (event_id_01 = '01')
-
-select * from #ghr_employee_events_temp
-
-        -- Set first loop number
-        SELECT @cnt = MIN(ID)
-        FROM #ghr_employee_events_temp
-        WHERE (event_id_01 = '01')
-
-        -- Set last ID number
-        SELECT @max = COUNT(ID)
-        FROM #ghr_employee_events_temp
-        WHERE (event_id_01 = '01')
-
-select @v_step_position as v_step_position
-     , @cnt as cnt
-     , @max as [max]
-
+        SET @v_step_position = 'Declaring cursor crsrHR'
 
         -- Loop through tbl_ghr_msg to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT msg.msg_id
-            , msg.severity_cd
-            , ghr.msg_desc
-            , msg.msg_text_2
-            , msg.msg_text_3
-        FROM #tbl_ghr_msg ghr
-        JOIN #tbl_msg_master msg ON
-            (ghr.msg_id = msg.msg_id)
-        WHERE (msg.loop_flag = 'Y')
+        SELECT t.event_id_01
+             , t.emp_id_01
+             , t.eff_date_01
+             , t.first_name_01
+             , t.first_middle_name_01
+             , t.last_name_01
+             , t.empl_id_01
+             , t.national_id_1_type_code_01
+             , t.national_id_1_01
+             , t.organization_group_id_01
+             , t.organization_chart_name_01
+             , t.organization_unit_name_01
+             , t.emp_status_classn_code_01
+             , t.position_title_01
+             , t.employment_type_code_01
+             , t.annual_salary_amt_01
+             , t.begin_date_02
+             , t.end_date_02
+             , t.pay_status_code_03
+             , t.pay_group_id_03
+             , t.pay_element_ctrl_grp_id_03
+             , t.time_reporting_meth_code_03
+             , t.employment_info_chg_reason_cd_03
+             , t.emp_location_code_03
+             , t.emp_status_code_5
+             , t.reason_code_5
+             , t.emp_expected_return_date_5
+             , t.pay_through_date_5
+             , t.emp_death_date_5
+             , t.consider_for_rehire_ind_5
+             , t.pay_element_desc_06
+             , t.emp_calculation_06
+             , t.tax_flag
+             , t.nic_flag
+             , t.tax_ceiling_amt
+             , t.labor_grp_code
+             , t.file_source
+        FROM #ghr_employee_events_temp t
+		WHERE (event_id_01 = @v_EVENT_ID)
 
+        SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
 
-        FETCH crsr
-        INTO @msg_id
-        , @w_severity_cd
-        , @w_msg_text
-        , @w_msg_text_2
-        , @w_msg_text_3
+        SET @v_step_position = 'Fetching cursor crsrHR'
+        FETCH crsrHR
+        INTO  @event_id_01
+            , @emp_id_01
+            , @eff_date_01
+            , @first_name_01
+            , @first_middle_name_01
+            , @last_name_01
+            , @empl_id_01
+            , @national_id_1_type_code_01
+            , @national_id_1_01
+            , @organization_group_id_01
+            , @organization_chart_name_01
+            , @organization_unit_name_01
+            , @emp_status_classn_code_01
+            , @position_title_01
+            , @employment_type_code_01
+            , @annual_salary_amt_01
+            , @begin_date_02
+            , @end_date_02
+            , @pay_status_code_03
+            , @pay_group_id_03
+            , @pay_element_ctrl_grp_id_03
+            , @time_reporting_meth_code_03
+            , @employment_info_chg_reason_cd_03
+            , @emp_location_code_03
+            , @emp_status_code_5
+            , @reason_code_5
+            , @emp_expected_return_date_5
+            , @pay_through_date_5
+            , @emp_death_date_5
+            , @consider_for_rehire_ind_5
+            , @pay_element_desc_06
+            , @emp_calculation_06
+            , @tax_flag
+            , @nic_flag
+            , @tax_ceiling_amt
+            , @labor_grp_code
+            , @file_source
 
 
-        -- DELETE #tbl_ghr_msg
-
-        WHILE (@cnt <= @max)
+        WHILE (@@FETCH_STATUS = 0)
         BEGIN
 
-            SET @v_step_position = 'Begin While Loop'
+            SET @v_step_position = 'Begin crsrHR While Loop'
 
             SET @w_fatal_error = '0'
 
-            SELECT @event_id_01						    = t.event_id_01
-                , @emp_id_01							= t.emp_id_01
-                , @eff_date_01						    = t.eff_date_01
-                , @first_name_01						= t.first_name_01
-                , @first_middle_name_01				= t.first_middle_name_01
-                , @last_name_01						= t.last_name_01
-                , @empl_id_01							= t.empl_id_01
-                , @national_id_1_type_code_01			= 'NIS'--t.national_id_1_type_code_01
-                , @national_id_1_01					= t.national_id_1_01
-                , @organization_group_id_01			= t.organization_group_id_01
-                , @organization_chart_name_01			= ''--t.organization_chart_name_01
-                , @organization_unit_name_01			= ''--t.organization_unit_name_01
-                , @emp_status_classn_code_01			= t.emp_status_classn_code_01
-                , @position_title_01					= t.position_title_01
-                , @employment_type_code_01			    = t.employment_type_code_01
-                , @annual_salary_amt_01				= t.annual_salary_amt_01
-                , @begin_date_02						= t.begin_date_02
-                , @end_date_02						    = t.end_date_02
-                , @pay_status_code_03					= t.pay_status_code_03
-                , @pay_group_id_03					    = t.pay_group_id_03
-                , @pay_element_ctrl_grp_id_03			= t.pay_element_ctrl_grp_id_03
-                , @time_reporting_meth_code_03		    = t.time_reporting_meth_code_03
-                , @employment_info_chg_reason_cd_03	= t.employment_info_chg_reason_cd_03
-                , @emp_location_code_03				= t.emp_location_code_03
-                , @emp_status_code_5					= t.emp_status_code_5
-                , @reason_code_5						= t.reason_code_5
-                , @emp_expected_return_date_5			= t.emp_expected_return_date_5
-                , @pay_through_date_5					= t.pay_through_date_5
-                , @emp_death_date_5					= t.emp_death_date_5
-                , @consider_for_rehire_ind_5			= t.consider_for_rehire_ind_5
-                , @pay_element_desc_06				    = t.pay_element_desc_06
-                , @emp_calculation_06					= t.emp_calculation_06
-                , @tax_flag                            = t.tax_flag
-                , @nic_flag                            = t.nic_flag
-                , @tax_ceiling_amt                     = t.tax_ceiling_amt
-                , @labor_grp_code                      = t.labor_grp_code
-                , @file_source                         = t.file_source
-            FROM #ghr_employee_events_temp t
-            WHERE (t.ID = @cnt)
 
 
             ---------------------------------------------------------------------------
@@ -475,6 +482,9 @@ select @v_step_position as v_step_position
             ---------------------------------------------------------------------------
             -- Check to see if the employee exists
             ---------------------------------------------------------------------------
+            SET @msg_id = 'U00003'
+            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
             IF  EXISTS (
                         SELECT 1
                         FROM DBShrpn.dbo.employee
@@ -482,25 +492,31 @@ select @v_step_position as v_step_position
                     )
                 BEGIN
 
-                    SET @msg_id = 'U00003'
-                    SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	=	'01'
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	'01'
+                        AND event_id_01		=	@v_EVENT_ID
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id					    As msg_id
+                        , @emp_id_01					As msg_p1
+                        , ''   					        As msg_p2
+                        -- create error message for logging
+                        , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
+                    FROM #tbl_msg_master t
+                    WHERE (msg_id = @msg_id)
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id,
                             @emp_id_01					As msg_p1,
                             ''							As msg_p2,
-                            'Total nbr of employee already exists'	As msg_desc
+                            'Employee already exists'	As msg_desc
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            '01'						As event_id,
+                            @v_EVENT_ID						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -519,15 +535,15 @@ select @v_step_position as v_step_position
             ---------------------------------------------------------------------------
             -- Check to see if the employer exists
             ---------------------------------------------------------------------------
+            SET @msg_id = 'U00005'
+            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
             IF NOT EXISTS (
                             SELECT *
                             FROM DBShrpn.dbo.employer
                             WHERE empl_id = @empl_id_01
                             )
                 BEGIN
-
-                    SET @msg_id = 'U00005'
-                    SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                     IF EXISTS (
                                 SELECT *
@@ -541,7 +557,7 @@ select @v_step_position as v_step_position
                             SET activity_status	= '02'
                             WHERE activity_date	= @p_activity_date
                             AND emp_id_01		= @emp_id_01
-                            AND event_id_01		= '01'
+                            AND event_id_01		= @v_EVENT_ID
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
@@ -555,7 +571,7 @@ select @v_step_position as v_step_position
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id					As msg_id,
-                                    '01'						As event_id,
+                                    @v_EVENT_ID						As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01				As eff_date,
                                     @pay_element_desc_06		As pay_element_id,
@@ -584,7 +600,7 @@ select @v_step_position as v_step_position
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'01'
+                    AND event_id_01		=	@v_EVENT_ID
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id						As msg_id
@@ -596,8 +612,8 @@ select @v_step_position as v_step_position
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  'U00046'					As msg_id,
-                            '01'						As event_id,
+                    SELECT  @msg_id					    As msg_id,
+                            @v_EVENT_ID					As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -628,7 +644,7 @@ select @v_step_position as v_step_position
                                 SET activity_status	=	'02'
                                 WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
-                                AND event_id_01		=	'01'
+                                AND event_id_01		=	@v_EVENT_ID
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id						As msg_id
@@ -641,7 +657,7 @@ select @v_step_position as v_step_position
                                 -- Historical Message for reporting purpose
                                 INSERT INTO DBShrpn.dbo.ghr_historical_message
                                 SELECT  @msg_id					As msg_id,
-                                        '01'						As event_id,
+                                        @v_EVENT_ID						As event_id,
                                         @emp_id_01 					As emp_id,
                                         @eff_date_01				As eff_date,
                                         @pay_element_desc_06		As pay_element_id,
@@ -668,7 +684,7 @@ select @v_step_position as v_step_position
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'01'
+                    AND event_id_01		=	@v_EVENT_ID
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
@@ -681,7 +697,7 @@ select @v_step_position as v_step_position
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            '01'						As event_id,
+                            @v_EVENT_ID						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -717,7 +733,7 @@ select @v_step_position as v_step_position
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'01'
+                    AND event_id_01		=	@v_EVENT_ID
 
 					SET @v_step_position = @v_step_position + ' #tbl_ghr_msg'
 
@@ -734,7 +750,7 @@ select @v_step_position as v_step_position
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            '01'						As event_id,
+                            @v_EVENT_ID						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -752,6 +768,9 @@ select @v_step_position as v_step_position
             ---------------------------------------------------------------------------
             --	Check to see if pay group id exists
             ---------------------------------------------------------------------------
+            SET @msg_id = 'U00020'
+            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
             IF NOT EXISTS(
                         SELECT *
                         FROM	DBShrpn.dbo.pay_group
@@ -759,14 +778,11 @@ select @v_step_position as v_step_position
                         )
                 BEGIN
 
-                    SET @msg_id = 'U00020'
-                    SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	= '02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'01'
+                    AND event_id_01		=	@v_EVENT_ID
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
@@ -780,7 +796,7 @@ select @v_step_position as v_step_position
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            '01'						As event_id,
+                            @v_EVENT_ID						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -795,31 +811,33 @@ select @v_step_position as v_step_position
                     SET  @w_fatal_error = '5'
 
                 END
-/*
+
             ---------------------------------------------------------------------------
             -- Validate Employee Employment Type Code
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00060'
+            -- Warning only - Will not skip record
+            SET @msg_id = 'U00100'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF NOT EXISTS(
                           SELECT 1
                           FROM DBShrpn.dbo.code_entry_policy
                           WHERE (code_tbl_id = '10093')     -- Employment Types
+                            AND (code_value = @employment_type_code_01)
                         )
                 BEGIN
-
+				/*
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '02'
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	'01'
-
+                    SET activity_status	= '00'
+                    WHERE activity_date	= @p_activity_date
+                    AND emp_id_01		= @emp_id_01
+                    AND event_id_01		= @v_EVENT_ID
+				*/
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					As msg_id
-                            , @emp_id_01					As msg_p1
-                            , @pay_group_id_03			As msg_p2
-                            , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id_03), '@2', @emp_id_01) AS msg_desc
+                    SELECT @msg_id					        As msg_id
+                            , @employment_type_code_01      As msg_p1
+                            , @emp_id_01			        As msg_p2
+                            , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code_01), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -827,22 +845,17 @@ select @v_step_position as v_step_position
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            '01'						As event_id,
+                            @v_EVENT_ID						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
-                            @pay_group_id_03			As msg_p2,
-                            'Pay Group does not exists'	As msg_desc,
+                            @employment_type_code_01	As msg_p1,
+                            @emp_id_01			        As msg_p2,
+                            'Employment Type code does not exists'	As msg_desc,
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SET	@pay_group_id_03 = ' '
-
-                    SET  @w_fatal_error = '5'
-
                 END
-*/
 
 
             ---------------------------------------------------------------------------
@@ -870,10 +883,12 @@ select @v_step_position as v_step_position
             SELECT @ind_idx = CONVERT(char(10),gen_indiv_id_last_nbr + 1)
             FROM DBSentp.dbo.entp_human_resources_plcy  with (holdlock)
 
+--select @ind_idx as ind_idx
+
             -- Set next individual id
             UPDATE DBSentp.dbo.entp_human_resources_plcy
             SET gen_indiv_id_last_nbr = CONVERT(float, @ind_idx)
-            WHERE display_name_format = 'LNMCOMFNMFMNSMN'
+            WHERE (display_name_format = @v_DISPLAY_NAME_FORMAT)    -- Unique value for client
 
             -- Derive employee display name
             SET @w_emp_display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
@@ -1070,7 +1085,7 @@ select @v_step_position                                                         
 , @w_reg_reporting_unit_code                                                           AS w_reg_reporting_unit_code
 , @w_emp_workers_comp_cvg_cd                                                           AS w_emp_workers_comp_cvg_cd
 
-/*
+
             EXEC DBShrpn.dbo.usp_ins_hemp
                 @p_employer_id                       = @empl_id_01
                 , @p_employee_id                       = @emp_id_01
@@ -1203,7 +1218,7 @@ select @v_step_position                                                         
                 , @p_tax_auth_type_code_5              = @w_tax_auth_type_code_5
                 , @p_reg_reporting_unit_code           = @w_reg_reporting_unit_code
                 , @p_emp_workers_comp_cvg_cd           = @w_emp_workers_comp_cvg_cd
-*/
+
 
             ---------------------------------------------------------------------------
             -- Lookup Employee Employment Details
@@ -1252,7 +1267,7 @@ select @v_step_position                                                         
 
             UPDATE	DBShrpn.dbo.individual_personal
             SET	user_ind_1 = @nic_flag
-            , user_ind_2 = @tax_flag
+              , user_ind_2 = @tax_flag
             WHERE (individual_id = @individual_id)
 
             ---------------------------------------------------------------------------
@@ -1266,11 +1281,52 @@ select @v_step_position                                                         
 
 
 
-            BYPASS_EMPLOYEE:
+BYPASS_EMPLOYEE:
 
-            SELECT @cnt = @cnt + 1
+            FETCH crsrHR
+            INTO  @event_id_01
+                , @emp_id_01
+                , @eff_date_01
+                , @first_name_01
+                , @first_middle_name_01
+                , @last_name_01
+                , @empl_id_01
+                , @national_id_1_type_code_01
+                , @national_id_1_01
+                , @organization_group_id_01
+                , @organization_chart_name_01
+                , @organization_unit_name_01
+                , @emp_status_classn_code_01
+                , @position_title_01
+                , @employment_type_code_01
+                , @annual_salary_amt_01
+                , @begin_date_02
+                , @end_date_02
+                , @pay_status_code_03
+                , @pay_group_id_03
+                , @pay_element_ctrl_grp_id_03
+                , @time_reporting_meth_code_03
+                , @employment_info_chg_reason_cd_03
+                , @emp_location_code_03
+                , @emp_status_code_5
+                , @reason_code_5
+                , @emp_expected_return_date_5
+                , @pay_through_date_5
+                , @emp_death_date_5
+                , @consider_for_rehire_ind_5
+                , @pay_element_desc_06
+                , @emp_calculation_06
+                , @tax_flag
+                , @nic_flag
+                , @tax_ceiling_amt
+                , @labor_grp_code
+                , @file_source
 
         END  -- Error Loop
+
+        -- Cleanup Cursor
+        CLOSE crsrHR
+        DEALLOCATE crsrHR
 
 
         ---------------------------------------------------------------------------
@@ -1302,7 +1358,7 @@ select @v_step_position                                                         
         -- Send notification of warning message U00001 -- Total Global HR New Hire: @1
         ---------------------------------------------------------------------------
         SET @msg_id = 'U00001'
-        SET @v_step_position = 'Log ' + @msg_id
+        SET @v_step_position = 'Log ' + RTRIM(@msg_id)
 
         SELECT @w_msg_text    = msg_text
             , @w_msg_text_2  = msg_text_2
@@ -1314,7 +1370,7 @@ select @v_step_position                                                         
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM DBShrpn.dbo.ghr_employee_events
-        WHERE (event_id_01 = '01')
+        WHERE (event_id_01 = @v_EVENT_ID)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
@@ -1548,17 +1604,25 @@ select @v_step_position                                                         
 
         SET @p_status = @v_ret_val
 
-        -- Handle cursor
+        -- Handle cursors
+        IF (CURSOR_STATUS('local', 'crsrHR') > 0)
+        BEGIN
+            CLOSE crsrHR
+            DEALLOCATE crsrHR
+        END
+
         IF (CURSOR_STATUS('local', 'crsrLog') > 0)
         BEGIN
             CLOSE crsrLog
             DEALLOCATE crsrLog
         END
 
+/*
         SELECT @v_step_position AS step_position
              , @ErrorMessage  AS err_msg
              , @ErrorSeverity AS err_sev
              , @ErrorState    AS err_state
+*/
 
         RAISERROR(@ErrorMessage
                   , @ErrorSeverity

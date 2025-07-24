@@ -116,11 +116,11 @@ BEGIN
             , first_middle_name_01
             , last_name_01
             , empl_id_01
-            , national_id_1_type_code_01
+            , 'NIS' -- national_id_1_type_code_01
             , national_id_1_01
             , organization_group_id_01
-            , organization_chart_name_01
-            , organization_unit_name_01
+            , ''    -- organization_chart_name_01
+            , ''    -- organization_unit_name_01
             , emp_status_classn_code_01
             , position_title_01
             , employment_type_code_01
@@ -148,7 +148,7 @@ BEGIN
             , file_source
         FROM DBShrpn.dbo.ghr_employee_events
         ORDER BY event_id_01
-            , emp_id_01
+               , emp_id_01
 
 
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
@@ -219,7 +219,7 @@ BEGIN
                 , @p_status          = @w_status
         END
 
-    /*
+    /*  -- GOSL: Salaries are not interfaced into SS. Will be managed manually by user
         ---------------------------------------------------------------------------
         -- Salary Change
         ---------------------------------------------------------------------------
@@ -233,7 +233,7 @@ BEGIN
                     @w_activity_status,
                     @w_status
         END
-
+*/
 
         ---------------------------------------------------------------------------
         -- Employee Transfer
