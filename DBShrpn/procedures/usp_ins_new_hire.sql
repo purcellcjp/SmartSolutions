@@ -34,7 +34,11 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+
     DECLARE @v_EVENT_ID                     char(2)             = '01'
+    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+
+
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
@@ -119,7 +123,7 @@ BEGIN
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
     DECLARE @w_emp_display_name                     char(45)        = ''
-    DECLARE @w_birth_date                           datetime        = '29991231'
+    DECLARE @w_birth_date                           datetime        = @v_END_OF_TIME_DATE
     DECLARE @w_sex_code                             char(01)        = ''
     DECLARE @w_marital_status_code_1                char(05)        = ''
     -- DECLARE @w_national_id_1_type_code              char(05)        = 'NIS'--'SSN'
@@ -194,8 +198,8 @@ BEGIN
     DECLARE @w_user_amt_2                           float           = 0
     DECLARE @w_user_code_1                          char(05)        = ''
     DECLARE @w_user_code_2                          char(05)        = ''
-    DECLARE @w_user_date_1                          datetime        = '29991231'
-    DECLARE @w_user_date_2                          datetime        = '29991231'
+    DECLARE @w_user_date_1                          datetime        = @v_END_OF_TIME_DATE
+    DECLARE @w_user_date_2                          datetime        = @v_END_OF_TIME_DATE
     DECLARE @w_user_ind_1                           char(01)        = ''
     DECLARE @w_user_ind_2                           char(01)        = ''
     DECLARE @w_user_monetary_amt_1                  money           = 0
@@ -221,7 +225,7 @@ BEGIN
     DECLARE @w_empl_province_terr_code              char(02)        = ''
     DECLARE @w_eeo_4_agency_function_code           char(02)        = '99'
     DECLARE @w_eeo_establishment_id                 char(8)         = '0714'
-    DECLARE @w_assignment_end_date                  datetime        = '29991231'
+    DECLARE @w_assignment_end_date                  datetime        = @v_END_OF_TIME_DATE
     DECLARE @w_location_code                        char(10)        = ''
     DECLARE @w_salary_structure_id                  char(10)        = ''
     DECLARE @w_salary_incr_guideline_id             char(10)        = ''
@@ -239,6 +243,8 @@ BEGIN
     DECLARE @w_tax_auth_type_code_5                 char(01)        = ''
     DECLARE @w_reg_reporting_unit_code			    char(10)        = ''
     DECLARE @w_emp_workers_comp_cvg_cd			    char(01)        = ''
+
+    DECLARE @w_conv_employment_type_code			char(05)
 
 
     -- This section declares the interface values from Global HR
@@ -446,7 +452,6 @@ BEGIN
             SET @w_fatal_error = '0'
 
 
-
             ---------------------------------------------------------------------------
             -- Determine Emp Assignment Position - Not provided by HCM
             ---------------------------------------------------------------------------
@@ -461,7 +466,7 @@ BEGIN
                         SELECT 1
                         FROM DBShrpn.dbo.employer
                         WHERE empl_id = @empl_id_01
-                            AND (name LIKE 'PEN%')
+                            AND (name LIKE 'Pen%')
                         )
                     SET @w_job_or_pos_id = 'PEN-0001'
 
@@ -477,13 +482,12 @@ BEGIN
             --	This section will validate the interface data
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
-            SET @v_step_position = 'Begin Validation'
+            SET @v_step_position = 'Validation'
 
             ---------------------------------------------------------------------------
             -- Check to see if the employee exists
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00003'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
 
             IF  EXISTS (
                         SELECT 1
@@ -491,6 +495,9 @@ BEGIN
                         WHERE emp_id = @emp_id_01
                     )
                 BEGIN
+
+                    SET @msg_id = 'U00003'
+                    SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	=	'01'
@@ -535,8 +542,6 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Check to see if the employer exists
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00005'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF NOT EXISTS (
                             SELECT *
@@ -544,6 +549,9 @@ BEGIN
                             WHERE empl_id = @empl_id_01
                             )
                 BEGIN
+
+                    SET @msg_id = 'U00005'
+                    SET @v_step_position = 'Validation -  ' + RTRIM(@msg_id)
 
                     IF EXISTS (
                                 SELECT *
@@ -590,11 +598,13 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Check for the exists of the national id
             ---------------------------------------------------------------------------
+
+
             IF	(@national_id_1_01 = '')
                 BEGIN
 
                     SET @msg_id = 'U00046'
-                    SET @v_step_position = 'Begin ' + @msg_id
+                    SET @v_step_position = 'Validation - ' + @msg_id
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	=	'02'
@@ -819,11 +829,35 @@ BEGIN
             SET @msg_id = 'U00100'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
+            -- Convert HCM Employment Type to SS Employment Type Code
+            SELECT @w_conv_employment_type_code = CASE @employment_type_code_01
+                                                    WHEN 'APPRENTICE'           THEN 'APPR'
+                                                    WHEN 'ASSOCIATE'            THEN 'ASSOC'
+                                                    WHEN 'CONTRACT'             THEN 'CONTR'
+                                                    WHEN 'EMPLOYEE'             THEN 'EMP'
+                                                    WHEN 'EST/PUBLIC'           THEN 'ESTPB'
+                                                    WHEN 'INTERN'               THEN 'INT'
+                                                    WHEN 'LEGISLATIVE'          THEN 'LEGIS'
+                                                    WHEN 'NON-ESTAB(WAGES)'     THEN 'NESTM'
+                                                    WHEN 'NON-ESTAB(FORT)'      THEN 'NESTW'
+                                                    WHEN 'OTHER'                THEN 'OTHER'
+                                                    WHEN 'PENSIONER'            THEN 'PEN'
+                                                    WHEN 'PERMNON-PEN'          THEN 'PERMN'
+                                                    WHEN 'PERMPENSIONABLE'      THEN 'PERMP'
+                                                    WHEN 'PROJECT'              THEN 'PJCTC'
+                                                    WHEN 'PROBATION'            THEN 'PROB'
+                                                    WHEN 'RECRUIT'              THEN 'RECRU'
+                                                    WHEN 'SEASONAL'             THEN 'SEAS'
+                                                    WHEN 'TEMPORARY'            THEN 'TEMP'
+                                                    WHEN 'VOLUNTEER'            THEN 'VOLUN'
+                                                    ELSE 'XXXXX'    -- invalid code
+                                                  END
+
             IF NOT EXISTS(
                           SELECT 1
                           FROM DBShrpn.dbo.code_entry_policy
                           WHERE (code_tbl_id = '10093')     -- Employment Types
-                            AND (code_value = @employment_type_code_01)
+                            AND (code_value = @w_conv_employment_type_code)
                         )
                 BEGIN
 				/*
@@ -844,14 +878,14 @@ BEGIN
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID						As event_id,
+                    SELECT  @msg_id					    As msg_id,
+                            @v_EVENT_ID					As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
                             @employment_type_code_01	As msg_p1,
                             @emp_id_01			        As msg_p2,
-                            'Employment Type code does not exists'	As msg_desc,
+                            'Invalid Employment Type Code'	As msg_desc,
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
@@ -1122,7 +1156,7 @@ select @v_step_position                                                         
                 , @p_organization_unit_name            = @organization_unit_name_01
                 , @p_emp_status_classn_code            = @emp_status_classn_code_01
                 , @p_active_reason_code                = @w_active_reason_code
-                , @p_employment_type_code              = @employment_type_code_01
+                , @p_employment_type_code              = w_conv_employment_type_code    --@employment_type_code_01
                 , @p_professional_cat_code             = @w_professional_cat_code
                 , @p_labor_grp_code                    = @w_labor_grp_code
                 , @p_non_employee_indicator            = @w_non_employee_indicator
@@ -1240,12 +1274,11 @@ select @v_step_position                                                         
             -- Make sure new record end date = end of time date
             SET @v_step_position = 'Set emp_employment end date'
 
-            IF	@ee_next_eff_date <> '29991231'
+            IF	(@ee_next_eff_date <> @v_END_OF_TIME_DATE)
                 UPDATE	DBShrpn.dbo.emp_employment
-                SET  next_eff_date = '29991231'
-                FROM	DBShrpn.dbo.emp_employment ee
-                WHERE  emp_id		=	@ee_emp_id
-                AND  eff_date	=	@ee_eff_date
+                SET  next_eff_date = @v_END_OF_TIME_DATE
+                WHERE (emp_id = @ee_emp_id)
+                  AND (eff_date = @ee_eff_date)
 
 
             SELECT @individual_id = individual_id

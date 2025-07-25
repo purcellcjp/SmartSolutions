@@ -6,7 +6,17 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-CREATE OR ALTER PROCEDURE dbo.usp_ins_name_change
+IF OBJECT_ID(N'dbo.usp_ins_name_change', N'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_ins_name_change
+    IF OBJECT_ID(N'dbo.usp_ins_name_change') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_name_change >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_name_change >>>'
+END
+GO
+
+CREATE PROCEDURE dbo.usp_ins_name_change
 (
 	@p_userid						varchar(30),
 	@p_batchname					varchar(08),
@@ -24,7 +34,9 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+
     DECLARE @v_EVENT_ID                     char(2)             = '04'
+
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
@@ -738,4 +750,10 @@ END
 GO
 
 ALTER AUTHORIZATION ON dbo.usp_ins_name_change TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_ins_name_change', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_name_change >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_name_change >>>'
 GO

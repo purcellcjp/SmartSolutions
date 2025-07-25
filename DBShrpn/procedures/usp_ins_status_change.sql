@@ -6,6 +6,16 @@ GO
 SET QUOTED_IDENTIFIER OFF
 GO
 
+IF OBJECT_ID(N'dbo.usp_ins_status_change', N'P') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_ins_status_change
+    IF OBJECT_ID(N'dbo.usp_ins_status_change') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_status_change >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_status_change >>>'
+END
+GO
+
 CREATE OR ALTER PROCEDURE dbo.usp_ins_status_change
 (
 	@p_userid						varchar(30),
@@ -23,7 +33,11 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+
     DECLARE @v_EVENT_ID                     char(2)             = '05'
+    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_BEG_OF_TIME_DATE             datetime            = '19000101'
+
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
@@ -788,8 +802,8 @@ BEGIN
             ---------------------------------------------------------------------------
             --	Find the Job_position end date and Assignment end date
             ---------------------------------------------------------------------------
-            SELECT	@w_position_end_date		=	'29991231'
-            SELECT	@w_job_end_date				=	'29991231'
+            SELECT	@w_position_end_date		=	@v_END_OF_TIME_DATE
+            SELECT	@w_job_end_date				=	@v_END_OF_TIME_DATE
 
 
 
@@ -936,8 +950,6 @@ BEGIN
                     AND		prior_eff_date		=	@i_prior_eff_date
 
 
-
-
                     UPDATE DBShrpn.dbo.emp_assignment
                     SET user_text_2 = @position_title_01
                     WHERE emp_id			=	@i_emp_id
@@ -998,11 +1010,11 @@ BEGIN
                         @p_status_change_date			=	@w_status_change_date,
                         @p_inactivate_date				=	@w_eff_date_01,
                         @p_new_reason					=	' ',
-                        @p_new_loa_expd_date			=	'29991231',
+                        @p_new_loa_expd_date			=	@v_END_OF_TIME_DATE,
                         @p_new_classification_cd		=	@emp_status_classn_code_01,
                         @p_allow_emp_pay_updates_ind	=	'Y',
                         @p_pay_status_code				=	@pay_status_code_03,
-                        @p_last_day_paid				=	'19000101',
+                        @p_last_day_paid				=	@v_BEG_OF_TIME_DATE,
                         @p_old_chgstamp				=	@w_old_chgstamp
 
                 END
@@ -1080,12 +1092,12 @@ BEGIN
                         @p_status_change_date           =	@w_status_change_date,
                         @p_termination_date             =	@w_eff_date_01,
                         @p_new_classn_cd                =	@emp_status_classn_code_01,
-                        @p_date_of_death                =	'29991231',
+                        @p_date_of_death                =	@v_END_OF_TIME_DATE,
                         @p_new_reason_code              =	@reason_code_5,
                         @p_new_pay_through_date         =	@w_eff_date_01,
                         @p_new_rehire_conson            =	@consider_for_rehire_ind_5,
                         @p_pay_status_code              =	@pay_status_code_03,
-                        @p_last_day_paid                =	'19000101',
+                        @p_last_day_paid                =	@v_BEG_OF_TIME_DATE,
                         @p_old_chgstamp                 =	@w_old_chgstamp
 
                     DROP TABLE #temp1
@@ -1599,4 +1611,10 @@ GO
 
 
 ALTER AUTHORIZATION ON dbo.usp_ins_status_change TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_ins_status_change', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_status_change >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_status_change >>>'
 GO
