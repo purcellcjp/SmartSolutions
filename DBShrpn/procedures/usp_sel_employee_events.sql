@@ -240,7 +240,8 @@ BEGIN
         ---------------------------------------------------------------------------
         IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '03' )
         BEGIN
-            EXEC	DBShrpn.dbo.usp_perform_transfer @w_userid,
+            EXEC	DBShrpn.dbo.usp_perform_transfer
+                    @w_userid,
                     @w_batchname,
                     @w_qualifier,
                     @w_activity_date,
@@ -270,7 +271,8 @@ BEGIN
         ---------------------------------------------------------------------------
         IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = '05' )
         BEGIN
-            EXEC	DBShrpn.dbo.usp_ins_status_change @w_userid,
+            EXEC	DBShrpn.dbo.usp_ins_status_change
+                    @w_userid,
                     @w_batchname,
                     @w_qualifier,
                     @w_activity_date,

@@ -6,10 +6,6 @@ GO
 SET QUOTED_IDENTIFIER OFF
 GO
 
-
-
-
-
 CREATE procedure [dbo].[usp_ins_hepy_insert]
                (@w_stop_date    char(12),
 				@p_emp_id                          char(15),
@@ -70,8 +66,8 @@ CREATE procedure [dbo].[usp_ins_hepy_insert]
 				@p_epend_rec_ovr_nbr_pay_pds		tinyint,
 				@p_epend_wh_status_code				char(1),
 				@p_epend_calc_last_pay_pd_ind		char(1),
-				@p_epend_prenotif_chk_date			datetime, 
-				@p_epend_prenotification_code		char(1), 
+				@p_epend_prenotif_chk_date			datetime,
+				@p_epend_prenotification_code		char(1),
 				@p_epend_chgstamp					smallint,
 				@p_epec_emp_id						char(15),
 				@p_epec_empl_id						char(10),
@@ -116,14 +112,14 @@ CREATE procedure [dbo].[usp_ins_hepy_insert]
 				@p_pre_1990_rpp_ctrb_type			char(1),
 				@p_first_roth_ctrb					datetime,
 				@p_ira_sep_simple_ind				char(1),
-				@p_txbl_amt_not_det_ind				char(1),        
+				@p_txbl_amt_not_det_ind				char(1),
 				@p_result_set_ind					char(1) = 'Y',
 				@ret								int = 0 OUTPUT )
 AS
 
 declare   @W_ACTION_DATETIME char(30)
   EXEC @ret = sp_dbs_authenticate
-  IF @ret != 0 RETURN 
+  IF @ret != 0 RETURN
 
 /*=== Variable Declaration ===*/
 DECLARE @w_pe_eff_date  datetime,
@@ -138,30 +134,30 @@ SELECT @w_pay_element_added = 'N'    /*R4.1M - SSA# 19517*/
 
 SELECT @p_user_monetary_curr_code = @p_pe_curr_code
 
-IF @p_user_date_1 = @w_bot 
+IF @p_user_date_1 = @w_bot
    SELECT @p_user_date_1 = @w_eot
 
-IF @p_user_date_2 = @w_bot 
+IF @p_user_date_2 = @w_bot
    SELECT @p_user_date_2 = @w_eot
 
-IF @p_prior_eff_date = @w_bot 
+IF @p_prior_eff_date = @w_bot
    SELECT @p_prior_eff_date = @w_eot
 
-IF @p_next_eff_date = @w_bot 
+IF @p_next_eff_date = @w_bot
    SELECT @p_next_eff_date = @w_eot
 
-IF @w_stop_date = @w_bot OR @w_stop_date IS Null 
+IF @w_stop_date = @w_bot OR @w_stop_date IS Null
    SELECT @w_stop_date = @w_eot
 
-IF @p_start_after_pay_element_id != "" AND 
+IF @p_start_after_pay_element_id != "" AND
 @p_stop_date != @w_eot
  BEGIN
-  IF EXISTS( SELECT * 
+  IF EXISTS( SELECT *
    FROM emp_pay_element
   WHERE  emp_id = @p_emp_id
-  AND empl_id = @p_empl_id 
-  AND pay_element_id = @p_start_after_pay_element_id 
-  AND start_date > @p_stop_date ) 
+  AND empl_id = @p_empl_id
+  AND pay_element_id = @p_start_after_pay_element_id
+  AND start_date > @p_stop_date )
 
     BEGIN
      SELECT @ret = 261256
@@ -172,18 +168,18 @@ IF @p_start_after_pay_element_id != "" AND
 
 /*=== Determine If Policy Pay Element has differect rate table in
       future version ===*/
-IF @w_stop_date = "00/00/0000" 
+IF @w_stop_date = "00/00/0000"
  BEGIN
-   IF (ltrim(rtrim(@p_rate_tbl_id)) IS NOT NULL AND ltrim(rtrim(@p_rate_tbl_id))!="")    
+   IF (ltrim(rtrim(@p_rate_tbl_id)) IS NOT NULL AND ltrim(rtrim(@p_rate_tbl_id))!="")
     BEGIN
      SELECT @w_pe_eff_date = eff_date
       FROM pay_element
      WHERE  pay_element_id = @p_pay_element_id
-      AND eff_date > @p_start_date 
-      AND eff_date <= @p_stop_date 
-      AND (ltrim(rtrim(rate_tbl_id)) IS NOT NULL AND ltrim(rtrim(rate_tbl_id))!="")    
-      AND rate_tbl_id != @p_rate_tbl_id 
-     IF @@rowcount != 0 
+      AND eff_date > @p_start_date
+      AND eff_date <= @p_stop_date
+      AND (ltrim(rtrim(rate_tbl_id)) IS NOT NULL AND ltrim(rtrim(rate_tbl_id))!="")
+      AND rate_tbl_id != @p_rate_tbl_id
+     IF @@rowcount != 0
       SELECT @w_stop_date = convert(char(12),dateadd(day,-1,@w_pe_eff_date),101)
      ELSE
       SELECT @w_stop_date = convert(char(12),@p_stop_date,101)
@@ -194,42 +190,42 @@ IF @w_stop_date = "00/00/0000"
 /* Reset Employee Pay Element Fields whcich defaulted from Policy Pay */
 /* Element        */
 /*======================================================================*/
-IF @p_pay_ele_pay_pd_sched_code = @p_pe_pay_pd_sched 
+IF @p_pay_ele_pay_pd_sched_code = @p_pe_pay_pd_sched
   SELECT @p_pay_ele_pay_pd_sched_code = " "
-IF @p_calc_meth_code = @p_pe_calc_meth 
+IF @p_calc_meth_code = @p_pe_calc_meth
   SELECT @p_calc_meth_code = " "
-IF @p_standard_calc_factor_1 = @p_pe_stndrd_calc_fac_1 
+IF @p_standard_calc_factor_1 = @p_pe_stndrd_calc_fac_1
   SELECT @p_standard_calc_factor_1 = 0
-IF @p_standard_calc_factor_2 = @p_pe_stndrd_calc_fac_2 
+IF @p_standard_calc_factor_2 = @p_pe_stndrd_calc_fac_2
   SELECT @p_standard_calc_factor_2 = 0
-IF @p_special_calc_factor_1 = @p_pe_spec_calc_fac_1 
+IF @p_special_calc_factor_1 = @p_pe_spec_calc_fac_1
   SELECT @p_special_calc_factor_1 = 0
-IF @p_special_calc_factor_2 = @p_pe_spec_calc_fac_2 
+IF @p_special_calc_factor_2 = @p_pe_spec_calc_fac_2
   SELECT @p_special_calc_factor_2 = 0
-IF @p_special_calc_factor_3 = @p_pe_spec_calc_fac_3 
+IF @p_special_calc_factor_3 = @p_pe_spec_calc_fac_3
   SELECT @p_special_calc_factor_3 = 0
-IF @p_special_calc_factor_4 = @p_pe_spec_calc_fac_4 
+IF @p_special_calc_factor_4 = @p_pe_spec_calc_fac_4
   SELECT @p_special_calc_factor_4 = 0
-IF @p_limit_amt = @p_pe_limit_amt 
+IF @p_limit_amt = @p_pe_limit_amt
   SELECT @p_limit_amt = 0
-IF @p_pay_pd_arrs_rec_fixed_amt = @p_pe_rec_fixed_amt 
+IF @p_pay_pd_arrs_rec_fixed_amt = @p_pe_rec_fixed_amt
   SELECT @p_pay_pd_arrs_rec_fixed_amt = 0
-IF @p_pay_pd_arrs_rec_fixed_pct= @p_pe_rec_fixed_pct 
+IF @p_pay_pd_arrs_rec_fixed_pct= @p_pe_rec_fixed_pct
   SELECT @p_pay_pd_arrs_rec_fixed_pct = 0
-IF @p_min_pay_pd_recovery_amt = @p_pe_min_pay_pd_rec_amt 
+IF @p_min_pay_pd_recovery_amt = @p_pe_min_pay_pd_rec_amt
   SELECT @p_min_pay_pd_recovery_amt = 0
 /*======================================================================*/
 /*    END     */
 /* Reset Employee Pay Element Fields whcich defaulted from Policy Pay */
 /* Element        */
 /*======================================================================*/
-/*R4.1M - SSA# 19517 check if the pay element has been added - Begin*/ 
-if exists (select * from emp_pay_element 
+/*R4.1M - SSA# 19517 check if the pay element has been added - Begin*/
+if exists (select * from emp_pay_element
            where emp_id  = @p_emp_id
-             and empl_id = @p_empl_id 
-             and pay_element_id = @p_pay_element_id) 
+             and empl_id = @p_empl_id
+             and pay_element_id = @p_pay_element_id)
    select @w_pay_element_added = 'Y'
-/*R4.1M - SSA# 19517 check if the pay element has been added - end*/ 
+/*R4.1M - SSA# 19517 check if the pay element has been added - end*/
 /*======================================================================*/
 /*    START     */
 /* Insert into Employee Pay Element     */
@@ -289,8 +285,8 @@ if exists (select * from emp_pay_element
               pension_distn_code_1,
               pension_distn_code_2,
               pre_1990_rpp_ctrb_type_cd,
-              chgstamp, 
-              first_roth_ctrb,                /* r71m - 578919 in 2006 reg pack 576240 */ 
+              chgstamp,
+              first_roth_ctrb,                /* r71m - 578919 in 2006 reg pack 576240 */
               ira_sep_simple_ind,             /* r71m - 581591 in reg pack catchup 582025 */
               taxable_amt_not_determined_ind) /* r71m - 581591 in reg pack catchup 582025 */
 
@@ -348,10 +344,10 @@ if exists (select * from emp_pay_element
               @p_pension_distn_code_1,
               @p_pension_distn_code_2,
               @p_pre_1990_rpp_ctrb_type,
-              0, 
+              0,
               @p_first_roth_ctrb,               /* r71m - 578919 in 2006 reg pack 576240 */
               @p_ira_sep_simple_ind,            /* r71m - 581591 in reg pack catchup 582025 */
-              @p_txbl_amt_not_det_ind)          /* r71m - 581591 in reg pack catchup 582025 */          
+              @p_txbl_amt_not_det_ind)          /* r71m - 581591 in reg pack catchup 582025 */
 
 /*======================================================================*/
 /*    END     */
@@ -360,19 +356,19 @@ if exists (select * from emp_pay_element
 
 /*======================================================================*/
 /*    START     */
-/* Insert into Employee Pay Element Limit If the Employee Pay Element */ 
+/* Insert into Employee Pay Element Limit If the Employee Pay Element */
 /* Limit Amount is present OR the Pay Element Limit amount is present */
 /*======================================================================*/
 SELECT @lv_dummy = emp_id
  FROM emp_pay_element_limit
 WHERE  emp_id = @p_emp_id
- AND empl_id = @p_empl_id 
- AND pay_element_id = @p_pay_element_id 
- AND start_date = @p_start_date 
+ AND empl_id = @p_empl_id
+ AND pay_element_id = @p_pay_element_id
+ AND start_date = @p_start_date
 
-IF @@rowcount = 0 
+IF @@rowcount = 0
  BEGIN
-  IF @p_limit_amt != 0 OR @p_pe_limit_amt != 0 
+  IF @p_limit_amt != 0 OR @p_pe_limit_amt != 0
    BEGIN
     INSERT INTO emp_pay_element_limit
 ( emp_id,
@@ -392,7 +388,7 @@ chgstamp )
  END
 /*======================================================================*/
 /*    END     */
-/* Insert into Employee Pay Element Limit If the Employee Pay Element */ 
+/* Insert into Employee Pay Element Limit If the Employee Pay Element */
 /* Limit Amount is present OR the Pay Element Limit amount is present */
 /*======================================================================*/
 
@@ -403,10 +399,10 @@ chgstamp )
 SELECT @lv_dummy = emp_id
  FROM emp_pay_element_non_dtd
 WHERE  emp_id = @p_emp_id
- AND empl_id = @p_empl_id 
- AND pay_element_id = @p_pay_element_id 
+ AND empl_id = @p_empl_id
+ AND pay_element_id = @p_pay_element_id
 
-IF @@rowcount = 0 
+IF @@rowcount = 0
  BEGIN
      INSERT INTO emp_pay_element_non_dtd
 ( emp_id,
@@ -416,8 +412,8 @@ arrears_bal_amt,
 recover_over_nbr_of_pay_pds,
 wh_status_code,
 calc_last_pay_pd_ind,
-prenotification_check_date, 
-prenotification_code, 
+prenotification_check_date,
+prenotification_code,
  chgstamp )
 
      VALUES ( @p_emp_id,
@@ -428,7 +424,7 @@ prenotification_code,
 @p_epend_wh_status_code,
 @p_epend_calc_last_pay_pd_ind,
 @w_eot,
-@p_epend_prenotification_code, 
+@p_epend_prenotification_code,
 0 )
 
  END
@@ -440,23 +436,23 @@ prenotification_code,
 /* AUDIT SECTION ==============================================*/
 /* Set up the work employee pay element audit table                                            */
 /* ============================================================*/
-/*R4.1M - SSA# 19517 if the pay element has been added do not write 'ADD' - Begin*/ 
-if @w_pay_element_added = 'Y' 
+/*R4.1M - SSA# 19517 if the pay element has been added do not write 'ADD' - Begin*/
+if @w_pay_element_added = 'Y'
    goto setandreturn
-/*R4.1M - SSA# 19517 if the pay element has been added do not write 'ADD' - end*/ 
+/*R4.1M - SSA# 19517 if the pay element has been added do not write 'ADD' - end*/
 
 declare    @W_ACTION_USER      char(30)
 
 select @W_ACTION_USER = suser_sname()
 declare @W_MS             char(3)
    select @W_MS = convert (char(3), datepart(millisecond,getdate()))
-   if datalength(rtrim(@W_MS)) = 1 
+   if datalength(rtrim(@W_MS)) = 1
       begin
 select @W_MS = '00'+substring(@W_MS,1,1)
       end
    else
       begin
-      if datalength(rtrim(@W_MS)) = 2 
+      if datalength(rtrim(@W_MS)) = 2
          begin
          select @W_MS = '0'+substring(@W_MS,1,2)
          end
@@ -473,12 +469,12 @@ values
 
 Delete work_emp_pay_element_aud
 Where user_id = @W_ACTION_USER
-and action_date = @W_ACTION_DATETIME 
-and activity_action_code = 'ADD' 
-and emp_id = @p_emp_id 
-and empl_id = @p_empl_id 
-and pay_element_id = @p_pay_element_id 
-and eff_date = @p_eff_date 
+and action_date = @W_ACTION_DATETIME
+and activity_action_code = 'ADD'
+and emp_id = @p_emp_id
+and empl_id = @p_empl_id
+and pay_element_id = @p_pay_element_id
+and eff_date = @p_eff_date
 
 /* END AUDIT SECTION ==========================================*/
 /* Set up the work employee pay element audit table                                            */
@@ -486,13 +482,13 @@ and eff_date = @p_eff_date
 
 
 setandreturn:
-   IF @p_result_set_ind = 'Y' 
+   IF @p_result_set_ind = 'Y'
      SELECT @ret
 
- 
 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_ins_hepy_insert] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_ins_hepy_insert] TO  SCHEMA OWNER
 GO

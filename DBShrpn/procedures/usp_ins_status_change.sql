@@ -928,36 +928,28 @@ BEGIN
 
 
 
-                    UPDATE [DBShrpn].[dbo].[emp_assignment]
-                    SET		annual_salary_amt			=	CAST(@annual_salary_amt_01 AS MONEY),
-                            hourly_pay_rate				=	@i_hourly_rate_amt,
-                            pd_salary_amt				=	@i_period_amt,
-                            salary_change_type_code		=	'',
-                            work_tm_code				=	@i_work_tm_code,
-                            base_rate_tbl_id			=	@i_base_rate_tbl_id,
-                            base_rate_tbl_entry_code	=	@i_base_rate_tbl_entry_code,
-                            pd_salary_tm_pd_id          =   @pay_frequency_code,
-                            standard_work_pd_id         =   @i_standard_work_pd_id,
-                            standard_work_hrs           =   @i_standard_work_hrs,
-                            organization_group_id		=	CAST(@organization_group_id_01 AS INT),
-                            organization_chart_name		=	@organization_chart_name_01,
-                            organization_unit_name		=	@organization_unit_name_01
-                    WHERE	emp_id				=	@i_emp_id
-                    AND		assigned_to_code	=	@i_assigned_to_code
-                    AND		job_or_pos_id		=	@i_job_or_pos_id
-                    AND		eff_date			=	@i_eff_date
-                    AND		next_eff_date		=	@i_next_eff_date
-                    AND		prior_eff_date		=	@i_prior_eff_date
-
-
                     UPDATE DBShrpn.dbo.emp_assignment
-                    SET user_text_2 = @position_title_01
-                    WHERE emp_id			=	@i_emp_id
-                    AND assigned_to_code	=	@i_assigned_to_code
-                    AND job_or_pos_id		=	@i_job_or_pos_id
-                    AND eff_date			=	@i_eff_date
-                    AND next_eff_date		=	@i_next_eff_date
-                    AND prior_eff_date	=	@i_prior_eff_date
+                    SET annual_salary_amt			= CAST(@annual_salary_amt_01 AS MONEY)
+                      , hourly_pay_rate				= @i_hourly_rate_amt
+                      , pd_salary_amt				= @i_period_amt
+                      , salary_change_type_code		= @i_salary_change_type_code
+                      , work_tm_code				= @i_work_tm_code
+                      , base_rate_tbl_id			= @i_base_rate_tbl_id
+                      , base_rate_tbl_entry_code	= @i_base_rate_tbl_entry_code
+                      , pd_salary_tm_pd_id          = @pay_frequency_code
+                      , standard_work_pd_id         = @i_standard_work_pd_id
+                      , standard_work_hrs           = @i_standard_work_hrs
+                      , organization_group_id		= CAST(@organization_group_id_01 AS INT)
+                      , organization_chart_name		= @organization_chart_name_01
+                      , organization_unit_name		= @organization_unit_name_01
+                      , user_text_2 = @position_title_01
+                    WHERE emp_id           = @i_emp_id
+                      AND assigned_to_code = @i_assigned_to_code
+                      AND job_or_pos_id    = @i_job_or_pos_id
+                      AND eff_date         = @i_eff_date
+                      AND next_eff_date    = @i_next_eff_date
+                      AND prior_eff_date   = @i_prior_eff_date
+
 
                 END
             ELSE    -- Associate Not terminated

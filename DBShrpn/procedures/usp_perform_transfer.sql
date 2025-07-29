@@ -117,9 +117,8 @@ BEGIN
     DECLARE @i_hourly_rate_amt				money
     DECLARE @i_period_amt					money
 
-    DECLARE @o_empl_id						char(10)
+
     DECLARE	@emp_status_code				CHAR(1)
-    DECLARE @pay_frequency_code		char(05)
 
 
     -- This section declares the interface values from Global HR
@@ -312,7 +311,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id_01 = @v_EVENT_ID)
+		WHERE (event_id_01 = @v_EVENT_ID_TRANSFER)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -555,17 +554,15 @@ BEGIN
                             @empl_id_01						As msg_p2,
                             'Existing payments have not been updated into the accumulator for this employee.'		As msg_desc,
                             @p_activity_date				AS activity_date
-                    -- End of Historical Message for reporting purpose
 
-                SELECT  @w_fatal_error = '5'
-
+                    SET @w_fatal_error = '5'
 
                 END
 
-            --
-            -- Check to see if the employer exists
-            --
 
+            ---------------------------------------------------------------------------
+            -- Check to see if the employer exists
+            ---------------------------------------------------------------------------
             IF NOT EXISTS (SELECT * FROM DBShrpn.dbo.employer WHERE empl_id = @empl_id_01)
             BEGIN
                 IF EXISTS (SELECT * FROM DBShrpn.dbo.employer WHERE empl_id = '0' + @empl_id_01)
@@ -604,9 +601,7 @@ BEGIN
                                 @p_activity_date			AS activity_date
                         -- End of Historical Message for reporting purpose
 
-                        SELECT  @w_fatal_error = '5'
-
-
+                        SET @w_fatal_error = '5'
 
                     END
             END
@@ -1015,7 +1010,8 @@ BEGIN
 
 
 
-            EXECUTE DBShrpy.dbo.usp_ins_hpep_02_trn @p_emp_id,
+            EXECUTE DBShrpy.dbo.usp_ins_hpep_02_trn
+                            @p_emp_id,
                             @p_old_empl_id,
                             @p_new_empl_id,
                             @p_transfer_date,
@@ -1040,9 +1036,9 @@ BEGIN
             DROP TABLE #temp14
             DROP TABLE #temp15
 
-            --
+            ---------------------------------------------------------------------------
             --	Update the Salary in the Assignment Record
-            --
+            ---------------------------------------------------------------------------
 
             SELECT	@i_emp_id				=	emp_id,
                     @i_assigned_to_code		=	assigned_to_code,
@@ -1060,34 +1056,19 @@ BEGIN
                                             AND prime_assignment_ind	=	'Y'
                                             )
 
+            -- GOSL: HCM Salary data will not be extracted to SS
+            -- Blank them out
+            SELECT @annual_salary				    =	0.00
+                    , @i_hourly_rate_amt			=	0.00
+                    , @i_period_amt				    =	0.00
+                    , @i_salary_change_type_code	=	''
+                    , @i_work_tm_code				=	''
+                    , @i_base_rate_tbl_id			=	''
+                    , @i_base_rate_tbl_entry_code	=	''
+                    , @i_standard_work_pd_id		=	''
+                    , @i_standard_work_hrs		    =	0.00
+                    , @i_pd_salary_tm_pd_id		    =	''
 
-
-            --	SELECT @pay_frequency_code	= pay_frequency_code
-            --    FROM DBShrpn.dbo.pay_group WHERE pay_group_id = @pay_group_id_03
-
-            --- If blank, then default: SEMI ---
-
-            IF @pay_frequency_code = ''	SELECT	@pay_frequency_code		=	'SEMI'
-
-
-            IF	@pay_frequency_code	= 'WEEK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 52
-            ELSE
-            IF	@pay_frequency_code	= 'BIWK'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 26
-            ELSE
-            IF	@pay_frequency_code	= 'SEMI'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 24
-            ELSE
-            IF	@pay_frequency_code	= 'MONTH'	SELECT @i_yearly_std_work_hrs	=	@i_standard_work_hrs * 12
-
-            SELECT	@i_hourly_rate_amt	=	CAST(@annual_salary_amt_01 AS MONEY) / @i_yearly_std_work_hrs
-
-
-            IF	@pay_frequency_code	= 'WEEK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 52
-            ELSE
-            IF	@pay_frequency_code	= 'BIWK'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 26
-            ELSE
-            IF	@pay_frequency_code	= 'SEMI'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 24
-            ELSE
-            IF	@pay_frequency_code	= 'MONTH'	SELECT @i_period_amt		=	CAST(@annual_salary_amt_01 AS MONEY) / 12
 
 
 
@@ -1102,7 +1083,6 @@ BEGIN
                     organization_group_id		=	@p_org_grp_id,
                     organization_chart_name		=	@p_org_chart_name,
                     organization_unit_name		=	@p_org_unit_name
-
             WHERE	emp_id				=	@i_emp_id
             AND		assigned_to_code	=	@i_assigned_to_code
             AND		job_or_pos_id		=	@i_job_or_pos_id

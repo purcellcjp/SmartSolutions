@@ -355,7 +355,6 @@ BEGIN
                         ))
 
 
-
         SET @v_step_position = 'Declaring cursor crsrHR'
 
         -- Loop through tbl_ghr_msg to populate error message log entry

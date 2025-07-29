@@ -54,7 +54,7 @@ VALUES
 , (N'U00044', 1, 0, N'Cannot transfer employee, @1, to a pensioner employer.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00045', 1, 0, N'Terminated employee, @1, cannot be transferred.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00046', 1, 0, N'NIS ID is blank - defaulting to 99999 for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
-, (N'U00047', 1, 0, N'The stop date must be the same or later than the employee pay element effective date for employee, @1.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00047', 1, 0, N'The stop date, @1, must be equal or greater than the employee pay element effective date for employee, @2.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00048', 1, 0, N'After April 1, 2023,Pay Group, @1, must be semi-monthly.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00049', 1, 0, N'Invalid pay element id, @2.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00050', 1, 0, N'Employer id, @2, does not match the current employer id.', N' ', N' ', 0, N'0   ', 0, 0)
@@ -64,9 +64,10 @@ VALUES
 , (N'U00054', 1, 0, N'Must setup direct deposit (DD1) after: New Hire, Rehire, or Transfer to New Legal Entity', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00055', 1, 0, N'To rehire, the current employee status must be terminated', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00100', 1, 0, N'WARNING: Invalid Employment Type code, @1, for employee @2.', N'', N'', 0, N'', 0, 0)
+, (N'U00101', 1, 0, N'Invalid pay element amount, @1, for employee, @2, and pay element id, @3.', N'', N'', 0, N'', 0, 0)
 GO
 
 select *
-dbo.message_master
+from dbo.message_master
 WHERE (msg_id LIKE 'U%')
 GO
