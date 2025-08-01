@@ -35,7 +35,7 @@ BEGIN
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
-    DECLARE @v_EVENT_ID                     char(2)             = '01'
+    DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
 
@@ -287,6 +287,9 @@ BEGIN
           , @labor_grp_code                         char(50)        -- emp_assignment.user_text_1
           , @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
+    DECLARE @w_eff_date                             datetime
+    DECLARE @w_begin_date                           datetime
+    DECLARE @w_end_date                             datetime
 
     CREATE TABLE #tbl_ghr_msg
         (
@@ -397,7 +400,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id_01 = @v_EVENT_ID)
+		WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -502,7 +505,7 @@ BEGIN
                         SET activity_status	=	'01'
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID
+                        AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
@@ -522,7 +525,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_NEW_HIRE						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -564,7 +567,7 @@ BEGIN
                             SET activity_status	= '02'
                             WHERE activity_date	= @p_activity_date
                             AND emp_id_01		= @emp_id_01
-                            AND event_id_01		= @v_EVENT_ID
+                            AND event_id_01		= @v_EVENT_ID_NEW_HIRE
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
@@ -578,7 +581,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id					As msg_id,
-                                    @v_EVENT_ID						As event_id,
+                                    @v_EVENT_ID_NEW_HIRE						As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01				As eff_date,
                                     @pay_element_desc_06		As pay_element_id,
@@ -609,7 +612,7 @@ BEGIN
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID
+                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id						As msg_id
@@ -622,7 +625,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					    As msg_id,
-                            @v_EVENT_ID					As event_id,
+                            @v_EVENT_ID_NEW_HIRE					As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -653,7 +656,7 @@ BEGIN
                                 SET activity_status	=	'02'
                                 WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
-                                AND event_id_01		=	@v_EVENT_ID
+                                AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id						As msg_id
@@ -666,7 +669,7 @@ BEGIN
                                 -- Historical Message for reporting purpose
                                 INSERT INTO DBShrpn.dbo.ghr_historical_message
                                 SELECT  @msg_id					As msg_id,
-                                        @v_EVENT_ID						As event_id,
+                                        @v_EVENT_ID_NEW_HIRE						As event_id,
                                         @emp_id_01 					As emp_id,
                                         @eff_date_01				As eff_date,
                                         @pay_element_desc_06		As pay_element_id,
@@ -693,7 +696,7 @@ BEGIN
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID
+                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
@@ -706,7 +709,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_NEW_HIRE						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -719,59 +722,7 @@ BEGIN
                     SELECT @national_id_1_01 = '99999'
                 END
 
-            ---------------------------------------------------------------------------
-            -- Check to see if the unit name exists in the structure table
-            ---------------------------------------------------------------------------
-            -- GOSL will not supply organization to SS
-            /*
-            IF NOT EXISTS (
-                        SELECT p.NAME
-                        FROM DBSosst.dbo.SRG_STRUCTURE s
-                        INNER JOIN DBSosst.dbo.SRG_POINT p ON
-                        p.GROUP_ID		= s.GROUP_ID AND
-                        p.STRUCTURE_ID	= s.STRUCTURE_ID
-                        WHERE s.NAME =  @organization_chart_name_01
-                            AND p.NAME =	@organization_unit_name_01
-                        )
-                BEGIN
 
-                    SET @msg_id = 'U00008'
-                    SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	'02'
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID
-
-					SET @v_step_position = @v_step_position + ' #tbl_ghr_msg'
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					As msg_id
-                            , @emp_id_01					As msg_p1
-                            , RTRIM(@organization_unit_name_01)	As msg_p2
-                            , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@organization_unit_name_01)), '@2', @emp_id_01) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-					SET @v_step_position = @v_step_position + ' ghr_historical_message'
-
-                    -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID						As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
-                            ' ', --RTRIM(@organization_unit_name_01)	As msg_p2,
-                            'Unit name was missing - defaulting 99999'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
-
-                    SELECT @organization_unit_name_01 = '99999'
-                END
-            */
 
 
             ---------------------------------------------------------------------------
@@ -791,7 +742,7 @@ BEGIN
                     SET activity_status	= '02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID
+                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
@@ -805,7 +756,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_NEW_HIRE						As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -824,10 +775,64 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Validate Employee Employment Type Code
             ---------------------------------------------------------------------------
-            -- Warning only - Will not skip record
-            SET @msg_id = 'U00100'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
+
+            SELECT @w_conv_employment_type_code = code_tbl_id
+            FROM DBShrpn.dbo.code_entry_policy
+            WHERE (short_descp = @employment_type_code_01)
+
+
+            IF (@@ROWCOUNT = 0)
+                BEGIN
+
+                    -- Warning only - no record found - Will not skip record
+                    SET @msg_id = 'U00100'
+                    SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                    -- Use default employee type value
+                    SET @w_conv_employment_type_code = 'XXXXX'
+
+                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status	= '00'
+                    WHERE activity_date	= @p_activity_date
+                    AND emp_id_01		= @emp_id_01
+                    AND event_id_01		= @v_EVENT_ID_NEW_HIRE
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id					        As msg_id
+                            , @employment_type_code_01      As msg_p1
+                            , @emp_id_01			        As msg_p2
+                            , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code_01), '@2', @emp_id_01) AS msg_desc
+                    FROM #tbl_msg_master t
+                    WHERE (msg_id = @msg_id)
+
+
+                    -- Historical Message for reporting purpose
+                    INSERT INTO DBShrpn.dbo.ghr_historical_message
+                    SELECT  @msg_id					    As msg_id,
+                            @v_EVENT_ID_NEW_HIRE					As event_id,
+                            @emp_id_01 					As emp_id,
+                            @eff_date_01				As eff_date,
+                            @pay_element_desc_06		As pay_element_id,
+                            @employment_type_code_01	As msg_p1,
+                            @emp_id_01			        As msg_p2,
+                            'Invalid Employment Type Code'	As msg_desc,
+                            @p_activity_date			AS activity_date
+
+
+                END
+
+
+            -- HCM code to SS mappings are stored in code entry '50001'
+            IF NOT EXISTS (
+                           SELECT 1
+                           FROM DBShrpn.dbo.code_entry_policy
+                           WHERE (code_tbl_id = '50001')
+                             AND (short_descp = @employment_type_code_01)
+                            )
+
+
+/*
             -- Convert HCM Employment Type to SS Employment Type Code
             SELECT @w_conv_employment_type_code = CASE @employment_type_code_01
                                                     WHEN 'APPRENTICE'           THEN 'APPR'
@@ -851,7 +856,7 @@ BEGIN
                                                     WHEN 'VOLUNTEER'            THEN 'VOLUN'
                                                     ELSE 'XXXXX'    -- invalid code
                                                   END
-
+*/
             IF NOT EXISTS(
                           SELECT 1
                           FROM DBShrpn.dbo.code_entry_policy
@@ -859,34 +864,7 @@ BEGIN
                             AND (code_value = @w_conv_employment_type_code)
                         )
                 BEGIN
-				/*
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '00'
-                    WHERE activity_date	= @p_activity_date
-                    AND emp_id_01		= @emp_id_01
-                    AND event_id_01		= @v_EVENT_ID
-				*/
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					        As msg_id
-                            , @employment_type_code_01      As msg_p1
-                            , @emp_id_01			        As msg_p2
-                            , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code_01), '@2', @emp_id_01) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
 
-
-                    -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					    As msg_id,
-                            @v_EVENT_ID					As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @employment_type_code_01	As msg_p1,
-                            @emp_id_01			        As msg_p2,
-                            'Invalid Employment Type Code'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
 
                 END
 
@@ -1155,7 +1133,7 @@ select @v_step_position                                                         
                 , @p_organization_unit_name            = @organization_unit_name_01
                 , @p_emp_status_classn_code            = @emp_status_classn_code_01
                 , @p_active_reason_code                = @w_active_reason_code
-                , @p_employment_type_code              = w_conv_employment_type_code    --@employment_type_code_01
+                , @p_employment_type_code              = @w_conv_employment_type_code    --@employment_type_code_01
                 , @p_professional_cat_code             = @w_professional_cat_code
                 , @p_labor_grp_code                    = @w_labor_grp_code
                 , @p_non_employee_indicator            = @w_non_employee_indicator
@@ -1402,7 +1380,7 @@ BYPASS_EMPLOYEE:
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM DBShrpn.dbo.ghr_employee_events
-        WHERE (event_id_01 = @v_EVENT_ID)
+        WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
@@ -1649,17 +1627,19 @@ BYPASS_EMPLOYEE:
             DEALLOCATE crsrLog
         END
 
-/*
-        SELECT @v_step_position AS step_position
-             , @ErrorMessage  AS err_msg
-             , @ErrorSeverity AS err_sev
-             , @ErrorState    AS err_state
-*/
+            /*
+                    SELECT @v_step_position AS step_position
+                        , @ErrorMessage  AS err_msg
+                        , @ErrorSeverity AS err_sev
+                        , @ErrorState    AS err_state
+            */
 
-        RAISERROR(@ErrorMessage
-                  , @ErrorSeverity
-                  , @ErrorState
-                  );
+        RAISERROR(
+                   @ErrorMessage
+                 , @ErrorSeverity
+                 , @ErrorState
+                 );
+
     END CATCH
 
 

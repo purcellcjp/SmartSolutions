@@ -16,7 +16,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE dbo.usp_ins_status_change
+CREATE PROCEDURE dbo.usp_ins_status_change
 (
 	@p_userid						varchar(30),
 	@p_batchname					varchar(08),
@@ -42,7 +42,8 @@ BEGIN
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
 
-    DECLARE @ret int
+    DECLARE @v_ret_val						int					= 0
+
     --DECLARE @p_activity_date				datetime
     --DECLARE @p_userid						varchar(30)
     --DECLARE @p_batchname					varchar(08)
@@ -234,7 +235,7 @@ BEGIN
         UPDATE #tbl_msg_master
         SET loop_flag = 'Y'
         WHERE (msg_id IN (
-                        ,'U00005'
+                         'U00005'
                         ,'U00012'
                         ,'U00024'
                         ,'U00025'
@@ -345,10 +346,6 @@ BEGIN
             SET @w_fatal_error = '0'
 
 
-
-
-
-
             ---------------------------------------------------------------------------
             --	Obtain the current status record
             ---------------------------------------------------------------------------
@@ -420,7 +417,8 @@ BEGIN
                             ''						        As msg_p2,
                             'Employee does not exist'		As msg_desc,
                             @p_activity_date				AS activity_date
-                    -- End of Historical Message for reporting purpose
+
+                END
 
 
             ---------------------------------------------------------------------------
@@ -760,11 +758,11 @@ BEGIN
             IF  @w_fatal_error = '5'
                 GOTO BYPASS_EMPLOYEE
 
-        ---------------------------------------------------------------------------
-        ---------------------------------------------------------------------------
-        --	Obtain the setup variables
-        ---------------------------------------------------------------------------
-        ---------------------------------------------------------------------------
+            ---------------------------------------------------------------------------
+            ---------------------------------------------------------------------------
+            --	Obtain the setup variables
+            ---------------------------------------------------------------------------
+            ---------------------------------------------------------------------------
 
             ---------------------------------------------------------------------------
             -- Determine Emp Assignment Position - Not provided by HCM
@@ -783,12 +781,10 @@ BEGIN
                             AND (name LIKE 'PEN%')
                         )
                     SET @w_job_or_pos_id = 'PEN-0001'
-
                 ELSE
                     SET @w_job_or_pos_id = 'GEN-0001'
             ELSE   -- Ganymede FORTHCM
                 SET @w_job_or_pos_id = 'FORT-0001'
-
 
 
             ---------------------------------------------------------------------------
@@ -1013,7 +1009,7 @@ BEGIN
             ELSE
                 BEGIN
                     SET @msg_id = 'U00024'
-                    SET @v_step_position = @v_step_position ' - ' + @w_curr_status ' - ' + RTRIM(@msg_id)
+                    SET @v_step_position = @v_step_position + ' - ' + @w_curr_status + ' - ' + RTRIM(@msg_id)
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	=	'02'

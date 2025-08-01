@@ -112,6 +112,7 @@ BEGIN
     DECLARE @i_next_eff_date				datetime
     DECLARE @i_prior_eff_date				datetime
     DECLARE @i_standard_work_pd_id			char(5)
+	DECLARE @i_salary_change_type_code		char(5)
     DECLARE @i_standard_work_hrs			float
     DECLARE @i_yearly_std_work_hrs			float
     DECLARE @i_hourly_rate_amt				money
@@ -420,7 +421,7 @@ BEGIN
             ---------------------------------------------------------------------------
             set @v_step_position = 'Emp Employment Lookup'
 
-            SELECT (@i_emp_employment_exists = 'N')
+            SELECT @i_emp_employment_exists = 'N'
 
             SELECT	@i_emp_id					=	emp_id,
                     @i_empl_id					=	empl_id,
@@ -1076,7 +1077,7 @@ BEGIN
             SET		annual_salary_amt			=	CAST(@annual_salary_amt_01 AS MONEY),
                     hourly_pay_rate				=	@i_hourly_rate_amt,
                     pd_salary_amt				=	@i_period_amt,
-                    salary_change_type_code		=	'',
+                    salary_change_type_code		=	@i_salary_change_type_code,
                     work_tm_code				=	@i_work_tm_code,
                     base_rate_tbl_id			=	@i_base_rate_tbl_id,
                     base_rate_tbl_entry_code	=	@i_base_rate_tbl_entry_code,
