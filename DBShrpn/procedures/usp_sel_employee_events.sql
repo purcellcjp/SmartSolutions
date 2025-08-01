@@ -326,7 +326,6 @@ BEGIN
                       , @p_status          = @w_status
         END
 
-    */
 
     END TRY
     BEGIN CATCH

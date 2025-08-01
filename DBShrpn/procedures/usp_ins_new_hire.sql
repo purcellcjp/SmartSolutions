@@ -775,12 +775,11 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Validate Employee Employment Type Code
             ---------------------------------------------------------------------------
-
-
+            -- Translate HCM code to SS - conversions stored in code table
             SELECT @w_conv_employment_type_code = code_tbl_id
             FROM DBShrpn.dbo.code_entry_policy
-            WHERE (short_descp = @employment_type_code_01)
-
+            WHERE (code_tbl_id = '50001')
+              AND (short_descp = @employment_type_code_01)
 
             IF (@@ROWCOUNT = 0)
                 BEGIN
@@ -809,70 +808,67 @@ BEGIN
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					    As msg_id,
-                            @v_EVENT_ID_NEW_HIRE					As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @employment_type_code_01	As msg_p1,
-                            @emp_id_01			        As msg_p2,
-                            'Invalid Employment Type Code'	As msg_desc,
-                            @p_activity_date			AS activity_date
-
+                    SELECT  @msg_id As msg_id,
+                            @v_EVENT_ID_NEW_HIRE            As event_id,
+                            @emp_id_01                      As emp_id,
+                            @eff_date_01                    As eff_date,
+                            @pay_element_desc_06            As pay_element_id,
+                            @employment_type_code_01        As msg_p1,
+                            @emp_id_01                      As msg_p2,
+                            'Invalid Employment Type Code'  As msg_desc,
+                            @p_activity_date                AS activity_date
 
                 END
-
-
-            -- HCM code to SS mappings are stored in code entry '50001'
-            IF NOT EXISTS (
-                           SELECT 1
-                           FROM DBShrpn.dbo.code_entry_policy
-                           WHERE (code_tbl_id = '50001')
-                             AND (short_descp = @employment_type_code_01)
+            ELSE
+                IF NOT EXISTS(
+                            SELECT 1
+                            FROM DBShrpn.dbo.code_entry_policy
+                            WHERE (code_tbl_id = '10093')     -- Employment Types
+                                AND (code_value = @w_conv_employment_type_code)
                             )
+                    BEGIN
+                        -- Converted employee type is not correct
+                        -- Warning only - no record found - Will not skip record
+                        SET @msg_id = 'U00100'
+                        SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                        -- Use default employee type value
+                        SET @w_conv_employment_type_code = 'XXXXX'
+
+                        UPDATE	DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status	= '00'
+                        WHERE activity_date	= @p_activity_date
+                        AND emp_id_01		= @emp_id_01
+                        AND event_id_01		= @v_EVENT_ID_NEW_HIRE
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id					        As msg_id
+                                , @employment_type_code_01      As msg_p1
+                                , @emp_id_01			        As msg_p2
+                                , REPLACE(REPLACE(t.msg_text, '@1', @w_conv_employment_type_code), '@2', @emp_id_01) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
 
 
-/*
-            -- Convert HCM Employment Type to SS Employment Type Code
-            SELECT @w_conv_employment_type_code = CASE @employment_type_code_01
-                                                    WHEN 'APPRENTICE'           THEN 'APPR'
-                                                    WHEN 'ASSOCIATE'            THEN 'ASSOC'
-                                                    WHEN 'CONTRACT'             THEN 'CONTR'
-                                                    WHEN 'EMPLOYEE'             THEN 'EMP'
-                                                    WHEN 'EST/PUBLIC'           THEN 'ESTPB'
-                                                    WHEN 'INTERN'               THEN 'INT'
-                                                    WHEN 'LEGISLATIVE'          THEN 'LEGIS'
-                                                    WHEN 'NON-ESTAB(WAGES)'     THEN 'NESTM'
-                                                    WHEN 'NON-ESTAB(FORT)'      THEN 'NESTW'
-                                                    WHEN 'OTHER'                THEN 'OTHER'
-                                                    WHEN 'PENSIONER'            THEN 'PEN'
-                                                    WHEN 'PERMNON-PEN'          THEN 'PERMN'
-                                                    WHEN 'PERMPENSIONABLE'      THEN 'PERMP'
-                                                    WHEN 'PROJECT'              THEN 'PJCTC'
-                                                    WHEN 'PROBATION'            THEN 'PROB'
-                                                    WHEN 'RECRUIT'              THEN 'RECRU'
-                                                    WHEN 'SEASONAL'             THEN 'SEAS'
-                                                    WHEN 'TEMPORARY'            THEN 'TEMP'
-                                                    WHEN 'VOLUNTEER'            THEN 'VOLUN'
-                                                    ELSE 'XXXXX'    -- invalid code
-                                                  END
-*/
-            IF NOT EXISTS(
-                          SELECT 1
-                          FROM DBShrpn.dbo.code_entry_policy
-                          WHERE (code_tbl_id = '10093')     -- Employment Types
-                            AND (code_value = @w_conv_employment_type_code)
-                        )
-                BEGIN
+                        -- Historical Message for reporting purpose
+                        INSERT INTO DBShrpn.dbo.ghr_historical_message
+                        SELECT  @msg_id As msg_id,
+                                @v_EVENT_ID_NEW_HIRE            As event_id,
+                                @emp_id_01                      As emp_id,
+                                @eff_date_01                    As eff_date,
+                                @pay_element_desc_06            As pay_element_id,
+                                @employment_type_code_01        As msg_p1,
+                                @emp_id_01                      As msg_p2,
+                                'Invalid Employment Type Code'  As msg_desc,
+                                @p_activity_date                AS activity_date
 
-
-                END
+                    END
 
 
             ---------------------------------------------------------------------------
             -- Skip record if failed validation
             ---------------------------------------------------------------------------
-            IF  @w_fatal_error = '5'
+            IF @w_fatal_error = '5'
                 GOTO BYPASS_EMPLOYEE
 
 

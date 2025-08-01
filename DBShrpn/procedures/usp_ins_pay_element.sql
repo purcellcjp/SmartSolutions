@@ -258,7 +258,7 @@ BEGIN
           , @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
 
-    DECLARE @w_eff_date                             datetime
+    --DECLARE @w_eff_date                             datetime
     DECLARE @w_begin_date                           datetime
     DECLARE @w_end_date                             datetime
 
@@ -521,7 +521,7 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Validate Amount
             ---------------------------------------------------------------------------
-            SET @v_step_position 'Validate Pay Element Amount'
+            SET @v_step_position = 'Validate Pay Element Amount'
 
             IF (TRY_CONVERT(money, @emp_calculation_06) IS NULL)
                 BEGIN
@@ -1049,7 +1049,7 @@ BEGIN
 
                     UPDATE	DBShrpn.dbo.emp_pay_element
                     SET start_date             = @begin_date_02,
-                        stop_date              = @w_stop_date       --@end_date_02,
+                        stop_date              = @w_stop_date,       --@end_date_02,
                         standard_calc_factor_1 = @emp_calculation_06,
                         calc_meth_code         = @w_calc_meth_code,
                         rate_tbl_id            = @w_rate_tbl_id,
