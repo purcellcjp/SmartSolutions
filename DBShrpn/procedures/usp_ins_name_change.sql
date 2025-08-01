@@ -18,13 +18,13 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_name_change
 (
-	@p_userid						varchar(30),
-	@p_batchname					varchar(08),
-	@p_qualifier					varchar(30),
-    @p_activity_date				datetime,
-    @p_user_id						varchar(30),
-	@p_activity_status				char(02),
-	@p_status						int  output
+	@p_userid               varchar(30),
+	@p_batchname            varchar(08),
+	@p_qualifier            varchar(30),
+    @p_activity_date        datetime,
+    @p_user_id              varchar(30),
+	@p_activity_status      char(02),
+	@p_status               int  output
 )
 AS
 
@@ -35,7 +35,12 @@ BEGIN
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
-    DECLARE @v_EVENT_ID                     char(2)             = '04'
+    DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
+    DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
+    DECLARE @v_EVENT_ID_NAME_CHANGE         char(2)             = '04'
+    DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
+    DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
+
 
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
@@ -128,7 +133,7 @@ BEGIN
     INSERT INTO DBShrpn.dbo.ghr_employee_events_temp4    ---#t0
     SELECT *
     FROM DBShrpn.dbo.ghr_employee_events
-    WHERE event_id_01 =	@v_EVENT_ID
+    WHERE event_id_01 =	@v_EVENT_ID_NAME_CHANGE
 */
 
 
@@ -278,7 +283,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id_01 = @v_EVENT_ID)
+		WHERE (event_id_01 = @v_EVENT_ID_NAME_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -357,7 +362,7 @@ BEGIN
                         SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID
+                        AND event_id_01		=	@v_EVENT_ID_NAME_CHANGE
 
 
                     INSERT INTO #tbl_ghr_msg
@@ -373,7 +378,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					        As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_NAME_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -560,7 +565,7 @@ BYPASS_EMPLOYEE:
         -- Get total name records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM DBShrpn.dbo.ghr_employee_events
-        WHERE (event_id_01 =	@v_EVENT_ID)
+        WHERE (event_id_01 =	@v_EVENT_ID_NAME_CHANGE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)

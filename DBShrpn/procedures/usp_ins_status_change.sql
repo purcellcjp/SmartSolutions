@@ -18,13 +18,13 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_status_change
 (
-	@p_userid						varchar(30),
-	@p_batchname					varchar(08),
-	@p_qualifier					varchar(30),
-    @p_activity_date				datetime,
-    @p_user_id						varchar(30),
-	@p_activity_status				char(02),
-	@p_status						int  output
+	@p_userid               varchar(30),
+	@p_batchname            varchar(08),
+	@p_qualifier            varchar(30),
+    @p_activity_date        datetime,
+    @p_user_id              varchar(30),
+	@p_activity_status      char(02),
+	@p_status               int  output
 )
 AS
 

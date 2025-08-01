@@ -18,13 +18,13 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_pay_element
 (
-	@p_userid						varchar(30),
-	@p_batchname					varchar(08),
-	@p_qualifier					varchar(30),
-    @p_activity_date				datetime,
-    @p_user_id						varchar(30),
-	@p_activity_status				char(02),
-	@p_status						int  output
+	@p_userid               varchar(30),
+	@p_batchname            varchar(08),
+	@p_qualifier            varchar(30),
+    @p_activity_date        datetime,
+    @p_user_id              varchar(30),
+	@p_activity_status      char(02),
+	@p_status               int  output
 )
 AS
 
@@ -38,6 +38,7 @@ BEGIN
     DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
+
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
     DECLARE @v_BEG_OF_TIME_DATE             datetime            = '19000101'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
