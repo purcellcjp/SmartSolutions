@@ -24,7 +24,7 @@ CREATE PROCEDURE dbo.usp_perform_transfer
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
 	@p_activity_status      char(02),
-	@p_status               int  output
+	@p_status						int         = 0 OUTPUT
 )
 AS
 
@@ -209,8 +209,6 @@ BEGIN
     CREATE TABLE #tbl_ghr_msg
         (
           msg_id                                    char(15)            NOT NULL
-        , msg_p1                                    varchar(255)        NOT NULL
-        , msg_p2                                    varchar(255)        NOT NULL
         , msg_desc                                  varchar(255)        NOT NULL
         )
 
@@ -272,7 +270,7 @@ BEGIN
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
-        -- Loop through tbl_ghr_msg to populate error message log entry
+        -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
         SELECT t.event_id_01
              , t.emp_id_01
@@ -451,9 +449,6 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id					    As msg_id
-                            , @emp_id_01					As msg_p1
-                            , @empl_id_01					As msg_p2
-                            -- create error message for logging
                             , REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -495,9 +490,6 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , ''            As msg_p2
-                        -- create error message for logging
                         , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -536,9 +528,6 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , ''            As msg_p2
-                        -- create error message for logging
                         , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -582,9 +571,6 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      As msg_id
-                            , @emp_id_01    As msg_p1
-                            , ''            As msg_p2
-                            -- create error message for logging
                             , REPLACE(t.msg_text, '@1', @empl_id_01) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -641,9 +627,6 @@ BEGIN
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
-                                , @emp_id_01					As msg_p1
-                                , @empl_id_01					As msg_p2
-                                -- create error message for logging
                                 , REPLACE(REPLACE(t.msg_text, '@1', @empl_id_01), '@2', @emp_id_01) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
@@ -770,9 +753,6 @@ BEGIN
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
-                                , @emp_id_01					As msg_p1
-                                , ''   					        As msg_p2
-                                -- create error message for logging
                                 , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
@@ -827,9 +807,6 @@ BEGIN
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
-                                , @emp_id_01					As msg_p1
-                                , ''   					        As msg_p2
-                                -- create error message for logging
                                 , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
@@ -1242,8 +1219,7 @@ BEGIN
         FROM #tbl_ghr_msg
         WHERE (msg_id = @msg_id)
 
-        IF (CHARINDEX('@1', @w_msg_text,1) > 0)
-            SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
+        SET @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
             @userid   = @p_userid
@@ -1389,7 +1365,7 @@ BEGIN
         SELECT @ErrorMessage  = LEFT(ERROR_MESSAGE(), 1024) + ' (' + @v_step_position + ')'
              , @ErrorSeverity = ERROR_SEVERITY()
              , @ErrorState    = ERROR_STATE()
-             , @v_ret_val     = -1
+             , @p_status      = -1
 
         SET @p_status = @v_ret_val
 
@@ -1424,8 +1400,6 @@ BEGIN
     DROP TABLE #tbl_ghr_msg
     DROP TABLE #tbl_msg_master
 
-
-    RETURN @v_ret_val
 
 END
 GO

@@ -26,11 +26,15 @@ BEGIN
 
     SET NOCOUNT ON
 
+    DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+
+    DECLARE @ErrorNumber        varchar(10)
     DECLARE @ErrorMessage       nvarchar(4000)
     DECLARE @ErrorSeverity      int
     DECLARE @ErrorState         int
     DECLARE @v_ret_val          int = 0
 
+    DECLARE @v_event_id                     char(2)
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
@@ -94,6 +98,8 @@ BEGIN
 
     BEGIN TRY
 
+        SET @v_step_position = 'Set Variables'
+
 		IF (@p_user_id = '')
 			SET @p_user_id = SYSTEM_USER
 
@@ -111,10 +117,12 @@ BEGIN
         SET @w_wflow_userid = @p_user_id
 
 
-        SELECT @w_inputfile	=	batch_parameter_3
+        SELECT @w_inputfile	= batch_parameter_3
         FROM DBSentp.dbo.batch_parameters
-        WHERE batch_parameter_key = 'GHR_EMPLOYEE_EVENTS'
+        WHERE (batch_parameter_key = 'GHR_EMPLOYEE_EVENTS')
 
+        -- Load imported data to table table
+        SET @v_step_position = 'Copy Imported Data Temp'
 
         INSERT INTO #ghr_employee_events_temp
         SELECT event_id_01
@@ -158,7 +166,7 @@ BEGIN
         ORDER BY event_id_01
                , emp_id_01
 
-
+        SET @v_step_position = 'Copy Imported Data to Audit'
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
         SELECT event_id_01
             , emp_id_01
@@ -213,6 +221,8 @@ BEGIN
         ---------------------------------------------------------------------------
         -- New Hires
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute New Hires'
+        SET @v_event_id = @v_EVENT_ID_NEW_HIRE
 
         IF  EXISTS (
                     SELECT event_id_01
@@ -231,11 +241,19 @@ BEGIN
                 , @p_status          = @w_status
         END
 
-    /*  -- GOSL: Salaries are not interfaced into SS. Will be managed manually by user
+        /*
+        -- GOSL: Salaries are not interfaced into SS. Will be managed manually by user
         ---------------------------------------------------------------------------
         -- Salary Change
         ---------------------------------------------------------------------------
-        IF  EXISTS (SELECT event_id_01 FROM DBShrpn.dbo.ghr_employee_events WHERE event_id_01 = @v_EVENT_ID_SALARY_CHANGE)
+        SET @v_step_position = 'Execute Salary Change'
+        SET @v_event_id = @v_EVENT_ID_SALARY_CHANGE
+
+        IF  EXISTS (
+                    SELECT event_id_01
+                    FROM DBShrpn.dbo.ghr_employee_events
+                    WHERE (event_id_01 = @v_EVENT_ID_SALARY_CHANGE)
+                   )
         BEGIN
             EXEC	DBShrpn.dbo.usp_ins_salary_change @w_userid,
                     @w_batchname,
@@ -245,11 +263,14 @@ BEGIN
                     @w_activity_status,
                     @w_status
         END
-*/
+        */
 
         ---------------------------------------------------------------------------
         -- Employee Transfer
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Transfer'
+        SET @v_event_id = @v_EVENT_ID_NEW_HIRE
+
         IF EXISTS (
                    SELECT event_id_01
                    FROM DBShrpn.dbo.ghr_employee_events
@@ -270,6 +291,10 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Name Change
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Name Change'
+        SET @v_event_id = @v_EVENT_ID_NAME_CHANGE
+
+
         IF EXISTS (
                    SELECT event_id_01
                    FROM DBShrpn.dbo.ghr_employee_events
@@ -290,6 +315,9 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Status Change
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Status Change'
+        SET @v_event_id = @v_EVENT_ID_STATUS_CHANGE
+
         IF  EXISTS (
                     SELECT event_id_01
                     FROM DBShrpn.dbo.ghr_employee_events
@@ -310,6 +338,9 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Pay Element
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Pay Allowances'
+        SET @v_event_id = @v_EVENT_ID_PAY_ELE
+
         IF  EXISTS (
                     SELECT event_id_01
                     FROM DBShrpn.dbo.ghr_employee_events
@@ -330,18 +361,36 @@ BEGIN
     END TRY
     BEGIN CATCH
 
-      SELECT @ErrorMessage  = LEFT(ERROR_MESSAGE(), 1024),
-             @ErrorSeverity = ERROR_SEVERITY(),
-             @ErrorState    = ERROR_STATE(),
-             @v_ret_val     = -1
+      SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
+           , @ErrorMessage  = LEFT(ERROR_MESSAGE(), 255)
+           , @ErrorSeverity = ERROR_SEVERITY()
+           , @ErrorState    = ERROR_STATE()
+           , @v_ret_val     = -1
 
+        /*
         SELECT @ErrorMessage  AS err_msg
             , @ErrorSeverity AS err_sev
             , @ErrorState    AS err_state
+        */
+
+        -- Log system error
+        INSERT INTO DBShrpn.dbo.ghr_historical_message
+        VALUES
+        (
+          @ErrorNumber      -- msg_id
+        , @v_event_id       -- event_id
+        , ''                -- emp_id
+        , ''                -- eff_date
+        , ''                -- pay_element_desc_06
+        , @v_step_position  -- msg_p1
+        , ''                -- msg_p2
+        , @ErrorMessage     -- msg_desc
+        , @w_activity_date  -- activity_date
+        )
 
     END CATCH
 
-    -- Cleear import table
+    -- Clear import table
     TRUNCATE TABLE DBShrpn.dbo.ghr_employee_events;
 
     -- Clean up temp table

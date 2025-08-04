@@ -24,7 +24,7 @@ CREATE PROCEDURE dbo.usp_ins_pay_element
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
 	@p_activity_status      char(02),
-	@p_status               int  output
+	@p_status						int         = 0 OUTPUT
 )
 AS
 
@@ -47,7 +47,7 @@ BEGIN
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
 
-    DECLARE @v_ret_val                      int                 = 0
+    --DECLARE @v_ret_val                      int                 = 0
     DECLARE @v_ret_val_usp_ins_hepy_insert  INT                 = 0
 
     --DECLARE @p_activity_date				datetime
@@ -266,8 +266,6 @@ BEGIN
     CREATE TABLE #tbl_ghr_msg
         (
           msg_id                                    char(15)            NOT NULL
-        , msg_p1                                    varchar(255)        NOT NULL
-        , msg_p2                                    varchar(255)        NOT NULL
         , msg_desc                                  varchar(255)        NOT NULL
         )
 
@@ -332,7 +330,7 @@ BEGIN
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
-        -- Loop through tbl_ghr_msg to populate error message log entry
+        -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
         SELECT t.event_id_01
              , t.emp_id_01
@@ -448,10 +446,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , ''            As msg_p2
-                        -- create error message for logging
-                        , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
+                         , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -494,10 +489,7 @@ BEGIN
 
                 INSERT INTO #tbl_ghr_msg
                 SELECT @msg_id      As msg_id
-                    , @emp_id_01    As msg_p1
-                    , ''            As msg_p2
-                    -- create error message for logging
-                    , REPLACE(t.msg_text, '@1', @empl_id_01) AS msg_desc
+                     , REPLACE(t.msg_text, '@1', @empl_id_01) AS msg_desc
                 FROM #tbl_msg_master t
                 WHERE (msg_id = @msg_id)
 
@@ -538,10 +530,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , @pay_element_desc_06 As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @emp_calculation_06), '@2', @emp_id_01), '@3', @pay_element_desc_06) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @emp_calculation_06), '@2', @emp_id_01), '@3', @pay_element_desc_06) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -586,10 +575,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , @pay_element_desc_06 As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -629,10 +615,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , @pay_element_desc_06 As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -671,10 +654,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                        , @emp_id_01    As msg_p1
-                        , @pay_element_desc_06 As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -741,9 +721,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id						As msg_id
-                        , @eff_date_01					As msg_p1
-                        , @emp_id_01			As msg_p2
-                        , REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -795,10 +773,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
-                        , @emp_id_01					As msg_p1
-                        , @empl_id_01					As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(t.msg_text, '@1', @w_start_date), '@2', @emp_id_01) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @w_start_date), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -839,10 +814,7 @@ BEGIN
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
-                        , @end_date_02					As msg_p1
-                        , @emp_id_01					As msg_p2
-                        -- create error message for logging
-                        , REPLACE(REPLACE(t.msg_text, '@1', @end_date_02), '@2', @emp_id_01) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @end_date_02), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -871,7 +843,7 @@ BEGIN
             ---------------------------------------------------------------------------
             -- start pay element logic
             ---------------------------------------------------------------------------
-            SET @v_step_position = 'Begin Pay Element Setup'
+            SET @v_step_position = 'Pay Element Setup'
             -- Does record exist with same effective date?
             IF	NOT EXISTS (
                             SELECT 1
@@ -887,6 +859,8 @@ BEGIN
                        --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date
                        (@i_stop_date < @v_END_OF_TIME_DATE)
                         BEGIN
+                            SET @v_step_position = 'Pay Element Setup - Pay Element Exists'
+
                             -- Update existing record with new stop date
                             UPDATE DBShrpn.dbo.emp_pay_element
                             SET  stop_date     = @v_END_OF_TIME_DATE
@@ -896,6 +870,7 @@ BEGIN
                             AND eff_date       = @i_eff_date
                         END
 
+                    SET @v_step_position = 'Pay Element Setup - Exec DBShrpn.dbo.usp_ins_hepy_insert'
 
                     -- Create new pay element record
                     EXEC DBShrpn.dbo.usp_ins_hepy_insert
@@ -1008,9 +983,33 @@ BEGIN
                                 @p_result_set_ind						=	@w_result_set_ind,
                                 @ret									=	@v_ret_val_usp_ins_hepy_insert
 
+                    IF (@v_ret_val_usp_ins_hepy_insert <> 0)
+                    BEGIN
+                        -- Log proc usp_ins_hepy_insert returned an error code
+                        -- that did not raise a system error
+                        INSERT INTO DBShrpn.dbo.ghr_historical_message
+                        VALUES
+                        (
+                          CAST(@v_ret_val_usp_ins_hepy_insert AS varchar(10))       -- msg_id
+                        , @v_EVENT_ID_PAY_ELE       -- event_id
+                        , ''                -- emp_id
+                        , ''                -- eff_date
+                        , ''                -- pay_element_desc_06
+                        , @v_step_position  -- msg_p1
+                        , ''                -- msg_p2
+                        , 'DBShrpn.dbo.usp_ins_hepy_insert Returned an error'     -- msg_desc
+                        , @p_activity_date  -- activity_date
+                        )
+                    END
+
+
+
                     IF (@w_stop_date < @v_END_OF_TIME_DATE) -- not sure why not comparing to previous record's stop date -- Are all new records stop date = 12/31/2999?
                     --IF (CONVERT(date, @end_date_02) < CONVERT(date, @w_stop_date_1))
                         BEGIN
+
+                            SET @v_step_position = 'Pay Element Setup - Stop Date < 12/31/2999'
+
                             UPDATE DBShrpn.dbo.emp_pay_element
                             SET  stop_date = CASE
                                                --WHEN CONVERT(date, @end_date_02) < CONVERT(date, @i_eff_date) THEN @i_eff_date
@@ -1026,6 +1025,9 @@ BEGIN
 
                     IF (@i_pay_element_exists = 'Y')
                         BEGIN
+
+                            SET @v_step_position = 'Pay Element Setup - Pay Element Exists Update current/prior recs'
+
                             --  Current Record
                             UPDATE DBShrpn.dbo.emp_pay_element
                             SET prior_eff_date				=	@i_eff_date
@@ -1037,15 +1039,16 @@ BEGIN
                             -- Prior Record
                             UPDATE DBShrpn.dbo.emp_pay_element
                             SET next_eff_date				=	@w_eff_date     --@eff_date_01
-                            WHERE	emp_id					=	@emp_id_01
+                            WHERE emp_id					=	@emp_id_01
                             AND	empl_id						=	@empl_id_01
                             AND	pay_element_id				=	@pay_element_desc_06
                             AND	eff_date					=	@i_eff_date
                         END
 
                 END
-	        ELSE    -- Exact record exists
+	        ELSE    -- Extract record exists
                 BEGIN
+                    SET @v_step_position = 'Pay Element Setup - Pay Element Exists with same effective date'
 
                     UPDATE	DBShrpn.dbo.emp_pay_element
                     SET start_date             = @begin_date_02,
@@ -1204,8 +1207,7 @@ BEGIN
         FROM #tbl_ghr_msg
         WHERE (msg_id = @msg_id)
 
-        IF (CHARINDEX('@1', @w_msg_text,1) > 0)
-            SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
+        SET @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
             @userid   = @p_userid
@@ -1347,12 +1349,10 @@ BEGIN
     END TRY
     BEGIN CATCH
 
-        SELECT @ErrorMessage  = LEFT(ERROR_MESSAGE(), 1024) + ' (' + @v_step_position + ')'
+        SELECT @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
              , @ErrorSeverity = ERROR_SEVERITY()
              , @ErrorState    = ERROR_STATE()
-             , @v_ret_val     = -1
-
-        SET @p_status = @v_ret_val
+             , @p_status      = -1
 
         -- Handle cursors
         IF (CURSOR_STATUS('local', 'crsrHR') > 0)
@@ -1367,17 +1367,13 @@ BEGIN
             DEALLOCATE crsrLog
         END
 
-        /*
-                SELECT @v_step_position AS step_position
-                    , @ErrorMessage  AS err_msg
-                    , @ErrorSeverity AS err_sev
-                    , @ErrorState    AS err_state
-        */
 
-        RAISERROR(@ErrorMessage
-                  , @ErrorSeverity
-                  , @ErrorState
-                  )
+        -- send error back to calling procedure
+        RAISERROR(
+                   @ErrorMessage
+                 , @ErrorSeverity
+                 , @ErrorState
+                 );
 
     END CATCH
 
@@ -1386,8 +1382,6 @@ BEGIN
     DROP TABLE #tbl_ghr_msg
     DROP TABLE #tbl_msg_master
 
-
-    RETURN @v_ret_val
 
 END
 GO
