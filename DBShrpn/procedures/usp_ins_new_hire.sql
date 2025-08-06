@@ -262,7 +262,7 @@ BEGIN
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
           , @position_title_01						char(60)
-          , @employment_type_code_01				char(05)
+          , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
           , @end_date_02							char(10)
@@ -754,7 +754,7 @@ BEGIN
             -- Validate Employee Employment Type Code
             ---------------------------------------------------------------------------
             -- Translate HCM code to SS - conversions stored in code table
-            SELECT @w_conv_employment_type_code = code_tbl_id
+            SELECT @w_conv_employment_type_code = code_value
             FROM DBShrpn.dbo.code_entry_policy
             WHERE (code_tbl_id = '50001')
               AND (short_descp = @employment_type_code_01)
@@ -767,7 +767,7 @@ BEGIN
                     SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                     -- Use default employee type value
-                    SET @w_conv_employment_type_code = 'XXXXX'
+                    --SET @w_conv_employment_type_code = 'XXXXX'
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	= '00'
@@ -789,7 +789,7 @@ BEGIN
                             @emp_id_01                      As emp_id,
                             @eff_date_01                    As eff_date,
                             @pay_element_desc_06            As pay_element_id,
-                            @employment_type_code_01        As msg_p1,
+                            RTRIM(@employment_type_code_01) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
                             @emp_id_01                      As msg_p2,
                             'Invalid Employment Type Code'  As msg_desc,
                             @p_activity_date                AS activity_date
@@ -809,7 +809,7 @@ BEGIN
                         SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                         -- Use default employee type value
-                        SET @w_conv_employment_type_code = 'XXXXX'
+                        --SET @w_conv_employment_type_code = 'XXXXX'
 
                         UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	= '00'
@@ -831,7 +831,7 @@ BEGIN
                                 @emp_id_01                      As emp_id,
                                 @eff_date_01                    As eff_date,
                                 @pay_element_desc_06            As pay_element_id,
-                                @employment_type_code_01        As msg_p1,
+                                RTRIM(@employment_type_code_01) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
                                 @emp_id_01                      As msg_p2,
                                 'Invalid Employment Type Code'  As msg_desc,
                                 @p_activity_date                AS activity_date

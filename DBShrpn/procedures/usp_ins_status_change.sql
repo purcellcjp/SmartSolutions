@@ -34,7 +34,7 @@ BEGIN
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
-    DECLARE @v_EVENT_ID                     char(2)             = '05'
+    DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
     DECLARE @v_BEG_OF_TIME_DATE             datetime            = '19000101'
 
@@ -152,7 +152,7 @@ BEGIN
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
           , @position_title_01						char(60)
-          , @employment_type_code_01				char(05)
+          , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
           , @end_date_02							char(10)
@@ -290,7 +290,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id_01 = @v_EVENT_ID)
+		WHERE (event_id_01 = @v_EVENT_ID_STATUS_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -391,7 +391,7 @@ BEGIN
                         SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID
+                        AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 
 
                     INSERT INTO #tbl_ghr_msg
@@ -404,7 +404,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						As msg_id,
-                            @v_EVENT_ID							As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -452,7 +452,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id					As msg_id,
-                                    @v_EVENT_ID					As event_id,
+                                    @v_EVENT_ID_STATUS_CHANGE					As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01				As eff_date,
                                     @pay_element_desc_06		As pay_element_id,
@@ -481,7 +481,7 @@ BEGIN
                         SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID
+                        AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id					    As msg_id
@@ -492,7 +492,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -520,7 +520,7 @@ BEGIN
                         SET activity_status	= '02'
                         WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID
+                        AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
@@ -531,7 +531,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -570,7 +570,7 @@ BEGIN
                     SET activity_status = '02'
                     WHERE activity_date = @p_activity_date
                     AND emp_id_01     = @emp_id_01
-                    AND event_id_01   = @v_EVENT_ID
+                    AND event_id_01   = @v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
@@ -581,7 +581,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -627,7 +627,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID					As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE					As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -677,7 +677,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id						    As msg_id,
-                                    @v_EVENT_ID						As event_id,
+                                    @v_EVENT_ID_STATUS_CHANGE						As event_id,
                                     @emp_id_01 						As emp_id,
                                     @eff_date_01					As eff_date,
                                     @pay_element_desc_06			As pay_element_id,
@@ -717,7 +717,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id						    As msg_id,
-                                    @v_EVENT_ID						As event_id,
+                                    @v_EVENT_ID_STATUS_CHANGE						As event_id,
                                     @emp_id_01 						As emp_id,
                                     @eff_date_01					As eff_date,
                                     @pay_element_desc_06			As pay_element_id,
@@ -935,7 +935,7 @@ BEGIN
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		= @v_EVENT_ID
+                    AND event_id_01		= @v_EVENT_ID_STATUS_CHANGE
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
@@ -946,7 +946,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -1001,7 +1001,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -1093,7 +1093,7 @@ BEGIN
                     SET activity_status	=	'02'
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID
+                    AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id						As msg_id
@@ -1104,7 +1104,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID						As event_id,
+                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
                             @emp_id_01 						As emp_id,
                             @eff_date_01					As eff_date,
                             @pay_element_desc_06			As pay_element_id,
@@ -1125,7 +1125,7 @@ BEGIN
 		IF  EXISTS (
                     SELECT *
                     FROM DBShrpn.dbo.ghr_employee_events ee
-                    WHERE event_id_01 = @v_EVENT_ID
+                    WHERE event_id_01 = @v_EVENT_ID_STATUS_CHANGE
                       AND ee.emp_id_01 = @emp_id_01
                       AND emp_status_code_5 = 'RH'
                    )
@@ -1166,7 +1166,7 @@ BEGIN
                             SET activity_status	=	'02'
                             WHERE activity_date	=	@p_activity_date
                             AND emp_id_01		=	@emp_id_01
-                            AND event_id_01		=	@v_EVENT_ID
+                            AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id						As msg_id
@@ -1177,7 +1177,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id						As msg_id,
-                                    @v_EVENT_ID							As event_id,
+                                    @v_EVENT_ID_STATUS_CHANGE							As event_id,
                                     @emp_id_01 						As emp_id,
                                     @eff_date_01					As eff_date,
                                     @pay_element_desc_06			As pay_element_id,
@@ -1197,7 +1197,7 @@ BEGIN
 							   SET activity_status	=   '99'
 							 WHERE activity_date	=	@p_activity_date
 							   AND emp_id_01		=	@emp_id_01
-							   AND event_id_01		=	@v_EVENT_ID
+							   AND event_id_01		=	@v_EVENT_ID_STATUS_CHANGE
 							   AND emp_status_code_5=   'RA'
 
 				        END  --5
@@ -1382,7 +1382,7 @@ BYPASS_EMPLOYEE:
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM DBShrpn.dbo.ghr_employee_events
-        WHERE (event_id_01 = @v_EVENT_ID)
+        WHERE (event_id_01 = @v_EVENT_ID_STATUS_CHANGE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)

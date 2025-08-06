@@ -137,7 +137,7 @@ BEGIN
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
           , @position_title_01						char(60)
-          , @employment_type_code_01				char(05)
+          , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
           , @end_date_02							char(10)

@@ -18,7 +18,7 @@ GO
 
 CREATE PROCEDURE dbo.usp_sel_employee_events
 (
-    @p_user_id      char(30)
+    @p_user_id      char(30) = ''
 )
 AS
 
@@ -70,7 +70,7 @@ BEGIN
     , organization_unit_name_01			        varchar(240)        NULL
     , emp_status_classn_code_01			        char(02)            NULL
     , position_title_01					        char(60)            NULL
-    , employment_type_code_01				    char(05)            NULL
+    , employment_type_code_01				    varchar(70)         NULL    -- increased size to 70 from 5
     , annual_salary_amt_01				        char(15)            NULL
     , begin_date_02						        char(10)            NULL
     , end_date_02							    char(10)            NULL
@@ -167,6 +167,7 @@ BEGIN
                , emp_id_01
 
         SET @v_step_position = 'Copy Imported Data to Audit'
+
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
         SELECT event_id_01
             , emp_id_01
@@ -226,7 +227,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM DBShrpn.dbo.ghr_employee_events
+                    FROM #ghr_employee_events_temp
                     WHERE event_id_01 = @v_EVENT_ID_NEW_HIRE
                    )
         BEGIN
@@ -241,7 +242,7 @@ BEGIN
                 , @p_status          = @w_status
         END
 
-        /*
+/*
         -- GOSL: Salaries are not interfaced into SS. Will be managed manually by user
         ---------------------------------------------------------------------------
         -- Salary Change
@@ -251,7 +252,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM DBShrpn.dbo.ghr_employee_events
+                    FROM #ghr_employee_events_temp
                     WHERE (event_id_01 = @v_EVENT_ID_SALARY_CHANGE)
                    )
         BEGIN
@@ -263,17 +264,17 @@ BEGIN
                     @w_activity_status,
                     @w_status
         END
-        */
+*/
 
         ---------------------------------------------------------------------------
         -- Employee Transfer
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Transfer'
-        SET @v_event_id = @v_EVENT_ID_NEW_HIRE
+        SET @v_event_id = @v_EVENT_ID_TRANSFER
 
         IF EXISTS (
                    SELECT event_id_01
-                   FROM DBShrpn.dbo.ghr_employee_events
+                   FROM #ghr_employee_events_temp
                    WHERE event_id_01 = @v_EVENT_ID_TRANSFER
                   )
         BEGIN
@@ -297,7 +298,7 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id_01
-                   FROM DBShrpn.dbo.ghr_employee_events
+                   FROM #ghr_employee_events_temp
                    WHERE event_id_01 = @v_EVENT_ID_NAME_CHANGE
                   )
         BEGIN
@@ -320,7 +321,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM DBShrpn.dbo.ghr_employee_events
+                    FROM #ghr_employee_events_temp
                     WHERE event_id_01 = @v_EVENT_ID_STATUS_CHANGE
                    )
         BEGIN
@@ -334,7 +335,7 @@ BEGIN
                       , @p_status          = @w_status
         END
 
-
+/*
         ---------------------------------------------------------------------------
         -- Pay Element
         ---------------------------------------------------------------------------
@@ -343,7 +344,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM DBShrpn.dbo.ghr_employee_events
+                    FROM #ghr_employee_events_temp
                     WHERE event_id_01 = @v_EVENT_ID_PAY_ELE
                    )
         BEGIN
@@ -356,13 +357,13 @@ BEGIN
                       , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
-
+*/
 
     END TRY
     BEGIN CATCH
 
       SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-           , @ErrorMessage  = LEFT(ERROR_MESSAGE(), 255)
+           , @ErrorMessage  = ERROR_MESSAGE()
            , @ErrorSeverity = ERROR_SEVERITY()
            , @ErrorState    = ERROR_STATE()
            , @v_ret_val     = -1
