@@ -48,7 +48,7 @@ BEGIN
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
     DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					char(01)
+    DECLARE @w_fatal_error					bit     = 0         --char(01)
     DECLARE @w_trace_sw						char(01)
 
     DECLARE @special_value_exists			int
@@ -449,7 +449,7 @@ BEGIN
 
             SET @v_step_position = 'Begin crsrHR While Loop'
 
-            SET @w_fatal_error = '0'
+            SET @w_fatal_error = 0
 
 
             ---------------------------------------------------------------------------
@@ -524,7 +524,7 @@ BEGIN
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SELECT  @w_fatal_error = '5'
+                    SELECT  @w_fatal_error = 1
 
                     -- GOTO BYPASS_EMPLOYEE
                 END
@@ -746,7 +746,7 @@ BEGIN
 
                     SET	@pay_group_id_03 = ' '
 
-                    SET  @w_fatal_error = '5'
+                    SET  @w_fatal_error = 1
 
                 END
 
@@ -842,7 +842,7 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Skip record if failed validation
             ---------------------------------------------------------------------------
-            IF @w_fatal_error = '5'
+            IF (@w_fatal_error = 1)
                 GOTO BYPASS_EMPLOYEE
 
 
@@ -1206,17 +1206,13 @@ select @v_step_position                                                         
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Lookup emp_employment'
 
-            SELECT @ee_emp_id         = emp_id
-                , @ee_eff_date		  = eff_date
-                , @ee_next_eff_date  = next_eff_date
-                , @ee_prior_eff_date = prior_eff_date
-            FROM DBShrpn.dbo.emp_employment ee
-            WHERE emp_id   =	@emp_id_01
-            AND eff_date =	(
-                                SELECT	MAX(eff_date)
-                                FROM DBShrpn.dbo.emp_employment t
-                                WHERE	t.emp_id =	ee.emp_id
-                                )
+            SELECT @ee_emp_id         = eempl.emp_id
+                 , @ee_eff_date		  = eempl.eff_date
+                 , @ee_next_eff_date  = eempl.next_eff_date
+                 , @ee_prior_eff_date = eempl.prior_eff_date
+            FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
+            WHERE (emp_id =	@emp_id_01)
+
 
             -- Make sure new record end date = end of time date
             SET @v_step_position = 'Set emp_employment end date'

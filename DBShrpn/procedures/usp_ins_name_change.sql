@@ -58,7 +58,7 @@ BEGIN
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
     DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					char(01)
+    DECLARE @w_fatal_error					bit     = 0         --char(01)
     DECLARE @w_trace_sw						char(01)
 
     DECLARE @special_value_exists			int
@@ -76,65 +76,6 @@ BEGIN
     --SET @p_user_id			=	'GHRUser'
     --SET @p_activity_status	=	'00'
     --SET @p_status			=	0
-
-
-
-    --exec @ret = sp_dbs_authenticate
-    --if @ret != 0 return -1
-
-    SELECT @w_trace_sw = 'N'
-
-    IF @w_trace_sw = 'Y'
-    INSERT INTO DBSosxp.dbo.msg SELECT CAST(GETDATE() AS CHAR (20)) AS msg_desc
-
-    IF @w_trace_sw = 'Y'
-    INSERT INTO DBSosxp.dbo.msg SELECT 'Start usp_ins_name_change' AS msg_desc
-
-    IF  EXISTS (SELECT * FROM DBShrpn.sys.objects WHERE object_id = OBJECT_ID(N'dbo.ghr_employee_events_temp4') AND type in (N'U'))
-        DROP TABLE dbo.ghr_employee_events_temp4
-
-/*
-    CREATE TABLE dbo.ghr_employee_events_temp4(
-        ID									int	IDENTITY(1,1) NOT NULL,
-        event_id_01							char(02) NULL,
-        emp_id_01								char(15) NULL,
-        eff_date_01							char(10) NULL,
-        first_name_01							char(25) NULL,
-        first_middle_name_01					char(25) NULL,
-        last_name_01							char(30) NULL,
-        empl_id_01							char(10) NULL,
-        national_id_1_type_code_01			char(05) NULL,
-        national_id_1_01						char(20) NULL,
-        organization_group_id_01				char(05) NULL,
-        organization_chart_name_01			varchar(64) NULL,
-        organization_unit_name_01				varchar(240) NULL,
-        emp_status_classn_code_01				char(02) NULL,
-        position_title_01						char(60) NULL,
-        employment_type_code_01				char(05) NULL,
-        annual_salary_amt_01					char(15) NULL,
-        begin_date_02							char(10) NULL,
-        end_date_02							char(10) NULL,
-        pay_status_code_03					char(01) NULL,
-        pay_group_id_03						char(10) NULL,
-        pay_element_ctrl_grp_id_03			char(10) NULL,
-        time_reporting_meth_code_03			char(01) NULL,
-        employment_info_chg_reason_cd_03		char(05) NULL,
-        emp_location_code_03					char(10) NULL,
-        emp_status_code_5						char(02) NULL,
-        reason_code_5							char(02) NULL,
-        emp_expected_return_date_5			char(10) NULL,
-        pay_through_date_5					char(10) NULL,
-        emp_death_date_5						char(10) NULL,
-        consider_for_rehire_ind_5				char(01) NULL,
-        pay_element_desc_06					char(20) NULL,
-        emp_calculation_06					char(15) NULL
-    )
-
-    INSERT INTO DBShrpn.dbo.ghr_employee_events_temp4    ---#t0
-    SELECT *
-    FROM DBShrpn.dbo.ghr_employee_events
-    WHERE event_id_01 =	@v_EVENT_ID_NAME_CHANGE
-*/
 
 
     DECLARE @max			INT
@@ -332,7 +273,7 @@ BEGIN
 
             SET @v_step_position = 'Begin crsrHR While Loop'
 
-            SET @w_fatal_error = '0'
+            SET @w_fatal_error = 0
 
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
@@ -381,12 +322,11 @@ BEGIN
                             @p_activity_date				AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SELECT  @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
-                    -- GOTO BYPASS_EMPLOYEE
                 END
 
-            IF (@w_fatal_error = '5')
+            IF (@w_fatal_error = 1)
                 GOTO BYPASS_EMPLOYEE
 
 
@@ -466,6 +406,10 @@ BYPASS_EMPLOYEE:
 
 
         END -- end of while loop
+
+        -- Cleanup Cursor
+        CLOSE crsrHR
+        DEALLOCATE crsrHR
 
 
 

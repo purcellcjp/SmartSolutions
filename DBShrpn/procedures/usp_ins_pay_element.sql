@@ -61,7 +61,7 @@ BEGIN
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
     DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					char(01)
+    DECLARE @w_fatal_error					bit     = 0         --char(01)
 
 
     DECLARE @pay_through_date				datetime
@@ -421,7 +421,7 @@ BEGIN
 
             SET @v_step_position = 'Begin crsrHR While Loop'
 
-            SET @w_fatal_error = '0'
+            SET @w_fatal_error = 0
 
 
             ---------------------------------------------------------------------------
@@ -462,7 +462,7 @@ BEGIN
                             'Employee does not exists'		As msg_desc,
                             @p_activity_date				AS activity_date
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
 
@@ -505,7 +505,7 @@ BEGIN
                         'Employer does not exist - bypassing record' As msg_desc,
                         @p_activity_date                             AS activity_date
 
-                SET @w_fatal_error = '5'
+                SET @w_fatal_error = 1
 
             END
 
@@ -546,7 +546,7 @@ BEGIN
                             'Invalid pay element amount.' As msg_desc,
                             @p_activity_date                             AS activity_date
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
             ELSE
@@ -591,7 +591,7 @@ BEGIN
                             'Invalid Effective Date' As msg_desc,
                             @p_activity_date                             AS activity_date
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
             ELSE
@@ -631,7 +631,7 @@ BEGIN
                             'Invalid Begin Date' As msg_desc,
                             @p_activity_date                             AS activity_date
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
             ELSE
@@ -670,7 +670,7 @@ BEGIN
                             'Invalid Begin Date' As msg_desc,
                             @p_activity_date                             AS activity_date
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
             ELSE
@@ -737,7 +737,7 @@ BEGIN
                             'The new effective date for employee must be greater than the current effective date'		As msg_desc,
                             @p_activity_date				AS activity_date
 
-                    SET	@w_fatal_error = '5'
+                    SET	@w_fatal_error = 1
 
                 END
 
@@ -790,7 +790,7 @@ BEGIN
                             @p_activity_date				AS activity_date
 
 
-                    SET @w_fatal_error = '5'
+                    SET @w_fatal_error = 1
 
                 END
 
@@ -836,7 +836,7 @@ BEGIN
                 END
 
 
-            IF @w_fatal_error = '5'
+            IF (@w_fatal_error = 1)
                 GOTO BYPASS_EMPLOYEE
 
 
