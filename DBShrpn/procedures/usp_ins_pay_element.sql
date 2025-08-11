@@ -425,92 +425,6 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            -- Check to see if the employee exists
-            ---------------------------------------------------------------------------
-            IF NOT EXISTS (
-                           SELECT 1
-                           FROM DBShrpn.dbo.emp_status
-                           WHERE emp_id = @emp_id_01
-                          )
-                BEGIN
-
-                    SET @msg_id = 'U00012'
-                    SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
-
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	= @p_activity_date
-                      AND emp_id_01 = @emp_id_01
-                      AND pay_element_desc_06 = @pay_element_desc_06
-                      AND event_id_01 = @v_EVENT_ID_PAY_ELE
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
-                         , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-                    -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						As msg_id,
-                            @v_EVENT_ID_PAY_ELE			As event_id,
-                            @emp_id_01 						As emp_id,
-                            @eff_date_01					As eff_date,
-                            @pay_element_desc_06			As pay_element_id,
-                            @emp_id_01						As msg_p1,
-                            CONVERT(char,@eff_date_01,112)	As msg_p2,
-                            'Employee does not exists'		As msg_desc,
-                            @p_activity_date				AS activity_date
-
-                    SET @w_fatal_error = 1
-
-                END
-
-
-            ---------------------------------------------------------------------------
-            -- Check to see if the employer exists
-            ---------------------------------------------------------------------------
-            IF NOT EXISTS (
-                           SELECT 1
-                           FROM DBShrpn.dbo.employer
-                           WHERE empl_id = @empl_id_01
-                          )
-            BEGIN
-
-                SET @msg_id = 'U00039'
-                SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
-
-                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                WHERE activity_date = @p_activity_date
-                  AND emp_id_01 = @emp_id_01
-                  AND pay_element_desc_06 = @pay_element_desc_06
-                  AND event_id_01 = @v_EVENT_ID_PAY_ELE
-
-                INSERT INTO #tbl_ghr_msg
-                SELECT @msg_id      As msg_id
-                     , REPLACE(t.msg_text, '@1', @empl_id_01) AS msg_desc
-                FROM #tbl_msg_master t
-                WHERE (msg_id = @msg_id)
-
-                -- Historical Message for reporting purpose
-                INSERT INTO DBShrpn.dbo.ghr_historical_message
-                SELECT  @msg_id                                      As msg_id,
-                        @v_EVENT_ID_PAY_ELE                          As event_id,
-                        @emp_id_01                                   As emp_id,
-                        @eff_date_01                                 As eff_date,
-                        @pay_element_desc_06                         As pay_element_id,
-                        @emp_id_01                                   As msg_p1,
-                        @empl_id_01                                  As msg_p2,
-                        'Employer does not exist - bypassing record' As msg_desc,
-                        @p_activity_date                             AS activity_date
-
-                SET @w_fatal_error = 1
-
-            END
-
-
-            ---------------------------------------------------------------------------
             -- Validate Amount
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Validate Pay Element Amount'
@@ -529,21 +443,21 @@ BEGIN
                     AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
-                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @emp_calculation_06), '@2', @emp_id_01), '@3', @pay_element_desc_06) AS msg_desc
+                    SELECT @msg_id      AS msg_id
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@emp_calculation_06)), '@2', @emp_id_01), '@3', @pay_element_desc_06) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id                                      As msg_id,
-                            @v_EVENT_ID_PAY_ELE                          As event_id,
-                            @emp_id_01                                   As emp_id,
-                            @eff_date_01                                 As eff_date,
-                            @pay_element_desc_06                         As pay_element_id,
-                            @emp_id_01                                   As msg_p1,
-                            @empl_id_01                                  As msg_p2,
-                            'Invalid pay element amount.' As msg_desc,
+                    SELECT  @msg_id                                      AS msg_id,
+                            @v_EVENT_ID_PAY_ELE                          AS event_id,
+                            @emp_id_01                                   AS emp_id,
+                            @eff_date_01                                 AS eff_date,
+                            @pay_element_desc_06                         AS pay_element_id,
+                            @emp_id_01                                   AS msg_p1,
+                            @empl_id_01                                  AS msg_p2,
+                            'Invalid pay element amount.' AS msg_desc,
                             @p_activity_date                             AS activity_date
 
                     SET @w_fatal_error = 1
@@ -574,21 +488,21 @@ BEGIN
                     AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
+                    SELECT @msg_id      AS msg_id
                          , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id                                      As msg_id,
-                            @v_EVENT_ID_PAY_ELE                          As event_id,
-                            @emp_id_01                                   As emp_id,
-                            @eff_date_01                                 As eff_date,
-                            @pay_element_desc_06                         As pay_element_id,
-                            @emp_id_01                                   As msg_p1,
-                            @empl_id_01                                  As msg_p2,
-                            'Invalid Effective Date' As msg_desc,
+                    SELECT  @msg_id                                      AS msg_id,
+                            @v_EVENT_ID_PAY_ELE                          AS event_id,
+                            @emp_id_01                                   AS emp_id,
+                            @eff_date_01                                 AS eff_date,
+                            @pay_element_desc_06                         AS pay_element_id,
+                            @emp_id_01                                   AS msg_p1,
+                            @empl_id_01                                  AS msg_p2,
+                            'Invalid Effective Date' AS msg_desc,
                             @p_activity_date                             AS activity_date
 
                     SET @w_fatal_error = 1
@@ -596,7 +510,7 @@ BEGIN
                 END
             ELSE
                 -- Convert amount to money data type
-                SELECT @w_eff_date = CONVERT(money, @eff_date_01)
+                SELECT @w_eff_date = CONVERT(datetime, @eff_date_01)
 
 
             -- Begin Date
@@ -614,28 +528,28 @@ BEGIN
                     AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
+                    SELECT @msg_id      AS msg_id
                          , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id                                      As msg_id,
-                            @v_EVENT_ID_PAY_ELE                          As event_id,
-                            @emp_id_01                                   As emp_id,
-                            @eff_date_01                                 As eff_date,
-                            @pay_element_desc_06                         As pay_element_id,
-                            @begin_date_02                                   As msg_p1,
-                            ''                                  As msg_p2,
-                            'Invalid Begin Date' As msg_desc,
+                    SELECT  @msg_id                                      AS msg_id,
+                            @v_EVENT_ID_PAY_ELE                          AS event_id,
+                            @emp_id_01                                   AS emp_id,
+                            @eff_date_01                                 AS eff_date,
+                            @pay_element_desc_06                         AS pay_element_id,
+                            @begin_date_02                                   AS msg_p1,
+                            ''                                  AS msg_p2,
+                            'Invalid Begin Date' AS msg_desc,
                             @p_activity_date                             AS activity_date
 
                     SET @w_fatal_error = 1
 
                 END
             ELSE
-                -- Convert amount to money data type
+                -- Convert date string to datetime
                 SELECT @w_start_date = CONVERT(datetime, @begin_date_02)
 
             -- End Date
@@ -653,29 +567,161 @@ BEGIN
                     AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
+                    SELECT @msg_id      AS msg_id
                          , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date_02), '@2', @emp_id_01), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id                                      As msg_id,
-                            @v_EVENT_ID_PAY_ELE                          As event_id,
-                            @emp_id_01                                   As emp_id,
-                            @eff_date_01                                 As eff_date,
-                            @pay_element_desc_06                         As pay_element_id,
-                            @begin_date_02                              As msg_p1,
-                            ''                                  As msg_p2,
-                            'Invalid Begin Date' As msg_desc,
+                    SELECT  @msg_id                                      AS msg_id,
+                            @v_EVENT_ID_PAY_ELE                          AS event_id,
+                            @emp_id_01                                   AS emp_id,
+                            @eff_date_01                                 AS eff_date,
+                            @pay_element_desc_06                         AS pay_element_id,
+                            @begin_date_02                              AS msg_p1,
+                            ''                                  AS msg_p2,
+                            'Invalid Begin Date' AS msg_desc,
                             @p_activity_date                             AS activity_date
 
                     SET @w_fatal_error = 1
 
                 END
             ELSE
-                -- Convert amount to money data type
-                SELECT @w_stop_date = CONVERT(money, @end_date_02)
+                -- Convert date string to datetime
+                SELECT @w_stop_date = CONVERT(datetime, @end_date_02)
+
+
+            ---------------------------------------------------------------------------
+            -- Check to see if the employee exists
+            ---------------------------------------------------------------------------
+            IF NOT EXISTS (
+                           SELECT 1
+                           FROM DBShrpn.dbo.emp_status
+                           WHERE emp_id = @emp_id_01
+                          )
+                BEGIN
+
+                    SET @msg_id = 'U00012'
+                    SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date	      = @p_activity_date
+                      AND emp_id_01           = @emp_id_01
+                      AND pay_element_desc_06 = @pay_element_desc_06
+                      AND event_id_01         = @v_EVENT_ID_PAY_ELE
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id AS msg_id
+                         , REPLACE(t.msg_text, '@1', RTRIM(@emp_id_01)) AS msg_desc
+                    FROM #tbl_msg_master t
+                    WHERE (msg_id = @msg_id)
+
+                    -- Historical Message for reporting purpose
+                    INSERT INTO DBShrpn.dbo.ghr_historical_message
+                    SELECT  @msg_id AS msg_id,
+                            @v_EVENT_ID_PAY_ELE AS event_id,
+                            @emp_id_01 AS emp_id,
+                            @eff_date_01 AS eff_date,
+                            @pay_element_desc_06 AS pay_element_id,
+                            @emp_id_01 AS msg_p1,
+                            CONVERT(char,@eff_date_01,112) AS msg_p2,
+                            'Employee does not exists' AS msg_desc,
+                            @p_activity_date AS activity_date
+
+                    SET @w_fatal_error = 1
+
+                END
+
+
+            ---------------------------------------------------------------------------
+            -- Check to see if the employer exists
+            ---------------------------------------------------------------------------
+            IF NOT EXISTS (
+                           SELECT 1
+                           FROM DBShrpn.dbo.employer
+                           WHERE empl_id = @empl_id_01
+                          )
+            BEGIN
+
+                SET @msg_id = 'U00039'
+                SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET activity_status	= @v_ACTIVITY_STATUS_BAD
+                WHERE activity_date = @p_activity_date
+                  AND emp_id_01 = @emp_id_01
+                  AND pay_element_desc_06 = @pay_element_desc_06
+                  AND event_id_01 = @v_EVENT_ID_PAY_ELE
+
+                INSERT INTO #tbl_ghr_msg
+                SELECT @msg_id      AS msg_id
+                     , REPLACE(t.msg_text, '@1', RTRIM(@empl_id_01)) AS msg_desc
+                FROM #tbl_msg_master t
+                WHERE (msg_id = @msg_id)
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
+                SELECT  @msg_id                                      AS msg_id,
+                        @v_EVENT_ID_PAY_ELE                          AS event_id,
+                        @emp_id_01                                   AS emp_id,
+                        @eff_date_01                                 AS eff_date,
+                        @pay_element_desc_06                         AS pay_element_id,
+                        @emp_id_01                                   AS msg_p1,
+                        @empl_id_01                                  AS msg_p2,
+                        'Employer does not exist - bypassing record' AS msg_desc,
+                        @p_activity_date                             AS activity_date
+
+                SET @w_fatal_error = 1
+
+            END
+
+
+            ---------------------------------------------------------------------------
+            -- Validate Pay Element ID
+            ---------------------------------------------------------------------------
+            IF NOT EXISTS (
+                           SELECT 1
+                           FROM DBShrpn.dbo.pay_element
+                           WHERE (next_eff_date  = @v_END_OF_TIME_DATE)
+                             AND (stop_date      > @w_eff_date)
+                             AND (pay_element_id = @pay_element_desc_06)
+                          )
+            BEGIN
+
+                SET @msg_id = 'U00103'
+                SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET activity_status	= @v_ACTIVITY_STATUS_BAD
+                WHERE activity_date = @p_activity_date
+                  AND emp_id_01 = @emp_id_01
+                  AND pay_element_desc_06 = @pay_element_desc_06
+                  AND event_id_01 = @v_EVENT_ID_PAY_ELE
+
+                INSERT INTO #tbl_ghr_msg
+                SELECT @msg_id      AS msg_id
+                     , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@pay_element_desc_06)), '@2', RTRIM(@emp_id_01)) AS msg_desc
+                FROM #tbl_msg_master t
+                WHERE (msg_id = @msg_id)
+
+                -- Historical Message for reporting purpose
+                INSERT INTO DBShrpn.dbo.ghr_historical_message
+                SELECT  @msg_id                                      AS msg_id,
+                        @v_EVENT_ID_PAY_ELE                          AS event_id,
+                        @emp_id_01                                   AS emp_id,
+                        @eff_date_01                                 AS eff_date,
+                        @pay_element_desc_06                         AS pay_element_id,
+                        @emp_id_01                                   AS msg_p1,
+                        @empl_id_01                                  AS msg_p2,
+                        'Invalid pay element id.' AS msg_desc,
+                        @p_activity_date                             AS activity_date
+
+                SET @w_fatal_error = 1
+
+            END
+
 
 
             ---------------------------------------------------------------------------
@@ -720,21 +766,21 @@ BEGIN
                         AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id						As msg_id
+                    SELECT @msg_id						AS msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						As msg_id,
-                            @v_EVENT_ID_PAY_ELE             As event_id,
-                            @emp_id_01 						As emp_id,
-                            @eff_date_01					As eff_date,
-                            @pay_element_desc_06			As pay_element_id,
-                            @emp_id_01						As msg_p1,
-                            @emp_id_01						As msg_p2,
-                            'The new effective date for employee must be greater than the current effective date'		As msg_desc,
+                    SELECT  @msg_id						AS msg_id,
+                            @v_EVENT_ID_PAY_ELE             AS event_id,
+                            @emp_id_01 						AS emp_id,
+                            @eff_date_01					AS eff_date,
+                            @pay_element_desc_06			AS pay_element_id,
+                            @emp_id_01						AS msg_p1,
+                            @emp_id_01						AS msg_p2,
+                            'The new effective date for employee must be greater than the current effective date'		AS msg_desc,
                             @p_activity_date				AS activity_date
 
                     SET	@w_fatal_error = 1
@@ -772,21 +818,21 @@ BEGIN
                         AND event_id_01		= @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					    As msg_id
+                    SELECT @msg_id					    AS msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @w_start_date), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						As msg_id,
-                            @v_EVENT_ID_PAY_ELE As event_id,
-                            @emp_id_01 						As emp_id,
-                            @eff_date_01					As eff_date,
-                            @pay_element_desc_06			As pay_element_id,
-                            @emp_id_01						As msg_p1,
-                            @emp_id_01						As msg_p2,
-                            'The Begin Date cannot be greater than the pay through date for employee.'		As msg_desc,
+                    SELECT  @msg_id						AS msg_id,
+                            @v_EVENT_ID_PAY_ELE AS event_id,
+                            @emp_id_01 						AS emp_id,
+                            @eff_date_01					AS eff_date,
+                            @pay_element_desc_06			AS pay_element_id,
+                            @emp_id_01						AS msg_p1,
+                            @emp_id_01						AS msg_p2,
+                            'The Begin Date cannot be greater than the pay through date for employee.'		AS msg_desc,
                             @p_activity_date				AS activity_date
 
 
@@ -813,21 +859,21 @@ BEGIN
                         AND event_id_01		= @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					    As msg_id
+                    SELECT @msg_id					    AS msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @end_date_02), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						As msg_id,
-                            @v_EVENT_ID_PAY_ELE				As event_id,
-                            @emp_id_01 						As emp_id,
-                            @eff_date_01					As eff_date,
-                            @pay_element_desc_06			As pay_element_id,
-                            @emp_id_01						As msg_p1,
-                            @emp_id_01						As msg_p2,
-                            'The stop date must be greater or equal to the employee pay element effective date - Defaulting effective date to stop date.'		As msg_desc,
+                    SELECT  @msg_id						AS msg_id,
+                            @v_EVENT_ID_PAY_ELE				AS event_id,
+                            @emp_id_01 						AS emp_id,
+                            @eff_date_01					AS eff_date,
+                            @pay_element_desc_06			AS pay_element_id,
+                            @emp_id_01						AS msg_p1,
+                            @emp_id_01						AS msg_p2,
+                            'The stop date must be greater or equal to the employee pay element effective date - Defaulting effective date to stop date.'		AS msg_desc,
                             @p_activity_date				AS activity_date
 
                     SET @w_eff_date = @w_stop_date
@@ -871,6 +917,119 @@ BEGIN
                         END
 
                     SET @v_step_position = 'Pay Element Setup - Exec DBShrpn.dbo.usp_ins_hepy_insert'
+
+/*
+   SELECT @v_step_position               AS v_step_position
+        , @w_stop_date_1                 AS w_stop_date_1
+        , @emp_id_01                     AS emp_id_01
+        , @empl_id_01                    AS empl_id_01
+        , @pay_element_desc_06           AS pay_element_desc_06
+        , @eff_date_01                   AS eff_date_01
+        , @w_prior_eff_date              AS w_prior_eff_date
+        , @w_next_eff_date               AS w_next_eff_date
+        , @w_inact_by_pay_element_ind    AS w_inact_by_pay_element_ind
+        , @begin_date_02                 AS begin_date_02
+        , @w_stop_date                   AS w_stop_date
+        , @w_change_reason_code          AS w_change_reason_code
+        , @w_pay_ele_pay_pd_sched_code   AS w_pay_ele_pay_pd_sched_code
+        , @w_calc_meth_code              AS w_calc_meth_code
+        , @w_standard_calc_factor_1      AS w_standard_calc_factor_1
+        , @w_standard_calc_factor_2      AS w_standard_calc_factor_2
+        , @w_special_calc_factor_1       AS w_special_calc_factor_1
+        , @w_special_calc_factor_1       AS w_special_calc_factor_1
+        , @w_special_calc_factor_1       AS w_special_calc_factor_1
+        , @w_special_calc_factor_1       AS w_special_calc_factor_1
+        , @w_rate_tbl_id                 AS w_rate_tbl_id
+        , @w_rate_code                   AS w_rate_code
+        , @w_payee_name                  AS w_payee_name
+        , @w_payee_pmt_sched_code        AS w_payee_pmt_sched_code
+        , @w_payee_bank_transit_nbr      AS w_payee_bank_transit_nbr
+        , @w_payee_bank_acct_nbr         AS w_payee_bank_acct_nbr
+        , @w_pmt_ref_nbr                 AS w_pmt_ref_nbr
+        , @w_pmt_ref_name                AS w_pmt_ref_name
+        , @w_vendor_id                   AS w_vendor_id
+        , @w_limit_amt                   AS w_limit_amt
+        , @w_guaranteed_net_pay_amt      AS w_guaranteed_net_pay_amt
+        , @w_start_after_pay_element_id  AS w_start_after_pay_element_id
+        , @w_indiv_addr_typ_to_prt_code  AS w_indiv_addr_typ_to_prt_code
+        , @w_bank_id                     AS w_bank_id
+        , @w_dir_dep_bank_acct_nbr       AS w_dir_dep_bank_acct_nbr
+        , @w_bank_acct_type_code         AS w_bank_acct_type_code
+        , @w_pay_pd_arrs_rec_fixed_amt   AS w_pay_pd_arrs_rec_fixed_amt
+        , @w_pay_pd_arrs_rec_fixed_pct   AS w_pay_pd_arrs_rec_fixed_pct
+        , @w_min_pay_pd_recovery_amt     AS w_min_pay_pd_recovery_amt
+        , @w_user_amt_1                  AS w_user_amt_1
+        , @w_user_amt_2                  AS w_user_amt_2
+        , @w_user_monetary_amt_1         AS w_user_monetary_amt_1
+        , @w_user_monetary_amt_2         AS w_user_monetary_amt_2
+        , @w_user_monetary_curr_code     AS w_user_monetary_curr_code
+        , @w_user_code_1                 AS w_user_code_1
+        , @w_user_code_2                 AS w_user_code_2
+        , @w_user_date_1                 AS w_user_date_1
+        , @w_user_date_2                 AS w_user_date_2
+        , @w_user_ind_1                  AS w_user_ind_1
+        , @w_user_ind_2                  AS w_user_ind_2
+        , @w_user_text_1                 AS w_user_text_1
+        , @w_user_text_2                 AS w_user_text_2
+        , @w_chgstamp                    AS w_chgstamp
+        , @w_epend_emp_id                AS w_epend_emp_id
+        , @w_epend_empl_id               AS w_epend_empl_id
+        , @w_epend_pay_element_id        AS w_epend_pay_element_id
+        , @w_epend_arrears_bal_amt       AS w_epend_arrears_bal_amt
+        , @w_epend_rec_ovr_nbr_pay_pds   AS w_epend_rec_ovr_nbr_pay_pds
+        , @w_epend_wh_status_code        AS w_epend_wh_status_code
+        , @w_epend_calc_last_pay_pd_ind  AS w_epend_calc_last_pay_pd_ind
+        , @w_epend_prenotif_chk_date     AS w_epend_prenotif_chk_date
+        , @w_epend_prenotification_code  AS w_epend_prenotification_code
+        , @w_epend_chgstamp              AS w_epend_chgstamp
+        , @w_epec_emp_id                 AS w_epec_emp_id
+        , @w_epec_empl_id                AS w_epec_empl_id
+        , @w_epec_pay_element_id         AS w_epec_pay_element_id
+        , @w_epec_start_date             AS w_epec_start_date
+        , @w_epec_comnt_type_code        AS w_epec_comnt_type_code
+        , @w_epec_seq_nbr                AS w_epec_seq_nbr
+        , @w_epec_comnt_text             AS w_epec_comnt_text
+        , @w_epec_chgstamp               AS w_epec_chgstamp
+        , @w_pe_descp                    AS w_pe_descp
+        , @w_pe_type                     AS w_pe_type
+        , @w_pe_earning_type             AS w_pe_earning_type
+        , @w_pe_deduction_type           AS w_pe_deduction_type
+        , @w_pe_pay_pd_sched             AS w_pe_pay_pd_sched
+        , @w_pe_calc_meth                AS w_pe_calc_meth
+        , @w_pe_stndrd_calc_fac_1        AS w_pe_stndrd_calc_fac_1
+        , @w_pe_stndrd_calc_fac_2        AS w_pe_stndrd_calc_fac_2
+        , @w_pe_spec_calc_fac_1          AS w_pe_spec_calc_fac_1
+        , @w_pe_spec_calc_fac_2          AS w_pe_spec_calc_fac_2
+        , @w_pe_spec_calc_fac_3          AS w_pe_spec_calc_fac_3
+        , @w_pe_spec_calc_fac_4          AS w_pe_spec_calc_fac_4
+        , @w_pe_limit_amt                AS w_pe_limit_amt
+        , @w_pe_limit_cyc_type           AS w_pe_limit_cyc_type
+        , @w_pe_ded_rec_meth             AS w_pe_ded_rec_meth
+        , @w_pe_rec_fixed_amt            AS w_pe_rec_fixed_amt
+        , @w_pe_rec_fixed_pct            AS w_pe_rec_fixed_pct
+        , @w_pe_min_pay_pd_rec_amt       AS w_pe_min_pay_pd_rec_amt
+        , @w_pe_rate_tbl_id              AS w_pe_rate_tbl_id
+        , @w_pe_ben_plan_id              AS w_pe_ben_plan_id
+        , @w_rt_descp                    AS w_rt_descp
+        , @w_rte_descp                   AS w_rte_descp
+        , @w_epel_towards_lmt_amt        AS w_epel_towards_lmt_amt
+        , @w_tpp_descp                   AS w_tpp_descp
+        , @w_comments_flag               AS w_comments_flag
+        , @w_current_ver_eff_date        AS w_current_ver_eff_date
+        , @w_pe_curr_code                AS w_pe_curr_code
+        , @w_scrty_cat_code              AS w_scrty_cat_code
+        , @w_original_stop_date          AS w_original_stop_date
+        , @w_pension_tot_distn_ind       AS w_pension_tot_distn_ind
+        , @w_pension_distn_code_1        AS w_pension_distn_code_1
+        , @w_pension_distn_code_2        AS w_pension_distn_code_2
+        , @w_pre_1990_rpp_ctrb_type      AS w_pre_1990_rpp_ctrb_type
+        , @w_first_roth_ctrb             AS w_first_roth_ctrb
+        , @w_ira_sep_simple_ind          AS w_ira_sep_simple_ind
+        , @w_txbl_amt_not_det_ind        AS w_txbl_amt_not_det_ind
+        , @w_result_set_ind              AS w_result_set_ind
+        , @v_ret_val_usp_ins_hepy_insert AS v_ret_val_usp_ins_hepy_insert
+*/
+
 
                     -- Create new pay element record
                     EXEC DBShrpn.dbo.usp_ins_hepy_insert

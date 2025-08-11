@@ -66,6 +66,7 @@ VALUES
 , (N'U00100', 1, 0, N'WARNING: Invalid Employment Type code, @1, for employee @2.', N'', N'', 0, N'', 0, 0)
 , (N'U00101', 1, 0, N'Invalid pay element amount, @1, for employee, @2, and pay element id, @3.', N'', N'', 0, N'', 0, 0)
 , (N'U00102', 1, 0, N'Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.', N'', N'', 0, N'', 0, 0)
+, (N'U00103', 1, 0, N'Pay element id, @1, for employee, @2, is not a valid pay element in the system.', N'', N'', 0, N'', 0, 0)
 GO
 
 select *

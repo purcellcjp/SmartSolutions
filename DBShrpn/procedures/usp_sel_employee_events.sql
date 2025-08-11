@@ -335,7 +335,7 @@ BEGIN
                       , @p_status          = @w_status
         END
 
-/*
+
         ---------------------------------------------------------------------------
         -- Pay Element
         ---------------------------------------------------------------------------
@@ -357,7 +357,7 @@ BEGIN
                       , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
-*/
+
 
     END TRY
     BEGIN CATCH
