@@ -52,7 +52,7 @@ BEGIN
           , @w_batchname		varchar(08)
           , @w_qualifier		varchar(30)
 
-
+/*
     CREATE TABLE #ghr_employee_events_temp
     (
       ID									    int	IDENTITY(1,1)   NOT NULL
@@ -94,7 +94,7 @@ BEGIN
     , labor_grp_code                            char(50)            NULL    -- emp_assignment.user_text_1
     , file_source                               char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
     )
-
+*/
 
     BEGIN TRY
 
@@ -124,6 +124,7 @@ BEGIN
         -- Load imported data to table table
         SET @v_step_position = 'Copy Imported Data Temp'
 
+/*
         INSERT INTO #ghr_employee_events_temp
         SELECT event_id_01
             , emp_id_01
@@ -165,6 +166,7 @@ BEGIN
         FROM DBShrpn.dbo.ghr_employee_events
         ORDER BY event_id_01
                , emp_id_01
+*/
 
         SET @v_step_position = 'Copy Imported Data to Audit'
 
@@ -227,7 +229,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM #ghr_employee_events_temp
+                    FROM DBShrpn.dbo.ghr_employee_events
                     WHERE event_id_01 = @v_EVENT_ID_NEW_HIRE
                    )
         BEGIN
@@ -252,7 +254,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM #ghr_employee_events_temp
+                    FROM DBShrpn.dbo.ghr_employee_events
                     WHERE (event_id_01 = @v_EVENT_ID_SALARY_CHANGE)
                    )
         BEGIN
@@ -274,7 +276,7 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id_01
-                   FROM #ghr_employee_events_temp
+                   FROM DBShrpn.dbo.ghr_employee_events
                    WHERE event_id_01 = @v_EVENT_ID_TRANSFER
                   )
         BEGIN
@@ -298,7 +300,7 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id_01
-                   FROM #ghr_employee_events_temp
+                   FROM DBShrpn.dbo.ghr_employee_events
                    WHERE event_id_01 = @v_EVENT_ID_NAME_CHANGE
                   )
         BEGIN
@@ -321,7 +323,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM #ghr_employee_events_temp
+                    FROM DBShrpn.dbo.ghr_employee_events
                     WHERE event_id_01 = @v_EVENT_ID_STATUS_CHANGE
                    )
         BEGIN
@@ -344,7 +346,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id_01
-                    FROM #ghr_employee_events_temp
+                    FROM DBShrpn.dbo.ghr_employee_events
                     WHERE event_id_01 = @v_EVENT_ID_PAY_ELE
                    )
         BEGIN
@@ -395,7 +397,7 @@ BEGIN
     TRUNCATE TABLE DBShrpn.dbo.ghr_employee_events;
 
     -- Clean up temp table
-    DROP TABLE #ghr_employee_events_temp
+    --DROP TABLE #ghr_employee_events_temp
 
     RETURN @v_ret_val
 

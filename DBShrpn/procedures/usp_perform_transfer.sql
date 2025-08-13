@@ -269,8 +269,8 @@ BEGIN
              , t.national_id_1_type_code_01
              , t.national_id_1_01
              , t.organization_group_id_01
-             , t.organization_chart_name_01
-             , t.organization_unit_name_01
+             , ''   -- t.organization_chart_name_01
+             , ''   -- t.organization_unit_name_01
              , t.emp_status_classn_code_01
              , t.position_title_01
              , t.employment_type_code_01
@@ -296,7 +296,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM #ghr_employee_events_temp t
+        FROM DBShrpn.dbo.ghr_employee_events t
 		WHERE (event_id_01 = @v_EVENT_ID_TRANSFER)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -362,7 +362,7 @@ BEGIN
             ---------------------------------------------------------------------------
             IF  EXISTS (
                         SELECT 1
-                        FROM #ghr_employee_events_temp
+                        FROM DBShrpn.dbo.ghr_employee_events
                         WHERE event_id_01 = @v_EVENT_ID_STATUS_CHANGE
                           AND emp_id_01 = @emp_id_01
                           AND emp_status_code_5 = 'RH'
@@ -597,7 +597,7 @@ BEGIN
                     -- If salary Change Record Exists in this run, bypass transfer record
                     IF EXISTS (
                                SELECT 1
-                               FROM #ghr_employee_events_temp
+                               FROM DBShrpn.dbo.ghr_employee_events
                                WHERE emp_id_01   = @emp_id_01
                                  AND event_id_01 = @v_EVENT_ID_SALARY_CHANGE
                               )

@@ -104,7 +104,8 @@ BEGIN
                     @i_pay_element_id                  char(10),
                     @i_eff_date                        datetime,
                     @i_stop_date					   datetime,
-                    @i_pay_element_exists			   char(01)
+                    @i_pay_element_exists			   char(01),
+                    @i_calc_meth_code                  char(02)     -- cjp 8/12/2025
 
     -- Declare
     DECLARE @w_stop_date_1                      char(12)                = '29991231'
@@ -342,8 +343,8 @@ BEGIN
              , t.national_id_1_type_code_01
              , t.national_id_1_01
              , t.organization_group_id_01
-             , t.organization_chart_name_01
-             , t.organization_unit_name_01
+             , ''   -- t.organization_chart_name_01
+             , ''   -- t.organization_unit_name_01
              , t.emp_status_classn_code_01
              , t.position_title_01
              , t.employment_type_code_01
@@ -369,7 +370,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM #ghr_employee_events_temp t
+        FROM DBShrpn.dbo.ghr_employee_events t
 		WHERE (event_id_01 = @v_EVENT_ID_PAY_ELE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -681,13 +682,27 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Validate Pay Element ID
             ---------------------------------------------------------------------------
-            IF NOT EXISTS (
-                           SELECT 1
-                           FROM DBShrpn.dbo.pay_element
-                           WHERE (next_eff_date  = @v_END_OF_TIME_DATE)
-                             AND (stop_date      > @w_eff_date)
-                             AND (pay_element_id = @pay_element_desc_06)
-                          )
+            -- Lookup base pay element setting
+            -- if not present log error and skip record
+            -- if pay element exists variables will be passed to DBShrpn.dbo.usp_ins_hepy_insert
+            SELECT @w_pe_pay_pd_sched               = pe.pay_pd_sched_code
+                 , @w_pe_calc_meth_code             = pe.calc_meth_code
+                 , @w_pe_stndrd_calc_fac_1          = pe.standard_calc_factor_1
+                 , @w_pe_stndrd_calc_fac_2          = pe.standard_calc_factor_2
+                 , @w_pe_spec_calc_fac_1            = pe.special_calc_factor_1
+                 , @w_pe_spec_calc_fac_2            = pe.special_calc_factor_2
+                 , @w_pe_spec_calc_fac_3            = pe.special_calc_factor_3
+                 , @w_pe_spec_calc_fac_4            = pe.special_calc_factor_4
+                 , @w_pe_limit_amt                  = pe.limit_amt
+                 , @w_pe_rec_fixed_amt              = pe.pay_pd_arrears_rec_fixed_amt
+                 , @w_pe_rec_fixed_pct              = pe.pay_pd_arrears_rec_fixed_pct
+                 , @w_pe_min_pay_pd_rec_amt         = pe.min_pay_pd_recovery_amt
+            FROM DBShrpn.dbo.pay_element pe
+            WHERE (pe.pay_element_id = @pay_element_desc_06)
+              AND (pe.next_eff_date  = @v_END_OF_TIME_DATE)
+              AND (pe.stop_date      > @w_eff_date)
+
+            IF (@@ROWCOUNT = 0) -- record not found
             BEGIN
 
                 SET @msg_id = 'U00103'
@@ -730,23 +745,26 @@ BEGIN
             SELECT	@i_pay_element_exists	=	'N'
 
 
-            SELECT @i_emp_id				=	emp_id,         --don't need
-                   @i_empl_id				=	empl_id,        --don't need
-                   @i_pay_element_id		=	pay_element_id, -- don't need
-                   @i_eff_date				=	eff_date,
-                   @i_stop_date			    =	stop_date,
-                   @i_pay_element_exists	=	'Y'
-            FROM DBShrpn.dbo.emp_pay_element	pe
-            WHERE emp_id         =	@emp_id_01
-              AND empl_id        =	@empl_id_01
-              AND pay_element_id =	@pay_element_desc_06
-              AND eff_date       =	(
-                                     SELECT MAX(eff_date)
-                                     FROM DBShrpn.dbo.emp_pay_element t
-                                     WHERE t.emp_id         = pe.emp_id
-                                       AND t.empl_id        = pe.empl_id
-                                       AND t.pay_element_id = pe.pay_element_id
-                                    )
+            SELECT @i_emp_id             = epe.emp_id         --don't need
+                 , @i_empl_id            = epe.empl_id        --don't need
+                 , @i_pay_element_id     = epe.pay_element_id -- don't need
+                 , @i_eff_date           = epe.eff_date
+                 , @i_stop_date          = epe.stop_date
+                 , @i_pay_element_exists = 'Y'
+                 , @i_calc_meth_code     = epe.calc_meth_code   -- employee's calc method
+            FROM DBShrpn.dbo.emp_pay_element epe
+            WHERE epe.emp_id         = @emp_id_01
+              AND epe.empl_id        = @empl_id_01
+              AND epe.pay_element_id = @pay_element_desc_06
+              AND epe.next_eff_date  = @v_END_OF_TIME_DATE
+
+            --   AND epe.eff_date       =	(
+            --                              SELECT MAX(t.eff_date)
+            --                              FROM DBShrpn.dbo.emp_pay_element t
+            --                              WHERE t.emp_id         = epe.emp_id
+            --                                AND t.empl_id        = epe.empl_id
+            --                                AND t.pay_element_id = epe.pay_element_id
+            --                             )
 
 
             ---------------------------------------------------------------------------
@@ -902,7 +920,7 @@ BEGIN
                 BEGIN
 
                     IF (@i_pay_element_exists = 'Y') AND  -- record exists but <> eff date
-                       --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date
+                       --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date. @w_stop_date_1 hardcoded to 12/31/2999
                        (@i_stop_date < @v_END_OF_TIME_DATE)
                         BEGIN
                             SET @v_step_position = 'Pay Element Setup - Pay Element Exists'
@@ -918,229 +936,119 @@ BEGIN
 
                     SET @v_step_position = 'Pay Element Setup - Exec DBShrpn.dbo.usp_ins_hepy_insert'
 
-/*
-   SELECT @v_step_position               AS v_step_position
-        , @w_stop_date_1                 AS w_stop_date_1
-        , @emp_id_01                     AS emp_id_01
-        , @empl_id_01                    AS empl_id_01
-        , @pay_element_desc_06           AS pay_element_desc_06
-        , @eff_date_01                   AS eff_date_01
-        , @w_prior_eff_date              AS w_prior_eff_date
-        , @w_next_eff_date               AS w_next_eff_date
-        , @w_inact_by_pay_element_ind    AS w_inact_by_pay_element_ind
-        , @begin_date_02                 AS begin_date_02
-        , @w_stop_date                   AS w_stop_date
-        , @w_change_reason_code          AS w_change_reason_code
-        , @w_pay_ele_pay_pd_sched_code   AS w_pay_ele_pay_pd_sched_code
-        , @w_calc_meth_code              AS w_calc_meth_code
-        , @w_standard_calc_factor_1      AS w_standard_calc_factor_1
-        , @w_standard_calc_factor_2      AS w_standard_calc_factor_2
-        , @w_special_calc_factor_1       AS w_special_calc_factor_1
-        , @w_special_calc_factor_1       AS w_special_calc_factor_1
-        , @w_special_calc_factor_1       AS w_special_calc_factor_1
-        , @w_special_calc_factor_1       AS w_special_calc_factor_1
-        , @w_rate_tbl_id                 AS w_rate_tbl_id
-        , @w_rate_code                   AS w_rate_code
-        , @w_payee_name                  AS w_payee_name
-        , @w_payee_pmt_sched_code        AS w_payee_pmt_sched_code
-        , @w_payee_bank_transit_nbr      AS w_payee_bank_transit_nbr
-        , @w_payee_bank_acct_nbr         AS w_payee_bank_acct_nbr
-        , @w_pmt_ref_nbr                 AS w_pmt_ref_nbr
-        , @w_pmt_ref_name                AS w_pmt_ref_name
-        , @w_vendor_id                   AS w_vendor_id
-        , @w_limit_amt                   AS w_limit_amt
-        , @w_guaranteed_net_pay_amt      AS w_guaranteed_net_pay_amt
-        , @w_start_after_pay_element_id  AS w_start_after_pay_element_id
-        , @w_indiv_addr_typ_to_prt_code  AS w_indiv_addr_typ_to_prt_code
-        , @w_bank_id                     AS w_bank_id
-        , @w_dir_dep_bank_acct_nbr       AS w_dir_dep_bank_acct_nbr
-        , @w_bank_acct_type_code         AS w_bank_acct_type_code
-        , @w_pay_pd_arrs_rec_fixed_amt   AS w_pay_pd_arrs_rec_fixed_amt
-        , @w_pay_pd_arrs_rec_fixed_pct   AS w_pay_pd_arrs_rec_fixed_pct
-        , @w_min_pay_pd_recovery_amt     AS w_min_pay_pd_recovery_amt
-        , @w_user_amt_1                  AS w_user_amt_1
-        , @w_user_amt_2                  AS w_user_amt_2
-        , @w_user_monetary_amt_1         AS w_user_monetary_amt_1
-        , @w_user_monetary_amt_2         AS w_user_monetary_amt_2
-        , @w_user_monetary_curr_code     AS w_user_monetary_curr_code
-        , @w_user_code_1                 AS w_user_code_1
-        , @w_user_code_2                 AS w_user_code_2
-        , @w_user_date_1                 AS w_user_date_1
-        , @w_user_date_2                 AS w_user_date_2
-        , @w_user_ind_1                  AS w_user_ind_1
-        , @w_user_ind_2                  AS w_user_ind_2
-        , @w_user_text_1                 AS w_user_text_1
-        , @w_user_text_2                 AS w_user_text_2
-        , @w_chgstamp                    AS w_chgstamp
-        , @w_epend_emp_id                AS w_epend_emp_id
-        , @w_epend_empl_id               AS w_epend_empl_id
-        , @w_epend_pay_element_id        AS w_epend_pay_element_id
-        , @w_epend_arrears_bal_amt       AS w_epend_arrears_bal_amt
-        , @w_epend_rec_ovr_nbr_pay_pds   AS w_epend_rec_ovr_nbr_pay_pds
-        , @w_epend_wh_status_code        AS w_epend_wh_status_code
-        , @w_epend_calc_last_pay_pd_ind  AS w_epend_calc_last_pay_pd_ind
-        , @w_epend_prenotif_chk_date     AS w_epend_prenotif_chk_date
-        , @w_epend_prenotification_code  AS w_epend_prenotification_code
-        , @w_epend_chgstamp              AS w_epend_chgstamp
-        , @w_epec_emp_id                 AS w_epec_emp_id
-        , @w_epec_empl_id                AS w_epec_empl_id
-        , @w_epec_pay_element_id         AS w_epec_pay_element_id
-        , @w_epec_start_date             AS w_epec_start_date
-        , @w_epec_comnt_type_code        AS w_epec_comnt_type_code
-        , @w_epec_seq_nbr                AS w_epec_seq_nbr
-        , @w_epec_comnt_text             AS w_epec_comnt_text
-        , @w_epec_chgstamp               AS w_epec_chgstamp
-        , @w_pe_descp                    AS w_pe_descp
-        , @w_pe_type                     AS w_pe_type
-        , @w_pe_earning_type             AS w_pe_earning_type
-        , @w_pe_deduction_type           AS w_pe_deduction_type
-        , @w_pe_pay_pd_sched             AS w_pe_pay_pd_sched
-        , @w_pe_calc_meth                AS w_pe_calc_meth
-        , @w_pe_stndrd_calc_fac_1        AS w_pe_stndrd_calc_fac_1
-        , @w_pe_stndrd_calc_fac_2        AS w_pe_stndrd_calc_fac_2
-        , @w_pe_spec_calc_fac_1          AS w_pe_spec_calc_fac_1
-        , @w_pe_spec_calc_fac_2          AS w_pe_spec_calc_fac_2
-        , @w_pe_spec_calc_fac_3          AS w_pe_spec_calc_fac_3
-        , @w_pe_spec_calc_fac_4          AS w_pe_spec_calc_fac_4
-        , @w_pe_limit_amt                AS w_pe_limit_amt
-        , @w_pe_limit_cyc_type           AS w_pe_limit_cyc_type
-        , @w_pe_ded_rec_meth             AS w_pe_ded_rec_meth
-        , @w_pe_rec_fixed_amt            AS w_pe_rec_fixed_amt
-        , @w_pe_rec_fixed_pct            AS w_pe_rec_fixed_pct
-        , @w_pe_min_pay_pd_rec_amt       AS w_pe_min_pay_pd_rec_amt
-        , @w_pe_rate_tbl_id              AS w_pe_rate_tbl_id
-        , @w_pe_ben_plan_id              AS w_pe_ben_plan_id
-        , @w_rt_descp                    AS w_rt_descp
-        , @w_rte_descp                   AS w_rte_descp
-        , @w_epel_towards_lmt_amt        AS w_epel_towards_lmt_amt
-        , @w_tpp_descp                   AS w_tpp_descp
-        , @w_comments_flag               AS w_comments_flag
-        , @w_current_ver_eff_date        AS w_current_ver_eff_date
-        , @w_pe_curr_code                AS w_pe_curr_code
-        , @w_scrty_cat_code              AS w_scrty_cat_code
-        , @w_original_stop_date          AS w_original_stop_date
-        , @w_pension_tot_distn_ind       AS w_pension_tot_distn_ind
-        , @w_pension_distn_code_1        AS w_pension_distn_code_1
-        , @w_pension_distn_code_2        AS w_pension_distn_code_2
-        , @w_pre_1990_rpp_ctrb_type      AS w_pre_1990_rpp_ctrb_type
-        , @w_first_roth_ctrb             AS w_first_roth_ctrb
-        , @w_ira_sep_simple_ind          AS w_ira_sep_simple_ind
-        , @w_txbl_amt_not_det_ind        AS w_txbl_amt_not_det_ind
-        , @w_result_set_ind              AS w_result_set_ind
-        , @v_ret_val_usp_ins_hepy_insert AS v_ret_val_usp_ins_hepy_insert
-*/
+
 
 
                     -- Create new pay element record
                     EXEC DBShrpn.dbo.usp_ins_hepy_insert
-                                @w_stop_date	                        =	@w_stop_date_1,
-                                @p_emp_id								=	@emp_id_01,
-                                @p_empl_id								=	@empl_id_01,
-                                @p_pay_element_id						=	@pay_element_desc_06,
-                                @p_eff_date								=	@eff_date_01,
-                                @p_prior_eff_date						=	@w_prior_eff_date,
-                                @p_next_eff_date						=	@w_next_eff_date,
-                                @p_inact_by_pay_element_ind				=	@w_inact_by_pay_element_ind,
-                                @p_start_date							=	@begin_date_02,
-                                @p_stop_date							=	@w_stop_date,
-                                @p_change_reason_code					=	@w_change_reason_code,
-                                @p_pay_ele_pay_pd_sched_code			=	@w_pay_ele_pay_pd_sched_code,
-                                @p_calc_meth_code						=	@w_calc_meth_code,
-                                @p_standard_calc_factor_1				=	@w_standard_calc_factor_1,
-                                @p_standard_calc_factor_2				=	@w_standard_calc_factor_2,
-                                @p_special_calc_factor_1				=	@w_special_calc_factor_1,
-                                @p_special_calc_factor_2				=	@w_special_calc_factor_1,
-                                @p_special_calc_factor_3				=	@w_special_calc_factor_1,
-                                @p_special_calc_factor_4				=	@w_special_calc_factor_1,
-                                @p_rate_tbl_id							=	@w_rate_tbl_id,
-                                @p_rate_code							=	@w_rate_code,
-                                @p_payee_name							=	@w_payee_name,
-                                @p_payee_pmt_sched_code					=	@w_payee_pmt_sched_code,
-                                @p_payee_bank_transit_nbr				=	@w_payee_bank_transit_nbr,
-                                @p_payee_bank_acct_nbr					=	@w_payee_bank_acct_nbr,
-                                @p_pmt_ref_nbr							=	@w_pmt_ref_nbr,
-                                @p_pmt_ref_name							=	@w_pmt_ref_name,
-                                @p_vendor_id							=	@w_vendor_id ,
-                                @p_limit_amt							=	@w_limit_amt,
-                                @p_guaranteed_net_pay_amt				=	@w_guaranteed_net_pay_amt,
-                                @p_start_after_pay_element_id			=	@w_start_after_pay_element_id,
-                                @p_indiv_addr_typ_to_prt_code			=	@w_indiv_addr_typ_to_prt_code,
-                                @p_bank_id								=	@w_bank_id,
-                                @p_dir_dep_bank_acct_nbr				=	@w_dir_dep_bank_acct_nbr,
-                                @p_bank_acct_type_code					=	@w_bank_acct_type_code,
-                                @p_pay_pd_arrs_rec_fixed_amt			=	@w_pay_pd_arrs_rec_fixed_amt,
-                                @p_pay_pd_arrs_rec_fixed_pct			=	@w_pay_pd_arrs_rec_fixed_pct,
-                                @p_min_pay_pd_recovery_amt				=	@w_min_pay_pd_recovery_amt,
-                                @p_user_amt_1							=	@w_user_amt_1,
-                                @p_user_amt_2							=	@w_user_amt_2,
-                                @p_user_monetary_amt_1					=	@w_user_monetary_amt_1,
-                                @p_user_monetary_amt_2					=	@w_user_monetary_amt_2,
-                                @p_user_monetary_curr_code				=	@w_user_monetary_curr_code ,
-                                @p_user_code_1							=	@w_user_code_1,
-                                @p_user_code_2							=	@w_user_code_2,
-                                @p_user_date_1							=	@w_user_date_1,
-                                @p_user_date_2							=	@w_user_date_2,
-                                @p_user_ind_1							=	@w_user_ind_1,
-                                @p_user_ind_2							=	@w_user_ind_2,
-                                @p_user_text_1							=	@w_user_text_1,
-                                @p_user_text_2							=	@w_user_text_2,
-                                @p_chgstamp								=	@w_chgstamp,
-                                @p_epend_emp_id							=	@w_epend_emp_id,
-                                @p_epend_empl_id						=	@w_epend_empl_id,
-                                @p_epend_pay_element_id					=	@w_epend_pay_element_id,
-                                @p_epend_arrears_bal_amt				=	@w_epend_arrears_bal_amt,
-                                @p_epend_rec_ovr_nbr_pay_pds			=	@w_epend_rec_ovr_nbr_pay_pds,
-                                @p_epend_wh_status_code					=	@w_epend_wh_status_code,
-                                @p_epend_calc_last_pay_pd_ind			=	@w_epend_calc_last_pay_pd_ind,
-                                @p_epend_prenotif_chk_date				=	@w_epend_prenotif_chk_date,
-                                @p_epend_prenotification_code			=	@w_epend_prenotification_code,
-                                @p_epend_chgstamp						=	@w_epend_chgstamp,
-                                @p_epec_emp_id							=	@w_epec_emp_id,
-                                @p_epec_empl_id							=	@w_epec_empl_id,
-                                @p_epec_pay_element_id					=	@w_epec_pay_element_id,
-                                @p_epec_start_date						=	@w_epec_start_date,
-                                @p_epec_comnt_type_code					=	@w_epec_comnt_type_code,
-                                @p_epec_seq_nbr							=	@w_epec_seq_nbr,
-                                @p_epec_comnt_text						=	@w_epec_comnt_text,
-                                @p_epec_chgstamp						=	@w_epec_chgstamp,
-                                @p_pe_descp								=	@w_pe_descp,
-                                @p_pe_type								=	@w_pe_type,
-                                @p_pe_earning_type						=	@w_pe_earning_type,
-                                @p_pe_deduction_type					=	@w_pe_deduction_type,
-                                @p_pe_pay_pd_sched						=	@w_pe_pay_pd_sched,
-                                @p_pe_calc_meth							=	@w_pe_calc_meth,
-                                @p_pe_stndrd_calc_fac_1					=	@w_pe_stndrd_calc_fac_1,
-                                @p_pe_stndrd_calc_fac_2					=	@w_pe_stndrd_calc_fac_2,
-                                @p_pe_spec_calc_fac_1					=	@w_pe_spec_calc_fac_1,
-                                @p_pe_spec_calc_fac_2					=	@w_pe_spec_calc_fac_2,
-                                @p_pe_spec_calc_fac_3					=	@w_pe_spec_calc_fac_3,
-                                @p_pe_spec_calc_fac_4					=	@w_pe_spec_calc_fac_4,
-                                @p_pe_limit_amt							=	@w_pe_limit_amt,
-                                @p_pe_limit_cyc_type					=	@w_pe_limit_cyc_type,
-                                @p_pe_ded_rec_meth						=	@w_pe_ded_rec_meth,
-                                @p_pe_rec_fixed_amt						=	@w_pe_rec_fixed_amt,
-                                @p_pe_rec_fixed_pct						=	@w_pe_rec_fixed_pct,
-                                @p_pe_min_pay_pd_rec_amt				=	@w_pe_min_pay_pd_rec_amt,
-                                @p_pe_rate_tbl_id						=	@w_pe_rate_tbl_id,
-                                @p_pe_ben_plan_id						=	@w_pe_ben_plan_id,
-                                @p_rt_descp								=	@w_rt_descp,
-                                @p_rte_descp							=	@w_rte_descp,
-                                @p_epel_towards_lmt_amt					=	@w_epel_towards_lmt_amt,
-                                @p_tpp_descp							=	@w_tpp_descp,
-                                @p_comments_flag						=	@w_comments_flag,
-                                @p_current_ver_eff_date					=	@w_current_ver_eff_date,
-                                @p_pe_curr_code							=	@w_pe_curr_code,
-                                @p_scrty_cat_code						=	@w_scrty_cat_code,
-                                @p_original_stop_date					=	@w_original_stop_date,
-                                @p_pension_tot_distn_ind				=	@w_pension_tot_distn_ind,
-                                @p_pension_distn_code_1					=	@w_pension_distn_code_1,
-                                @p_pension_distn_code_2					=	@w_pension_distn_code_2,
-                                @p_pre_1990_rpp_ctrb_type				=	@w_pre_1990_rpp_ctrb_type,
-                                @p_first_roth_ctrb						=	@w_first_roth_ctrb,
-                                @p_ira_sep_simple_ind					=	@w_ira_sep_simple_ind,
-                                @p_txbl_amt_not_det_ind					=	@w_txbl_amt_not_det_ind,
-                                @p_result_set_ind						=	@w_result_set_ind,
-                                @ret									=	@v_ret_val_usp_ins_hepy_insert
+                          @w_stop_date	                        =	@w_stop_date_1
+                        , @p_emp_id								=	@emp_id_01
+                        , @p_empl_id							=	@empl_id_01
+                        , @p_pay_element_id						=	@pay_element_desc_06
+                        , @p_eff_date							=	@eff_date_01
+                        , @p_prior_eff_date						=	@w_prior_eff_date
+                        , @p_next_eff_date						=	@w_next_eff_date
+                        , @p_inact_by_pay_element_ind			=	@w_inact_by_pay_element_ind
+                        , @p_start_date							=	@begin_date_02
+                        , @p_stop_date							=	@w_stop_date
+                        , @p_change_reason_code					=	@w_change_reason_code
+                        , @p_pay_ele_pay_pd_sched_code			=	@w_pay_ele_pay_pd_sched_code
+                        , @p_calc_meth_code						=	@w_calc_meth_code
+                        , @p_standard_calc_factor_1				=	@w_standard_calc_factor_1
+                        , @p_standard_calc_factor_2				=	@w_standard_calc_factor_2
+                        , @p_special_calc_factor_1				=	@w_special_calc_factor_1
+                        , @p_special_calc_factor_2				=	@w_special_calc_factor_1
+                        , @p_special_calc_factor_3				=	@w_special_calc_factor_1
+                        , @p_special_calc_factor_4				=	@w_special_calc_factor_1
+                        , @p_rate_tbl_id						=	@w_rate_tbl_id
+                        , @p_rate_code							=	@w_rate_code
+                        , @p_payee_name							=	@w_payee_name
+                        , @p_payee_pmt_sched_code				=	@w_payee_pmt_sched_code
+                        , @p_payee_bank_transit_nbr				=	@w_payee_bank_transit_nbr
+                        , @p_payee_bank_acct_nbr				=	@w_payee_bank_acct_nbr
+                        , @p_pmt_ref_nbr						=	@w_pmt_ref_nbr
+                        , @p_pmt_ref_name						=	@w_pmt_ref_name
+                        , @p_vendor_id							=	@w_vendor_id
+                        , @p_limit_amt							=	@w_limit_amt
+                        , @p_guaranteed_net_pay_amt				=	@w_guaranteed_net_pay_amt
+                        , @p_start_after_pay_element_id			=	@w_start_after_pay_element_id
+                        , @p_indiv_addr_typ_to_prt_code			=	@w_indiv_addr_typ_to_prt_code
+                        , @p_bank_id							=	@w_bank_id
+                        , @p_dir_dep_bank_acct_nbr				=	@w_dir_dep_bank_acct_nbr
+                        , @p_bank_acct_type_code				=	@w_bank_acct_type_code
+                        , @p_pay_pd_arrs_rec_fixed_amt			=	@w_pay_pd_arrs_rec_fixed_amt
+                        , @p_pay_pd_arrs_rec_fixed_pct			=	@w_pay_pd_arrs_rec_fixed_pct
+                        , @p_min_pay_pd_recovery_amt			=	@w_min_pay_pd_recovery_amt
+                        , @p_user_amt_1							=	@w_user_amt_1
+                        , @p_user_amt_2							=	@w_user_amt_2
+                        , @p_user_monetary_amt_1				=	@w_user_monetary_amt_1
+                        , @p_user_monetary_amt_2				=	@w_user_monetary_amt_2
+                        , @p_user_monetary_curr_code			=	@w_user_monetary_curr_code
+                        , @p_user_code_1						=	@w_user_code_1
+                        , @p_user_code_2						=	@w_user_code_2
+                        , @p_user_date_1						=	@w_user_date_1
+                        , @p_user_date_2						=	@w_user_date_2
+                        , @p_user_ind_1							=	@w_user_ind_1
+                        , @p_user_ind_2							=	@w_user_ind_2
+                        , @p_user_text_1						=	@w_user_text_1
+                        , @p_user_text_2						=	@w_user_text_2
+                        , @p_chgstamp							=	@w_chgstamp
+                        , @p_epend_emp_id						=	@w_epend_emp_id
+                        , @p_epend_empl_id						=	@w_epend_empl_id
+                        , @p_epend_pay_element_id				=	@w_epend_pay_element_id
+                        , @p_epend_arrears_bal_amt				=	@w_epend_arrears_bal_amt
+                        , @p_epend_rec_ovr_nbr_pay_pds			=	@w_epend_rec_ovr_nbr_pay_pds
+                        , @p_epend_wh_status_code				=	@w_epend_wh_status_code
+                        , @p_epend_calc_last_pay_pd_ind			=	@w_epend_calc_last_pay_pd_ind
+                        , @p_epend_prenotif_chk_date			=	@w_epend_prenotif_chk_date
+                        , @p_epend_prenotification_code			=	@w_epend_prenotification_code
+                        , @p_epend_chgstamp						=	@w_epend_chgstamp
+                        , @p_epec_emp_id						=	@w_epec_emp_id
+                        , @p_epec_empl_id						=	@w_epec_empl_id
+                        , @p_epec_pay_element_id				=	@w_epec_pay_element_id
+                        , @p_epec_start_date					=	@w_epec_start_date
+                        , @p_epec_comnt_type_code				=	@w_epec_comnt_type_code
+                        , @p_epec_seq_nbr						=	@w_epec_seq_nbr
+                        , @p_epec_comnt_text					=	@w_epec_comnt_text
+                        , @p_epec_chgstamp						=	@w_epec_chgstamp
+                        , @p_pe_descp							=	@w_pe_descp
+                        , @p_pe_type							=	@w_pe_type
+                        , @p_pe_earning_type					=	@w_pe_earning_type
+                        , @p_pe_deduction_type					=	@w_pe_deduction_type
+                        , @p_pe_pay_pd_sched					=	@w_pe_pay_pd_sched
+                        , @p_pe_calc_meth						=	@w_calc_meth_code         -- cjp 8/12/2025  @w_pe_calc_meth
+                        , @p_pe_stndrd_calc_fac_1				=	@w_pe_stndrd_calc_fac_1
+                        , @p_pe_stndrd_calc_fac_2				=	@w_pe_stndrd_calc_fac_2
+                        , @p_pe_spec_calc_fac_1					=	@w_pe_spec_calc_fac_1
+                        , @p_pe_spec_calc_fac_2					=	@w_pe_spec_calc_fac_2
+                        , @p_pe_spec_calc_fac_3					=	@w_pe_spec_calc_fac_3
+                        , @p_pe_spec_calc_fac_4					=	@w_pe_spec_calc_fac_4
+                        , @p_pe_limit_amt						=	@w_pe_limit_amt
+                        , @p_pe_limit_cyc_type					=	@w_pe_limit_cyc_type
+                        , @p_pe_ded_rec_meth					=	@w_pe_ded_rec_meth
+                        , @p_pe_rec_fixed_amt					=	@w_pe_rec_fixed_amt
+                        , @p_pe_rec_fixed_pct					=	@w_pe_rec_fixed_pct
+                        , @p_pe_min_pay_pd_rec_amt				=	@w_pe_min_pay_pd_rec_amt
+                        , @p_pe_rate_tbl_id						=	@w_pe_rate_tbl_id
+                        , @p_pe_ben_plan_id						=	@w_pe_ben_plan_id
+                        , @p_rt_descp							=	@w_rt_descp
+                        , @p_rte_descp							=	@w_rte_descp
+                        , @p_epel_towards_lmt_amt				=	@w_epel_towards_lmt_amt
+                        , @p_tpp_descp							=	@w_tpp_descp
+                        , @p_comments_flag						=	@w_comments_flag
+                        , @p_current_ver_eff_date				=	@w_current_ver_eff_date
+                        , @p_pe_curr_code						=	@w_pe_curr_code
+                        , @p_scrty_cat_code						=	@w_scrty_cat_code
+                        , @p_original_stop_date					=	@w_original_stop_date
+                        , @p_pension_tot_distn_ind				=	@w_pension_tot_distn_ind
+                        , @p_pension_distn_code_1				=	@w_pension_distn_code_1
+                        , @p_pension_distn_code_2				=	@w_pension_distn_code_2
+                        , @p_pre_1990_rpp_ctrb_type				=	@w_pre_1990_rpp_ctrb_type
+                        , @p_first_roth_ctrb					=	@w_first_roth_ctrb
+                        , @p_ira_sep_simple_ind					=	@w_ira_sep_simple_ind
+                        , @p_txbl_amt_not_det_ind				=	@w_txbl_amt_not_det_ind
+                        , @p_result_set_ind						=	@w_result_set_ind
+                        , @ret									=	@v_ret_val_usp_ins_hepy_insert
 
                     IF (@v_ret_val_usp_ins_hepy_insert <> 0)
                     BEGIN

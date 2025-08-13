@@ -261,7 +261,7 @@ BEGIN
           , @organization_chart_name_01				varchar(64)
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(60)
+          , @position_title_01						char(60)        -- DBShrpn..emp_assignment.user_text_2
           , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
@@ -284,7 +284,7 @@ BEGIN
           , @tax_flag                               char(1)         -- individual_personal.ind_2
           , @nic_flag                               char(1)         -- individual_personal.ind_1
           , @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
-          , @labor_grp_code                         char(50)        -- emp_assignment.user_text_1
+          , @labor_grp_code                         char(5)         -- DBShrpn..emp_employment.labor_grp_code
           , @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
     DECLARE @w_eff_date                             datetime
@@ -370,8 +370,8 @@ BEGIN
              , t.national_id_1_type_code_01
              , t.national_id_1_01
              , t.organization_group_id_01
-             , t.organization_chart_name_01
-             , t.organization_unit_name_01
+             , ''       -- t.organization_chart_name_01
+             , ''       -- t.organization_unit_name_01
              , t.emp_status_classn_code_01
              , t.position_title_01
              , t.employment_type_code_01
@@ -397,7 +397,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM #ghr_employee_events_temp t
+        FROM DBShrpn.dbo.ghr_employee_events t
 		WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -1068,7 +1068,7 @@ select @v_step_position                                                         
 
 
             EXEC DBShrpn.dbo.usp_ins_hemp
-                @p_employer_id                       = @empl_id_01
+                  @p_employer_id                       = @empl_id_01
                 , @p_employee_id                       = @emp_id_01
                 , @p_individual_id                     = @ind_idx
                 , @p_original_hire_date                = @eff_date_01
@@ -1105,7 +1105,7 @@ select @v_step_position                                                         
                 , @p_active_reason_code                = @w_active_reason_code
                 , @p_employment_type_code              = @w_conv_employment_type_code    --@employment_type_code_01
                 , @p_professional_cat_code             = @w_professional_cat_code
-                , @p_labor_grp_code                    = @w_labor_grp_code
+                , @p_labor_grp_code                    = @labor_grp_code
                 , @p_non_employee_indicator            = @w_non_employee_indicator
                 , @p_excluded_from_payroll_ind         = @w_excluded_from_payroll_ind
                 , @p_pensioner_indicator               = @w_pensioner_indicator
@@ -1162,7 +1162,7 @@ select @v_step_position                                                         
                 , @p_user_monetary_amt_2               = @w_user_monetary_amt_2
                 , @p_user_monetary_curr_code           = @w_user_monetary_curr_code
                 , @p_user_text_1                       = @w_user_text_1
-                , @p_user_text_2                       = @position_title_01     -- CJP 7/8/2025 @w_user_text_2
+                , @p_user_text_2                       = @position_title_01     -- CJP 7/8/2025 DBShrpn..emp_assignment.user_text_2     @w_user_text_2
                 , @p_inc_tax_calc_method               = @w_inc_tax_calc_method
                 , @p_ei_status_code                    = @w_ei_status_code
                 , @p_ppip_status_code                  = @w_ppip_status_code
