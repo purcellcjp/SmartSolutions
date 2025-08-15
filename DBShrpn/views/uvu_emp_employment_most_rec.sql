@@ -107,7 +107,7 @@ SELECT emp_id
      , user_text_2
      , t4_employ_code
      , chgstamp
-FROM   DBShrpn..emp_employment
+FROM   DBShrpn.dbo.emp_employment
 WHERE  (next_eff_date = '12/31/2999')
 
 GO

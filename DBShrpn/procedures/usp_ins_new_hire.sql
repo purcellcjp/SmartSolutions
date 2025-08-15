@@ -261,7 +261,7 @@ BEGIN
           , @organization_chart_name_01				varchar(64)
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(60)        -- DBShrpn..emp_assignment.user_text_2
+          , @position_title_01						char(50)        -- DBShrpn..emp_assignment.user_text_2
           , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
@@ -379,7 +379,7 @@ BEGIN
              , t.begin_date_02
              , t.end_date_02
              , t.pay_status_code_03
-             , t.pay_group_id_03
+             , UPPER(t.pay_group_id_03)
              , t.pay_element_ctrl_grp_id_03
              , t.time_reporting_meth_code_03
              , t.employment_info_chg_reason_cd_03
@@ -397,7 +397,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM DBShrpn.dbo.ghr_employee_events t
+        FROM #ghr_employee_events_temp t
 		WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -1345,7 +1345,7 @@ BYPASS_EMPLOYEE:
 
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
-        FROM DBShrpn.dbo.ghr_employee_events
+        FROM #ghr_employee_events_temp
         WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)

@@ -34,6 +34,7 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
@@ -105,7 +106,7 @@ BEGIN
           , @organization_chart_name_01				varchar(64)
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(60)
+          , @position_title_01						char(50)
           , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
@@ -221,7 +222,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM DBShrpn.dbo.ghr_employee_events t
+        FROM #ghr_employee_events_temp t
 		WHERE (event_id_01 = @v_EVENT_ID_NAME_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -329,38 +330,84 @@ BEGIN
             IF (@w_fatal_error = 1)
                 GOTO BYPASS_EMPLOYEE
 
+            ---------------------------------------------------------------------------
+            -- Lookup individual_id and Prior Last Name
+            ---------------------------------------------------------------------------
+            SET @v_step_position = 'Lookup Ind ID Prior Last Name'
 
-            SELECT @individual_id = individual_id
-            FROM DBShrpn.dbo.employee
-            WHERE emp_id = @emp_id_01
+            SELECT @individual_id = emp.individual_id
+                 , @prior_last_name = ind.last_name
+            FROM DBShrpn.dbo.employee emp
+            JOIN DBShrpn.dbo.individual ind ON
+                 (emp.individual_id = ind.individual_id)
+            WHERE (emp_id = @emp_id_01)
 
-
-            SELECT @prior_last_name = last_name
-            FROM DBShrpn.dbo.individual
-            WHERE individual_id = @individual_id
-
-
-            UPDATE	DBShrpn.dbo.individual
-            SET	first_name			=	RTRIM(@first_name_01),
-                    first_middle_name   =   RTRIM(@first_middle_name_01),
-                    last_name			=	RTRIM(@last_name_01),
-                    prior_last_name		=	RTRIM(@prior_last_name),
-                    pay_to_name			=	RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
-            WHERE individual_id = @individual_id
-
-
-            UPDATE	DBShrpn.dbo.employee
-            SET	emp_display_name	=	RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
-            WHERE emp_id = @emp_id_01
 
             ---------------------------------------------------------------------------
-            -- Update the title of the employee
+            -- Update name fields
             ---------------------------------------------------------------------------
-            -- Note: GOSL uses user_text_2; Grenada uses user_text_1
+            SET @v_step_position = 'Update Name Fields'
+
+            UPDATE DBShrpn.dbo.individual
+            SET	first_name        = RTRIM(@first_name_01)
+              , first_middle_name = RTRIM(@first_middle_name_01)
+              , last_name         = RTRIM(@last_name_01)
+              , prior_last_name   = RTRIM(@prior_last_name)
+              , pay_to_name       = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01) + RTRIM(' ' + RTRIM(@first_middle_name_01))
+            WHERE (individual_id = @individual_id)
+
+
+            ---------------------------------------------------------------------------
+            -- Update Employee Display Name and Tax Ceiling
+            ---------------------------------------------------------------------------
+            SET @v_step_position = 'Update Emp Display Name Tax Ceiling'
+
+            UPDATE DBShrpn.dbo.employee
+            SET	emp_display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01) + RTRIM(' ' + RTRIM(@first_middle_name_01))
+              , user_monetary_amt_1 = @tax_ceiling_amt
+            WHERE (emp_id = @emp_id_01)
+
+
+            ---------------------------------------------------------------------------
+            -- GOSL update NIC and Tax Code
+            ---------------------------------------------------------------------------
+            -- CJP 7/7/2025
+            SET @v_step_position = 'Update NIC/Tax Code'
 
             UPDATE	DBShrpn.dbo.individual_personal
-            SET	user_text_2		=	CAST(@position_title_01 AS CHAR(50))
-            WHERE individual_id	=	@individual_id
+            SET	user_ind_1 = @nic_flag
+              , user_ind_2 = @tax_flag
+            WHERE (individual_id = @individual_id)
+
+
+            ---------------------------------------------------------------------------
+            -- Update Labor Group
+            ---------------------------------------------------------------------------
+            SET @v_step_position = 'Update Labor Group'
+
+            UPDATE DBShrpn..emp_employment
+            SET labor_grp_code = @labor_grp_code
+            WHERE (emp_id = @emp_id_01)
+              AND (next_eff_date = @v_END_OF_TIME_DATE)
+
+
+            ---------------------------------------------------------------------------
+            -- Update Position Title
+            ---------------------------------------------------------------------------
+            SET @v_step_position = 'Update Position'
+
+            -- Note: GOSL uses DBShrpn..emp_assignment.user_text_2;
+            --       Grenada uses DBShrpn.dbo.individual_personal.user_text_1
+            UPDATE	DBShrpn.dbo.emp_assignment
+            SET	user_text_2 = @position_title_01
+            FROM DBShrpn.dbo.emp_assignment ea
+            WHERE (ea.next_eff_date = @v_END_OF_TIME_DATE)
+              AND (ea.end_date = (
+                                    SELECT MAX(ea2.end_date)
+                                    FROM DBShrpn..emp_assignment ea2
+                                    WHERE (ea2.emp_id        = ea.emp_id)
+                                      AND (ea2.next_eff_date = @v_END_OF_TIME_DATE)
+                                 ))
 
 
 BYPASS_EMPLOYEE:
@@ -501,7 +548,7 @@ BYPASS_EMPLOYEE:
 
         -- Get total name records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
-        FROM DBShrpn.dbo.ghr_employee_events
+        FROM #ghr_employee_events_temp
         WHERE (event_id_01 =	@v_EVENT_ID_NAME_CHANGE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)

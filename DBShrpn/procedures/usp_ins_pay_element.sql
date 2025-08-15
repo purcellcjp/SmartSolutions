@@ -108,8 +108,7 @@ BEGIN
                     @i_calc_meth_code                  char(02)     -- cjp 8/12/2025
 
     -- Declare
-    DECLARE @w_stop_date_1                      char(12)                = '29991231'
-          , @w_emp_id                           char(15)                = '000325'
+    DECLARE @w_emp_id                           char(15)                = '000325'
           , @w_empl_id                          char(10)                = '5001'
           , @w_pay_element_id                   char(10)                = 'ACTI'
           , @w_eff_date                         datetime                = '20210801'
@@ -117,7 +116,7 @@ BEGIN
           , @w_next_eff_date                    datetime                = '19000101'
           , @w_inact_by_pay_element_ind         char(1)                 = 'N'
           , @w_start_date                       datetime                = '20210801'
-          , @w_stop_date                        datetime                = '29991231'
+          , @w_stop_date_1                      datetime                = '29991231'
           , @w_change_reason_code               char(5)                 = ''
           , @w_pay_ele_pay_pd_sched_code        char(2)                 = '01'
           , @w_calc_meth_code                   char(2)                 = '01'
@@ -232,7 +231,7 @@ BEGIN
           , @organization_chart_name_01				varchar(64)
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(60)
+          , @position_title_01						char(50)
           , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
@@ -352,7 +351,7 @@ BEGIN
              , t.begin_date_02
              , t.end_date_02
              , t.pay_status_code_03
-             , t.pay_group_id_03
+             , UPPER(t.pay_group_id_03)
              , t.pay_element_ctrl_grp_id_03
              , t.time_reporting_meth_code_03
              , t.employment_info_chg_reason_cd_03
@@ -370,7 +369,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM DBShrpn.dbo.ghr_employee_events t
+        FROM #ghr_employee_events_temp t
 		WHERE (event_id_01 = @v_EVENT_ID_PAY_ELE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -580,8 +579,8 @@ BEGIN
                             @emp_id_01                                   AS emp_id,
                             @eff_date_01                                 AS eff_date,
                             @pay_element_desc_06                         AS pay_element_id,
-                            @begin_date_02                              AS msg_p1,
-                            ''                                  AS msg_p2,
+                            @end_date_02                                 AS msg_p1,
+                            ''                                           AS msg_p2,
                             'Invalid Begin Date' AS msg_desc,
                             @p_activity_date                             AS activity_date
 
@@ -590,7 +589,7 @@ BEGIN
                 END
             ELSE
                 -- Convert date string to datetime
-                SELECT @w_stop_date = CONVERT(datetime, @end_date_02)
+                SELECT @w_stop_date_1 = CONVERT(datetime, @end_date_02)
 
 
             ---------------------------------------------------------------------------
@@ -684,9 +683,9 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Lookup base pay element setting
             -- if not present log error and skip record
-            -- if pay element exists variables will be passed to DBShrpn.dbo.usp_ins_hepy_insert
+            -- if pay element exists key variables will be passed to DBShrpn.dbo.usp_ins_hepy_insert
             SELECT @w_pe_pay_pd_sched               = pe.pay_pd_sched_code
-                 , @w_pe_calc_meth_code             = pe.calc_meth_code
+                 , @w_pe_calc_meth                  = pe.calc_meth_code
                  , @w_pe_stndrd_calc_fac_1          = pe.standard_calc_factor_1
                  , @w_pe_stndrd_calc_fac_2          = pe.standard_calc_factor_2
                  , @w_pe_spec_calc_fac_1            = pe.special_calc_factor_1
@@ -784,7 +783,7 @@ BEGIN
                         AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id						AS msg_id
+                    SELECT @msg_id AS msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @eff_date_01), '@2', @emp_id_01) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -814,13 +813,12 @@ BEGIN
 
             SELECT @pay_through_date = pay_through_date
             FROM DBShrpn.dbo.emp_employment ee
-            WHERE emp_id =	@emp_id_01
+            WHERE emp_id = @emp_id_01
               AND eff_date = (
                               SELECT MAX(t.eff_date)
                               FROM DBShrpn.dbo.emp_employment t
                               WHERE t.emp_id =	ee.emp_id
                              )
-
 
 
             IF (@w_start_date > @pay_through_date)
@@ -831,9 +829,9 @@ BEGIN
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                        AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		= @v_EVENT_ID_PAY_ELE
+                    WHERE activity_date	= @p_activity_date
+                        AND emp_id_01 =	@emp_id_01
+                        AND event_id_01 = @v_EVENT_ID_PAY_ELE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    AS msg_id
@@ -863,7 +861,7 @@ BEGIN
             --- Validate the stop date against the effective date
             ---------------------------------------------------------------------------
             -- If stop date less than eff date then set eff date = stop date
-            IF (@w_stop_date < @w_eff_date)
+            IF (@w_stop_date_1 < @w_eff_date)
             --IF CONVERT(date, @end_date_02) < CONVERT(date, @eff_date_01)
                 BEGIN
 
@@ -894,7 +892,7 @@ BEGIN
                             'The stop date must be greater or equal to the employee pay element effective date - Defaulting effective date to stop date.'		AS msg_desc,
                             @p_activity_date				AS activity_date
 
-                    SET @w_eff_date = @w_stop_date
+                    SET @w_eff_date = @w_stop_date_1
                     --SELECT @eff_date_01 = @end_date_02
 
                 END
@@ -908,7 +906,7 @@ BEGIN
             -- start pay element logic
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Pay Element Setup'
-            -- Does record exist with same effective date?
+            -- Does employee record exist with same effective date?
             IF	NOT EXISTS (
                             SELECT 1
                             FROM DBShrpn.dbo.emp_pay_element
@@ -919,20 +917,20 @@ BEGIN
                            )
                 BEGIN
 
-                    IF (@i_pay_element_exists = 'Y') AND  -- record exists but <> eff date
-                       --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date. @w_stop_date_1 hardcoded to 12/31/2999
-                       (@i_stop_date < @v_END_OF_TIME_DATE)
-                        BEGIN
-                            SET @v_step_position = 'Pay Element Setup - Pay Element Exists'
+                    -- IF (@i_pay_element_exists = 'Y') AND  -- record exists but <> eff date
+                    --    --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date. @w_stop_date_1 hardcoded to 12/31/2999
+                    --    (@i_stop_date < @v_END_OF_TIME_DATE)
+                    --     BEGIN
+                    --         SET @v_step_position = 'Pay Element Setup - Pay Element Exists'
 
-                            -- Update existing record with new stop date
-                            UPDATE DBShrpn.dbo.emp_pay_element
-                            SET  stop_date     = @v_END_OF_TIME_DATE
-                            WHERE emp_id       = @i_emp_id
-                            AND empl_id        = @i_empl_id
-                            AND pay_element_id = @i_pay_element_id
-                            AND eff_date       = @i_eff_date
-                        END
+                    --         -- Update existing record with new stop date
+                    --         UPDATE DBShrpn.dbo.emp_pay_element
+                    --         SET  stop_date     = @v_END_OF_TIME_DATE
+                    --         WHERE emp_id       = @i_emp_id
+                    --         AND empl_id        = @i_empl_id
+                    --         AND pay_element_id = @i_pay_element_id
+                    --         AND eff_date       = @i_eff_date
+                    --     END
 
                     SET @v_step_position = 'Pay Element Setup - Exec DBShrpn.dbo.usp_ins_hepy_insert'
 
@@ -941,7 +939,7 @@ BEGIN
 
                     -- Create new pay element record
                     EXEC DBShrpn.dbo.usp_ins_hepy_insert
-                          @w_stop_date	                        =	@w_stop_date_1
+                          @w_stop_date                          =   @w_stop_date_1                  -- used in insert statement
                         , @p_emp_id								=	@emp_id_01
                         , @p_empl_id							=	@empl_id_01
                         , @p_pay_element_id						=	@pay_element_desc_06
@@ -949,8 +947,8 @@ BEGIN
                         , @p_prior_eff_date						=	@w_prior_eff_date
                         , @p_next_eff_date						=	@w_next_eff_date
                         , @p_inact_by_pay_element_ind			=	@w_inact_by_pay_element_ind
-                        , @p_start_date							=	@begin_date_02
-                        , @p_stop_date							=	@w_stop_date
+                        , @p_start_date							=	@w_start_date                   -- not used in insert statement
+                        , @p_stop_date							=	@w_stop_date_1
                         , @p_change_reason_code					=	@w_change_reason_code
                         , @p_pay_ele_pay_pd_sched_code			=	@w_pay_ele_pay_pd_sched_code
                         , @p_calc_meth_code						=	@w_calc_meth_code
@@ -1016,7 +1014,7 @@ BEGIN
                         , @p_pe_earning_type					=	@w_pe_earning_type
                         , @p_pe_deduction_type					=	@w_pe_deduction_type
                         , @p_pe_pay_pd_sched					=	@w_pe_pay_pd_sched
-                        , @p_pe_calc_meth						=	@w_calc_meth_code         -- cjp 8/12/2025  @w_pe_calc_meth
+                        , @p_pe_calc_meth						=	@w_pe_calc_meth
                         , @p_pe_stndrd_calc_fac_1				=	@w_pe_stndrd_calc_fac_1
                         , @p_pe_stndrd_calc_fac_2				=	@w_pe_stndrd_calc_fac_2
                         , @p_pe_spec_calc_fac_1					=	@w_pe_spec_calc_fac_1
@@ -1071,23 +1069,23 @@ BEGIN
 
 
 
-                    IF (@w_stop_date < @v_END_OF_TIME_DATE) -- not sure why not comparing to previous record's stop date -- Are all new records stop date = 12/31/2999?
-                    --IF (CONVERT(date, @end_date_02) < CONVERT(date, @w_stop_date_1))
-                        BEGIN
+                    -- IF (@w_stop_date_1 < @v_END_OF_TIME_DATE) -- not sure why not comparing to previous record's stop date -- Are all new records stop date = 12/31/2999?
+                    -- --IF (CONVERT(date, @end_date_02) < CONVERT(date, @w_stop_date_1))
+                    --     BEGIN
 
-                            SET @v_step_position = 'Pay Element Setup - Stop Date < 12/31/2999'
+                    --         SET @v_step_position = 'Pay Element Setup - Stop Date < 12/31/2999'
 
-                            UPDATE DBShrpn.dbo.emp_pay_element
-                            SET  stop_date = CASE
-                                               --WHEN CONVERT(date, @end_date_02) < CONVERT(date, @i_eff_date) THEN @i_eff_date
-                                               WHEN @w_stop_date < @i_eff_date THEN @i_eff_date
-                                               ELSE CONVERT(date, @end_date_02)
-                                             END
-                            WHERE emp_id         = @emp_id_01
-                              AND empl_id        = @empl_id_01
-                              AND pay_element_id = @pay_element_desc_06
-                              AND eff_date       = @w_eff_date  --@eff_date_01
-                        END
+                    --         UPDATE DBShrpn.dbo.emp_pay_element
+                    --         SET  stop_date = CASE
+                    --                            --WHEN CONVERT(date, @end_date_02) < CONVERT(date, @i_eff_date) THEN @i_eff_date
+                    --                            WHEN @w_stop_date_1 < @i_eff_date THEN @i_eff_date
+                    --                            ELSE CONVERT(date, @end_date_02)
+                    --                          END
+                    --         WHERE emp_id         = @emp_id_01
+                    --           AND empl_id        = @empl_id_01
+                    --           AND pay_element_id = @pay_element_desc_06
+                    --           AND eff_date       = @w_eff_date  --@eff_date_01
+                    --     END
 
 
                     IF (@i_pay_element_exists = 'Y')
@@ -1097,33 +1095,33 @@ BEGIN
 
                             --  Current Record
                             UPDATE DBShrpn.dbo.emp_pay_element
-                            SET prior_eff_date				=	@i_eff_date
-                            WHERE emp_id					=	@emp_id_01
-                            AND	empl_id						=	@empl_id_01
-                            AND	pay_element_id				=	@pay_element_desc_06
-                            AND	eff_date					=	@w_eff_date     --@eff_date_01
+                            SET prior_eff_date = @i_eff_date
+                            WHERE emp_id         = @emp_id_01
+                              AND empl_id        = @empl_id_01
+                              AND pay_element_id = @pay_element_desc_06
+                              AND eff_date       = @w_eff_date     --@eff_date_01
 
                             -- Prior Record
                             UPDATE DBShrpn.dbo.emp_pay_element
-                            SET next_eff_date				=	@w_eff_date     --@eff_date_01
-                            WHERE emp_id					=	@emp_id_01
-                            AND	empl_id						=	@empl_id_01
-                            AND	pay_element_id				=	@pay_element_desc_06
-                            AND	eff_date					=	@i_eff_date
+                            SET next_eff_date =	@w_eff_date     --@eff_date_01
+                            WHERE emp_id         = @emp_id_01
+                              AND empl_id        = @empl_id_01
+                              AND pay_element_id = @pay_element_desc_06
+                              AND eff_date       = @i_eff_date
                         END
 
                 END
-	        ELSE    -- Extract record exists
+	        ELSE    -- Pay Element Exists with Same Effective Date - Just update existing record
                 BEGIN
                     SET @v_step_position = 'Pay Element Setup - Pay Element Exists with same effective date'
 
                     UPDATE	DBShrpn.dbo.emp_pay_element
-                    SET start_date             = @begin_date_02,
-                        stop_date              = @w_stop_date,       --@end_date_02,
-                        standard_calc_factor_1 = @emp_calculation_06,
-                        calc_meth_code         = @w_calc_meth_code,
-                        rate_tbl_id            = @w_rate_tbl_id,
-                        rate_code              = @w_rate_code
+                    SET start_date             = @begin_date_02
+                      , stop_date              = @w_stop_date_1                  -- @end_date_02,
+                      , standard_calc_factor_1 = @w_standard_calc_factor_1      -- @emp_calculation_06,
+                      , calc_meth_code         = @w_calc_meth_code
+                      , rate_tbl_id            = @w_rate_tbl_id
+                      , rate_code              = @w_rate_code
                     WHERE emp_id         = @emp_id_01
                       AND empl_id        = @empl_id_01
                       AND pay_element_id = @pay_element_desc_06

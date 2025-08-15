@@ -122,7 +122,7 @@ SELECT ea.emp_id
      , ea.unemployment_loc_code
      , ea.include_salary_in_autopay_ind
      , ea.chgstamp
-FROM DBShrpn..emp_assignment ea
+FROM DBShrpn.dbo.emp_assignment ea
 WHERE (ea.next_eff_date = '12/31/2999')
   AND (ea.end_date = (
                       SELECT MAX(ea2.end_date)

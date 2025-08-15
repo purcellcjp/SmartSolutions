@@ -136,7 +136,7 @@ BEGIN
           , @organization_chart_name_01				varchar(64)
           , @organization_unit_name_01				varchar(240)
           , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(60)
+          , @position_title_01						char(50)
           , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt_01					char(15)
           , @begin_date_02							char(10)
@@ -296,7 +296,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
-        FROM DBShrpn.dbo.ghr_employee_events t
+        FROM #ghr_employee_events_temp t
 		WHERE (event_id_01 = @v_EVENT_ID_TRANSFER)
 
         SET @v_step_position = 'Opening cursor crsrHR'
@@ -362,7 +362,7 @@ BEGIN
             ---------------------------------------------------------------------------
             IF  EXISTS (
                         SELECT 1
-                        FROM DBShrpn.dbo.ghr_employee_events
+                        FROM #ghr_employee_events_temp
                         WHERE event_id_01 = @v_EVENT_ID_STATUS_CHANGE
                           AND emp_id_01 = @emp_id_01
                           AND emp_status_code_5 = 'RH'
@@ -597,7 +597,7 @@ BEGIN
                     -- If salary Change Record Exists in this run, bypass transfer record
                     IF EXISTS (
                                SELECT 1
-                               FROM DBShrpn.dbo.ghr_employee_events
+                               FROM #ghr_employee_events_temp
                                WHERE emp_id_01   = @emp_id_01
                                  AND event_id_01 = @v_EVENT_ID_SALARY_CHANGE
                               )
@@ -988,16 +988,17 @@ BEGIN
 
 
             UPDATE DBShrpn.dbo.emp_assignment
-            SET		annual_salary_amt			=	CAST(@annual_salary_amt_01 AS MONEY),
-                    hourly_pay_rate				=	@i_hourly_rate_amt,
-                    pd_salary_amt				=	@i_period_amt,
-                    salary_change_type_code		=	@i_salary_change_type_code,
-                    work_tm_code				=	@i_work_tm_code,
-                    base_rate_tbl_id			=	@i_base_rate_tbl_id,
-                    base_rate_tbl_entry_code	=	@i_base_rate_tbl_entry_code,
-                    organization_group_id		=	@organization_group_id_01,
-                    organization_chart_name		=	@organization_chart_name_01,
-                    organization_unit_name		=	@organization_unit_name_01
+            SET annual_salary_amt			=   @annual_salary
+              , hourly_pay_rate				=	@i_hourly_rate_amt
+              , pd_salary_amt				=	@i_period_amt
+              , salary_change_type_code		=	@i_salary_change_type_code
+              , work_tm_code				=	@i_work_tm_code
+              , base_rate_tbl_id			=	@i_base_rate_tbl_id
+              , base_rate_tbl_entry_code	=	@i_base_rate_tbl_entry_code
+              , organization_group_id		=	@organization_group_id_01
+              , organization_chart_name		=	@organization_chart_name_01
+              , organization_unit_name		=	@organization_unit_name_01
+
             WHERE	emp_id				=	@i_emp_id
             AND		assigned_to_code	=	@i_assigned_to_code
             AND		job_or_pos_id		=	@i_job_or_pos_id
@@ -1005,15 +1006,29 @@ BEGIN
             AND		next_eff_date		=	@i_next_eff_date
             AND		prior_eff_date		=	@i_prior_eff_date
 
+            ---------------------------------------------------------------------------
+            -- GOSL update NIC and Tax Code
+            ---------------------------------------------------------------------------
+            -- CJP 7/7/2025
+            SET @v_step_position = 'Update NIC/Tax Code'
+
+            UPDATE DBShrpn.dbo.individual_personal
+            SET	user_ind_1 = @nic_flag
+              , user_ind_2 = @tax_flag
+            FROM DBShrpn.dbo.employee emp
+            JOIN DBShrpn.dbo.individual_personal ind ON
+                 (emp.individual_id = ind.individual_id)
+            WHERE (emp.emp_id = @emp_id_01)
+
 
             --
             -- Update the position since could be a new position with a new transfer
             --
-            SELECT @individual_id = individual_id FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01
+            -- SELECT @individual_id = individual_id FROM DBShrpn.dbo.employee WHERE emp_id = @emp_id_01
 
-            UPDATE	DBShrpn.dbo.individual_personal
-                SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
-            WHERE individual_id	=	@individual_id
+            -- UPDATE	DBShrpn.dbo.individual_personal
+            --     SET	user_text_2		=	CAST(@position_title_01 AS CHAR(50))
+            -- WHERE individual_id	=	@individual_id
 
 
 	    BYPASS_EMPLOYEE:

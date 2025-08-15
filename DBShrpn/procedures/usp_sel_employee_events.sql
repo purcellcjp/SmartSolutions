@@ -52,7 +52,7 @@ BEGIN
           , @w_batchname		varchar(08)
           , @w_qualifier		varchar(30)
 
-/*
+
     CREATE TABLE #ghr_employee_events_temp
     (
       ID									    int	IDENTITY(1,1)   NOT NULL
@@ -69,7 +69,7 @@ BEGIN
     , organization_chart_name_01			    varchar(64)         NULL
     , organization_unit_name_01			        varchar(240)        NULL
     , emp_status_classn_code_01			        char(02)            NULL
-    , position_title_01					        char(60)            NULL
+    , position_title_01					        char(50)            NULL
     , employment_type_code_01				    varchar(70)         NULL    -- increased size to 70 from 5
     , annual_salary_amt_01				        char(15)            NULL
     , begin_date_02						        char(10)            NULL
@@ -94,7 +94,7 @@ BEGIN
     , labor_grp_code                            char(50)            NULL    -- emp_assignment.user_text_1
     , file_source                               char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
     )
-*/
+
 
     BEGIN TRY
 
@@ -124,7 +124,7 @@ BEGIN
         -- Load imported data to table table
         SET @v_step_position = 'Copy Imported Data Temp'
 
-/*
+
         INSERT INTO #ghr_employee_events_temp
         SELECT event_id_01
             , emp_id_01
@@ -132,7 +132,7 @@ BEGIN
             , first_name_01
             , first_middle_name_01
             , last_name_01
-            , empl_id_01
+            , UPPER(empl_id_01)
             , 'NIS' -- national_id_1_type_code_01
             , national_id_1_01
             , organization_group_id_01
@@ -140,12 +140,12 @@ BEGIN
             , ''    -- organization_unit_name_01
             , emp_status_classn_code_01
             , position_title_01
-            , employment_type_code_01
+            , UPPER(employment_type_code_01)
             , annual_salary_amt_01
             , begin_date_02
             , end_date_02
             , pay_status_code_03
-            , pay_group_id_03
+            , UPPER(pay_group_id_03)
             , pay_element_ctrl_grp_id_03
             , time_reporting_meth_code_03
             , employment_info_chg_reason_cd_03
@@ -156,7 +156,7 @@ BEGIN
             , pay_through_date_5
             , emp_death_date_5
             , consider_for_rehire_ind_5
-            , pay_element_desc_06
+            , UPPER(pay_element_desc_06)
             , emp_calculation_06
             , tax_flag
             , nic_flag
@@ -166,7 +166,7 @@ BEGIN
         FROM DBShrpn.dbo.ghr_employee_events
         ORDER BY event_id_01
                , emp_id_01
-*/
+
 
         SET @v_step_position = 'Copy Imported Data to Audit'
 
@@ -397,7 +397,7 @@ BEGIN
     TRUNCATE TABLE DBShrpn.dbo.ghr_employee_events;
 
     -- Clean up temp table
-    --DROP TABLE #ghr_employee_events_temp
+    DROP TABLE #ghr_employee_events_temp
 
     RETURN @v_ret_val
 
