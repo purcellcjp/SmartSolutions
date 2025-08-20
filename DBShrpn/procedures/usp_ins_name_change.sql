@@ -23,7 +23,6 @@ CREATE PROCEDURE dbo.usp_ins_name_change
 	@p_qualifier            varchar(30),
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
-	@p_activity_status      char(02),
 	@p_status						int         = 0 OUTPUT
 )
 AS
@@ -42,19 +41,17 @@ BEGIN
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
 
+    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
+    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+
 
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
 
     DECLARE @v_ret_val                      int = 0
-    --DECLARE @p_activity_date				datetime
-    --DECLARE @p_userid						varchar(30)
-    --DECLARE @p_batchname					varchar(08)
-    --DECLARE @p_qualifier					varchar(30)
-    --DECLARE @p_user_id						varchar(30)
-    --DECLARE @p_activity_status				char(02)
-    --DECLARE @p_status						int
+
     DECLARE @w_msg_text						varchar(255)
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
@@ -65,18 +62,6 @@ BEGIN
     DECLARE @special_value_exists			int
     DECLARE @individual_id					char(10)
     DECLARE @prior_last_name				char(30)
-
-    --
-    -- Activate these fields when testing this program standalone.
-    --
-
-    --SET @p_userid			=	'DBS'
-    --SET @p_batchname		=	'GHR'
-    --SET @p_qualifier		=	'INTERFACES'
-    --SET @p_activity_date	=	GETDATE()
-    --SET @p_user_id			=	'GHRUser'
-    --SET @p_activity_status	=	'00'
-    --SET @p_status			=	0
 
 
     DECLARE @max			INT
@@ -297,10 +282,10 @@ BEGIN
                 BEGIN
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	=	'02'
-                    WHERE activity_date	=	@p_activity_date
-                        AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID_NAME_CHANGE
+                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date	= @p_activity_date
+                        AND emp_id_01 =	@emp_id_01
+                        AND event_id_01 = @v_EVENT_ID_NAME_CHANGE
 
 
                     INSERT INTO #tbl_ghr_msg
@@ -329,6 +314,7 @@ BEGIN
 
             IF (@w_fatal_error = 1)
                 GOTO BYPASS_EMPLOYEE
+
 
             ---------------------------------------------------------------------------
             -- Lookup individual_id and Prior Last Name

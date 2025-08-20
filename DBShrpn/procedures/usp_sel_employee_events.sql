@@ -17,9 +17,7 @@ END
 GO
 
 CREATE PROCEDURE dbo.usp_sel_employee_events
-(
-    @p_user_id      char(30) = ''
-)
+
 AS
 
 BEGIN
@@ -42,6 +40,8 @@ BEGIN
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
 
+    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
 
     DECLARE @w_activity_date	datetime
           , @w_inputfile		varchar(254)
@@ -100,23 +100,24 @@ BEGIN
 
         SET @v_step_position = 'Set Variables'
 
-		IF (@p_user_id = '')
-			SET @p_user_id = SYSTEM_USER
+        SET @w_wflow_userid = SYSTEM_USER
 
         -- Find the Batch name and qualifier for the job running the Bulk Copy
-        SELECT @w_userid        =	psc_userid
-            , @w_batchname	    =	psc_batchname
-            , @w_qualifier	    =	psc_qualifier
+        SELECT @w_userid       = psc_userid
+            , @w_batchname     = psc_batchname
+            , @w_qualifier     = psc_qualifier
+            , @w_activity_date = psc_last_comp_date
         FROM DBSpscb.dbo.psc_step
-        WHERE psc_userid		= @p_user_id
-        AND psc_pgm_parms	= 'GHR_EMPLOYEE_EVENTS'
+        WHERE (psc_userid = @w_wflow_userid)
+          AND (psc_pgm_parms = 'GHR_EMPLOYEE_EVENTS')     -- bulkcopy step
 
 
-        SET @w_activity_status	= '00'
-        SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
-        SET @w_wflow_userid = @p_user_id
+        --SET @w_activity_status	= '00'
+        -- Use date on bulkcopy step    SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
 
 
+        -- Get input filename
+        -- WHY IS THIS NEEDED???
         SELECT @w_inputfile	= batch_parameter_3
         FROM DBSentp.dbo.batch_parameters
         WHERE (batch_parameter_key = 'GHR_EMPLOYEE_EVENTS')
@@ -210,7 +211,7 @@ BEGIN
             , file_source
             , @w_activity_date		    AS activity_date
             , @w_wflow_userid		    AS activity_user
-            , @w_activity_status		AS activity_status
+            , @v_ACTIVITY_STATUS_GOOD		AS activity_status
         FROM DBShrpn.dbo.ghr_employee_events ee
         WHERE NOT EXISTS (
                         SELECT 1
@@ -240,7 +241,6 @@ BEGIN
                 , @p_qualifier       = @w_qualifier
                 , @p_activity_date   = @w_activity_date
                 , @p_user_id         = @w_wflow_userid
-                , @p_activity_status = @w_activity_status
                 , @p_status          = @w_status
         END
 
@@ -286,7 +286,6 @@ BEGIN
                       , @p_qualifier       = @w_qualifier
                       , @p_activity_date   = @w_activity_date
                       , @p_user_id         = @w_wflow_userid
-                      , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
 
@@ -310,7 +309,6 @@ BEGIN
                       , @p_qualifier       = @w_qualifier
                       , @p_activity_date   = @w_activity_date
                       , @p_user_id         = @w_wflow_userid
-                      , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
 
@@ -333,7 +331,6 @@ BEGIN
                       , @p_qualifier       = @w_qualifier
                       , @p_activity_date   = @w_activity_date
                       , @p_user_id         = @w_wflow_userid
-                      , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
 
@@ -356,7 +353,6 @@ BEGIN
                       , @p_qualifier       = @w_qualifier
                       , @p_activity_date   = @w_activity_date
                       , @p_user_id         = @w_wflow_userid
-                      , @p_activity_status = @w_activity_status
                       , @p_status          = @w_status
         END
 

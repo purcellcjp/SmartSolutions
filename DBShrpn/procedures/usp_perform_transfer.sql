@@ -23,7 +23,6 @@ CREATE PROCEDURE dbo.usp_perform_transfer
 	@p_qualifier            varchar(30),
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
-	@p_activity_status      char(02),
 	@p_status						int         = 0 OUTPUT
 )
 AS
@@ -40,18 +39,16 @@ BEGIN
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
+    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
+    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
 
     DECLARE @v_ret_val int
-    --DECLARE @p_activity_date				datetime
-    --DECLARE @p_userid						varchar(30)
-    --DECLARE @p_batchname					varchar(08)
-    --DECLARE @p_qualifier					varchar(30)
-    --DECLARE @p_user_id					varchar(30)
-    --DECLARE @p_activity_status			char(02)
-    --DECLARE @p_status						int
+
     DECLARE @w_msg_text						varchar(255)
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
@@ -79,17 +76,7 @@ BEGIN
             @i_base_rate_tbl_entry_code		char(08),
             @i_pd_salary_tm_pd_id			char(05)
 
-    --
-    -- Activate these fields when testing this program standalone.
-    --
 
-    --SET @p_userid			=	'DBS'
-    --SET @p_batchname		=	'GHR'
-    --SET @p_qualifier		=	'INTERFACES'
-    --SET @p_activity_date	=	'2021-09-10'
-    --SET @p_user_id		=	'JGROSS'
-    --SET @p_activity_status=	'00'
-    --SET @p_status			=	0
 
 
 
@@ -393,7 +380,7 @@ BEGIN
                 BEGIN
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '99'
+                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                       AND emp_id_01		=	@emp_id_01
                       AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -429,7 +416,7 @@ BEGIN
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	=	'02'
+                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
                         AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -470,7 +457,7 @@ BEGIN
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	=	'02'
+                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
                         AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -508,7 +495,7 @@ BEGIN
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '02'
+                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -560,7 +547,7 @@ BEGIN
                         SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                         UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= '02'
+                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
                         WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
                         AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -603,8 +590,10 @@ BEGIN
                               )
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = '99'
-                            WHERE emp_id_01 = @emp_id_01 AND activity_date = @p_activity_date AND event_id_01 = @v_EVENT_ID_TRANSFER
+                            SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                            WHERE emp_id_01 = @emp_id_01
+                              AND activity_date = @p_activity_date
+                              AND event_id_01 = @v_EVENT_ID_TRANSFER
 
                             --CJP 8/6/2025 set skip flag instead of jumping to GOTO BYPASS_EMPLOYEE
                             SET @w_fatal_error = 1
@@ -615,7 +604,7 @@ BEGIN
                             SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	= '02'
+                                SET activity_status	= @v_ACTIVITY_STATUS_BAD
                                 WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
                                 AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -629,7 +618,7 @@ BEGIN
                                 -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id						As msg_id,
-                                    @v_EVENT_ID_TRANSFER							As event_id,
+                                    @v_EVENT_ID_TRANSFER As event_id,
                                     @emp_id_01 						As emp_id,
                                     @eff_date_01					As eff_date,
                                     @pay_element_desc_06			As pay_element_id,
@@ -732,7 +721,7 @@ BEGIN
                       SELECT 1
                       FROM DBShrpn.dbo.employer
                       WHERE empl_id = @empl_id_01
-                        AND name like 'Pen%'
+                        AND (name LIKE 'Pen%')
                      )
                 BEGIN
                     SET @msg_id = 'U00044'
@@ -741,7 +730,7 @@ BEGIN
                     IF @rehire_override = 0
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	= '02'
+                                SET activity_status	= @v_ACTIVITY_STATUS_BAD
                             WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
                                 AND event_id_01		= @v_EVENT_ID_TRANSFER
@@ -754,15 +743,15 @@ BEGIN
 
                         -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						As msg_id,
-                                    @v_EVENT_ID_TRANSFER							As event_id,
-                                    @emp_id_01 					As emp_id,
-                                    @eff_date_01					As eff_date,
-                                    @pay_element_desc_06			As pay_element_id,
-                                    @emp_id_01					As msg_p1,
-                                    @empl_id_01					As msg_p2,
-                                    'Cannot transfer an employee to a pensioner employer'		As msg_desc,
-                                    @p_activity_date				AS activity_date
+                            SELECT  @msg_id As msg_id,
+                                    @v_EVENT_ID_TRANSFER As event_id,
+                                    @emp_id_01 As emp_id,
+                                    @eff_date_01 As eff_date,
+                                    @pay_element_desc_06 As pay_element_id,
+                                    @emp_id_01 As msg_p1,
+                                    @empl_id_01 As msg_p2,
+                                    'Cannot transfer an employee to a pensioner employer' As msg_desc,
+                                    @p_activity_date AS activity_date
                             -- End of Historical Message for reporting purpose
 
                             SELECT  @w_fatal_error = 1
@@ -770,10 +759,10 @@ BEGIN
                     ELSE
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	= '99'
-                                WHERE activity_date	=	@p_activity_date
-                                AND emp_id_01		=	@emp_id_01
-                                AND event_id_01		=	@v_EVENT_ID_TRANSFER
+                                SET activity_status	= @v_ACTIVITY_STATUS_WARNING
+                                WHERE activity_date	= @p_activity_date
+                                AND emp_id_01		= @emp_id_01
+                                AND event_id_01		= @v_EVENT_ID_TRANSFER
                         END
 
 
@@ -799,7 +788,7 @@ BEGIN
                     IF (@rehire_override = 0)
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	= '02'
+                                SET activity_status	= @v_ACTIVITY_STATUS_BAD
                                 WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
                                 AND event_id_01		=	@v_EVENT_ID_TRANSFER
@@ -813,7 +802,7 @@ BEGIN
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id						As msg_id,
-                                    @v_EVENT_ID_TRANSFER							As event_id,
+                                    @v_EVENT_ID_TRANSFER As event_id,
                                     @emp_id_01 					As emp_id,
                                     @eff_date_01					As eff_date,
                                     @pay_element_desc_06			As pay_element_id,
@@ -829,7 +818,7 @@ BEGIN
                         BEGIN
 
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= '99'
+                            SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                             WHERE activity_date	=	@p_activity_date
                             AND emp_id_01		=	@emp_id_01
                             AND event_id_01		=	@v_EVENT_ID_TRANSFER

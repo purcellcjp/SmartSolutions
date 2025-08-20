@@ -23,7 +23,6 @@ CREATE PROCEDURE dbo.usp_ins_new_hire
 	@p_qualifier					varchar(30),
     @p_activity_date				datetime,
     @p_user_id						varchar(30),
-	@p_activity_status				char(02),
 	@p_status						int         = 0 OUTPUT
 )
 AS
@@ -38,6 +37,9 @@ BEGIN
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
+    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
+    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
 
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
@@ -70,41 +72,20 @@ BEGIN
     DECLARE @ee_prior_eff_date	datetime
 
 
-    --
-    -- Disabled tracing logic since table doesn't exist - CJP 6/12/2025
-    -- SELECT @w_trace_sw = 'N'
 
-    -- IF @w_trace_sw = 'Y'
-    --     INSERT INTO DBSosxp.dbo.msg SELECT CAST(GETDATE() AS CHAR (20)) AS msg_desc
 
-    -- IF @w_trace_sw = 'Y'
-    -- INSERT INTO DBSosxp.dbo.msg SELECT 'Start usp_ins_new_hire' AS msg_desc
-
-    --
-    -- Activate these fields when testing this program standalone.
-    --
-    /*
-    SET @p_userid			=	'DBS'
-    SET @p_batchname		=	'GHR'
-    SET @p_qualifier		=	'INTERFACES'
-    SET @p_activity_date	=	GETDATE()
-    SET @p_user_id			=	'GHRUser'
-    SET @p_activity_status	=	'00'
-    SET @p_status			=	0
-    */
-
-    DECLARE @max			INT
+    --DECLARE @max			INT
     DECLARE @maxx			VARCHAR(06)
-    DECLARE @cnt			INT
-    DECLARE @ind_id			INT
+    --DECLARE @cnt			INT
+    --DECLARE @ind_id			INT
     DECLARE @ind_idx		CHAR(10)
     DECLARE @annual_salary	MONEY
     DECLARE @tax_entity_id	CHAR(10)
-    DECLARE @display_name	CHAR(45)
+    --DECLARE @display_name	CHAR(45)
     DECLARE @msg_id			CHAR(10)
-    DECLARE @msg_p1			CHAR(15)
-    DECLARE @msg_p2			CHAR(15)
-    DECLARE @msg_cnt		INT
+    --DECLARE @msg_p1			CHAR(15)
+    --DECLARE @msg_p2			CHAR(15)
+    --DECLARE @msg_cnt		INT
     DECLARE @individual_id	CHAR(10)
     DECLARE @pay_frequency_code		char(05)
     DECLARE @annualizing_factor float
@@ -500,7 +481,7 @@ BEGIN
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	=	'01'
+                        SET activity_status	=	@v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                         AND emp_id_01		=	@emp_id_01
                         AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
@@ -514,7 +495,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_NEW_HIRE						As event_id,
+                            @v_EVENT_ID_NEW_HIRE As event_id,
                             @emp_id_01 					As emp_id,
                             @eff_date_01				As eff_date,
                             @pay_element_desc_06		As pay_element_id,
@@ -553,7 +534,7 @@ BEGIN
                     ELSE
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= '02'
+                            SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                             WHERE activity_date	= @p_activity_date
                             AND emp_id_01		= @emp_id_01
                             AND event_id_01		= @v_EVENT_ID_NEW_HIRE
@@ -595,7 +576,7 @@ BEGIN
                     SET @v_step_position = 'Validation - ' + @msg_id
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	'02'
+                    SET activity_status	=	@v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
@@ -637,7 +618,7 @@ BEGIN
                                 SET @v_step_position = 'Begin ' + @msg_id
 
                                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	=	'02'
+                                SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
                                 WHERE activity_date	=	@p_activity_date
                                 AND emp_id_01		=	@emp_id_01
                                 AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
@@ -675,7 +656,7 @@ BEGIN
                     SET @v_step_position = 'Begin ' + @msg_id
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	'02'
+                    SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
@@ -719,7 +700,7 @@ BEGIN
                 BEGIN
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '02'
+                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
                     AND emp_id_01		=	@emp_id_01
                     AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
@@ -770,7 +751,7 @@ BEGIN
                     --SET @w_conv_employment_type_code = 'XXXXX'
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= '00'
+                    SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                     WHERE activity_date	= @p_activity_date
                     AND emp_id_01		= @emp_id_01
                     AND event_id_01		= @v_EVENT_ID_NEW_HIRE
@@ -812,7 +793,7 @@ BEGIN
                         --SET @w_conv_employment_type_code = 'XXXXX'
 
                         UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= '00'
+                        SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                         WHERE activity_date	= @p_activity_date
                         AND emp_id_01		= @emp_id_01
                         AND event_id_01		= @v_EVENT_ID_NEW_HIRE

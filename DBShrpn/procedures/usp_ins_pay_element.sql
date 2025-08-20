@@ -23,7 +23,6 @@ CREATE PROCEDURE dbo.usp_ins_pay_element
 	@p_qualifier            varchar(30),
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
-	@p_activity_status      char(02),
 	@p_status						int         = 0 OUTPUT
 )
 AS
@@ -39,7 +38,10 @@ BEGIN
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
 
+    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+
     DECLARE @v_BEG_OF_TIME_DATE             datetime            = '19000101'
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
@@ -50,13 +52,7 @@ BEGIN
     --DECLARE @v_ret_val                      int                 = 0
     DECLARE @v_ret_val_usp_ins_hepy_insert  INT                 = 0
 
-    --DECLARE @p_activity_date				datetime
-    --DECLARE @p_userid						varchar(30)
-    --DECLARE @p_batchname					varchar(08)
-    --DECLARE @p_qualifier					varchar(30)
-    --DECLARE @p_user_id						varchar(30)
-    --DECLARE @p_activity_status				char(02)
-    --DECLARE @p_status						int
+
     DECLARE @w_msg_text						varchar(255)
     DECLARE @w_msg_text_2					varchar(255)
     DECLARE @w_msg_text_3					varchar(255)
@@ -65,22 +61,7 @@ BEGIN
 
 
     DECLARE @pay_through_date				datetime
-    --DECLARE	@start_date						datetime
-    --DECLARE @pay_frequency_code				char(05)
-    --DECLARE @emp_calculation_06_nbr			money
-    --DECLARE @emp_calculation_06_char        char(15)
 
-    --
-    -- Activate these fields when testing this program standalone.
-    --
-
-    --SET @p_userid			=	'DBS'
-    --SET @p_batchname		=	'GHR'
-    --SET @p_qualifier		=	'INTERFACES'
-    --SET @p_activity_date	=	GETDATE()
-    --SET @p_user_id			=	'GHRUser'
-    --SET @p_activity_status	=	'00'
-    --SET @p_status			=	0
 
 
 
