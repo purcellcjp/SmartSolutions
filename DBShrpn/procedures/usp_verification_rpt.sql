@@ -320,7 +320,7 @@ BEGIN
     -- Name Change Section
     ---------------------------------------------------------------------------
     SELECT @v_SPACES_30
-    SELECT	'Name CHange Section:'
+    SELECT	'Name Change Section:'
     SELECT @v_SPACES_30
 
     -- Headers
@@ -533,10 +533,11 @@ BEGIN
     JOIN DBShrpn.dbo.ghr_historical_message m ON
             (m.event_id = ev.event_id_01) AND
             (m.emp_id   = ev.emp_id_01) AND
-            (m.eff_date = ev.eff_date_01) AND
+            (m.eff_date = ev.eff_date_01) AND   -- just in case more than one pay element id with different effective dates - should not happen
+            (m.activity_date = ev.activity_date) AND
             (m.pay_element_desc_06 = ev.pay_element_desc_06)
     WHERE (ev.event_id_01        = @v_EVENT_ID_PAY_ELE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
+        AND (ev.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (ev.activity_date    = @w_activity_date)
     ORDER BY ev.empl_id_01
 

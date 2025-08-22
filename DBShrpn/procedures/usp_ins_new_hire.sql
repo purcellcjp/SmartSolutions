@@ -226,51 +226,50 @@ BEGIN
     DECLARE @w_emp_workers_comp_cvg_cd			    char(01)        = ''
 
     DECLARE @w_conv_employment_type_code			char(05)
-
+    DECLARE @w_eff_date                             datetime
+    DECLARE @w_begin_date                           datetime
+    DECLARE @w_end_date                             datetime
 
     -- This section declares the interface values from Global HR
-    DECLARE	@event_id_01							char(02)
-          , @emp_id_01								char(15)
-          , @eff_date_01							char(10)
-          , @first_name_01							char(25)
-          , @first_middle_name_01					char(25)
-          , @last_name_01							char(30)
-          , @empl_id_01								char(10)
-          , @national_id_1_type_code_01				char(05)
-          , @national_id_1_01						char(20)
-          , @organization_group_id_01				char(05)
-          , @organization_chart_name_01				varchar(64)
-          , @organization_unit_name_01				varchar(240)
-          , @emp_status_classn_code_01				char(02)
-          , @position_title_01						char(50)        -- DBShrpn..emp_assignment.user_text_2
-          , @employment_type_code_01				varchar(70)     -- increased size to 70 from 5
-          , @annual_salary_amt_01					char(15)
-          , @begin_date_02							char(10)
-          , @end_date_02							char(10)
-          , @pay_status_code_03						char(01)
-          , @pay_group_id_03						char(10)
-          , @pay_element_ctrl_grp_id_03				char(10)
-          , @time_reporting_meth_code_03			char(01)
-          , @employment_info_chg_reason_cd_03		char(05)
-          , @emp_location_code_03					char(10)
-          , @emp_status_code_5						char(02)
-          , @reason_code_5							char(02)
-          , @emp_expected_return_date_5				char(10)
-          , @pay_through_date_5						char(10)
-          , @emp_death_date_5						char(10)
-          , @consider_for_rehire_ind_5				char(01)
-          , @pay_element_desc_06					char(20)
-          , @emp_calculation_06						char(15)
-          -- CJP 7/7/2025
+    DECLARE	@event_id							    char(02)
+          , @emp_id								    char(15)
+          , @eff_date							    char(10)
+          , @first_name							    char(25)
+          , @first_middle_name					    char(25)
+          , @last_name							    char(30)
+          , @empl_id							    char(10)
+          , @national_id_type_code				    char(05)
+          , @national_id						    char(20)
+          , @organization_group_id				    char(05)
+          , @organization_chart_name			    varchar(64)
+          , @organization_unit_name				    varchar(240)
+          , @emp_status_classn_code				    char(02)
+          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text
+          , @employment_type_code				    varchar(70)     -- increased size to 70 from 5
+          , @annual_salary_amt					    char(15)
+          , @begin_date							    char(10)
+          , @end_date							    char(10)
+          , @pay_status_code					    char(01)
+          , @pay_group_id						    char(10)
+          , @pay_element_ctrl_grp_id			    char(10)
+          , @time_reporting_meth_code			    char(01)
+          , @employment_info_chg_reason_cd		    char(05)
+          , @emp_location_code					    char(10)
+          , @emp_status_code					    char(02)
+          , @reason_code						    char(02)
+          , @emp_expected_return_date			    char(10)
+          , @pay_through_date					    char(10)
+          , @emp_death_date						    char(10)
+          , @consider_for_rehire_ind			    char(01)
+          , @pay_element_id					        char(10)
+          , @emp_calculation						char(15)
           , @tax_flag                               char(1)         -- individual_personal.ind_2
           , @nic_flag                               char(1)         -- individual_personal.ind_1
           , @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
           , @labor_grp_code                         char(5)         -- DBShrpn..emp_employment.labor_grp_code
           , @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
-    DECLARE @w_eff_date                             datetime
-    DECLARE @w_begin_date                           datetime
-    DECLARE @w_end_date                             datetime
+
 
     CREATE TABLE #tbl_ghr_msg
         (
@@ -341,83 +340,83 @@ BEGIN
 
         -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT t.event_id_01
-             , t.emp_id_01
-             , t.eff_date_01
-             , t.first_name_01
-             , t.first_middle_name_01
-             , t.last_name_01
-             , t.empl_id_01
-             , t.national_id_1_type_code_01
-             , t.national_id_1_01
-             , t.organization_group_id_01
-             , ''       -- t.organization_chart_name_01
-             , ''       -- t.organization_unit_name_01
-             , t.emp_status_classn_code_01
-             , t.position_title_01
-             , t.employment_type_code_01
-             , t.annual_salary_amt_01
-             , t.begin_date_02
-             , t.end_date_02
-             , t.pay_status_code_03
-             , UPPER(t.pay_group_id_03)
-             , t.pay_element_ctrl_grp_id_03
-             , t.time_reporting_meth_code_03
-             , t.employment_info_chg_reason_cd_03
-             , t.emp_location_code_03
-             , t.emp_status_code_5
-             , t.reason_code_5
-             , t.emp_expected_return_date_5
-             , t.pay_through_date_5
-             , t.emp_death_date_5
-             , t.consider_for_rehire_ind_5
-             , t.pay_element_desc_06
-             , t.emp_calculation_06
+        SELECT t.event_id
+             , t.emp_id
+             , t.eff_date
+             , t.first_name
+             , t.first_middle_name
+             , t.last_name
+             , t.empl_id
+             , t.national_id_type_code
+             , t.national_id
+             , t.organization_group_id
+             , ''       -- t.organization_chart_name
+             , ''       -- t.organization_unit_name
+             , t.emp_status_classn_code
+             , t.position_title
+             , t.employment_type_code
+             , t.annual_salary_amt
+             , t.begin_date
+             , t.end_date
+             , t.pay_status_code
+             , t.pay_group_id
+             , t.pay_element_ctrl_grp_id
+             , t.time_reporting_meth_code
+             , t.employment_info_chg_reason_cd
+             , t.emp_location_code
+             , t.emp_status_code
+             , t.reason_code
+             , t.emp_expected_return_date
+             , t.pay_through_date
+             , t.emp_death_date
+             , t.consider_for_rehire_ind
+             , t.pay_element_id
+             , t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
+		WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
 
         SET @v_step_position = 'Fetching cursor crsrHR'
         FETCH crsrHR
-        INTO  @event_id_01
-            , @emp_id_01
-            , @eff_date_01
-            , @first_name_01
-            , @first_middle_name_01
-            , @last_name_01
-            , @empl_id_01
-            , @national_id_1_type_code_01
-            , @national_id_1_01
-            , @organization_group_id_01
-            , @organization_chart_name_01
-            , @organization_unit_name_01
-            , @emp_status_classn_code_01
-            , @position_title_01
-            , @employment_type_code_01
-            , @annual_salary_amt_01
-            , @begin_date_02
-            , @end_date_02
-            , @pay_status_code_03
-            , @pay_group_id_03
-            , @pay_element_ctrl_grp_id_03
-            , @time_reporting_meth_code_03
-            , @employment_info_chg_reason_cd_03
-            , @emp_location_code_03
-            , @emp_status_code_5
-            , @reason_code_5
-            , @emp_expected_return_date_5
-            , @pay_through_date_5
-            , @emp_death_date_5
-            , @consider_for_rehire_ind_5
-            , @pay_element_desc_06
-            , @emp_calculation_06
+        INTO  @event_id
+            , @emp_id
+            , @eff_date
+            , @first_name
+            , @first_middle_name
+            , @last_name
+            , @empl_id
+            , @national_id_type_code
+            , @national_id
+            , @organization_group_id
+            , @organization_chart_name
+            , @organization_unit_name
+            , @emp_status_classn_code
+            , @position_title
+            , @employment_type_code
+            , @annual_salary_amt
+            , @begin_date
+            , @end_date
+            , @pay_status_code
+            , @pay_group_id
+            , @pay_element_ctrl_grp_id
+            , @time_reporting_meth_code
+            , @employment_info_chg_reason_cd
+            , @emp_location_code
+            , @emp_status_code
+            , @reason_code
+            , @emp_expected_return_date
+            , @pay_through_date
+            , @emp_death_date
+            , @consider_for_rehire_ind
+            , @pay_element_id
+            , @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
@@ -446,7 +445,7 @@ BEGIN
                 IF EXISTS(
                         SELECT 1
                         FROM DBShrpn.dbo.employer
-                        WHERE empl_id = @empl_id_01
+                        WHERE empl_id = @empl_id
                             AND (name LIKE 'Pen%')
                         )
                     SET @w_job_or_pos_id = 'PEN-0001'
@@ -473,7 +472,7 @@ BEGIN
             IF  EXISTS (
                         SELECT 1
                         FROM DBShrpn.dbo.employee
-                        WHERE emp_id = @emp_id_01
+                        WHERE emp_id = @emp_id
                     )
                 BEGIN
 
@@ -483,12 +482,12 @@ BEGIN
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	=	@v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
-                        AND emp_id_01		=	@emp_id_01
-                        AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
+                        AND emp_id		=	@emp_id
+                        AND event_id		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					    As msg_id
-                        , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
+                        , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -496,10 +495,10 @@ BEGIN
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
                             @v_EVENT_ID_NEW_HIRE As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
+                            @emp_id 					As emp_id,
+                            @eff_date				As eff_date,
+                            @pay_element_id		As pay_element_id,
+                            @emp_id					As msg_p1,
                             ''							As msg_p2,
                             'Employee already exists'	As msg_desc,
                             @p_activity_date			AS activity_date
@@ -507,7 +506,6 @@ BEGIN
 
                     SELECT  @w_fatal_error = 1
 
-                    -- GOTO BYPASS_EMPLOYEE
                 END
 
 
@@ -518,7 +516,7 @@ BEGIN
             IF NOT EXISTS (
                             SELECT *
                             FROM DBShrpn.dbo.employer
-                            WHERE empl_id = @empl_id_01
+                            WHERE empl_id = @empl_id
                             )
                 BEGIN
 
@@ -528,20 +526,20 @@ BEGIN
                     IF EXISTS (
                                 SELECT *
                                 FROM DBShrpn.dbo.employer
-                                WHERE empl_id = '0' + @empl_id_01
+                                WHERE empl_id = '0' + @empl_id
                                 )
-                        SELECT @empl_id_01	= '0' + @empl_id_01
+                        SELECT @empl_id	= '0' + @empl_id
                     ELSE
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
                             SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                             WHERE activity_date	= @p_activity_date
-                            AND emp_id_01		= @emp_id_01
-                            AND event_id_01		= @v_EVENT_ID_NEW_HIRE
+                            AND emp_id		= @emp_id
+                            AND event_id		= @v_EVENT_ID_NEW_HIRE
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id					    As msg_id
-                                , REPLACE(REPLACE(t.msg_text, '@1', @empl_id_01), '@2', @emp_id_01) AS msg_desc
+                                , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
 
@@ -549,16 +547,16 @@ BEGIN
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
                             SELECT  @msg_id					As msg_id,
                                     @v_EVENT_ID_NEW_HIRE						As event_id,
-                                    @emp_id_01 					As emp_id,
-                                    @eff_date_01				As eff_date,
-                                    @pay_element_desc_06		As pay_element_id,
-                                    @emp_id_01					As msg_p1,
-                                    @empl_id_01					As msg_p2,
+                                    @emp_id 					As emp_id,
+                                    @eff_date				As eff_date,
+                                    @pay_element_id		As pay_element_id,
+                                    @emp_id					As msg_p1,
+                                    @empl_id					As msg_p2,
                                     'Employer does not exists - defaulting 99999'	As msg_desc,
                                     @p_activity_date			AS activity_date
                             -- End of Historical Message for reporting purpose
 
-                            SELECT @empl_id_01 = '99999'
+                            SELECT @empl_id = '99999'
 
                         END
                 END
@@ -569,7 +567,7 @@ BEGIN
             ---------------------------------------------------------------------------
 
 
-            IF	(@national_id_1_01 = '')
+            IF	(@national_id = '')
                 BEGIN
 
                     SET @msg_id = 'U00046'
@@ -578,12 +576,12 @@ BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	=	@v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
-                    AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
+                    AND emp_id		=	@emp_id
+                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id						As msg_id
-                        , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
+                        , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -591,26 +589,26 @@ BEGIN
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					    As msg_id,
                             @v_EVENT_ID_NEW_HIRE					As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
-                            @national_id_1_01			As msg_p2,
+                            @emp_id 					As emp_id,
+                            @eff_date				As eff_date,
+                            @pay_element_id		As pay_element_id,
+                            @emp_id					As msg_p1,
+                            @national_id			As msg_p2,
                             'NIS nbr is blank - defaulting 99999'	As msg_desc,
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SELECT  @national_id_1_01 = '99999'
+                    SELECT  @national_id = '99999'
                 END
             ELSE
-                IF	(@national_id_1_01 = '99999')
-                    SELECT @national_id_1_01 = '99999'
+                IF	(@national_id = '99999')
+                    SELECT @national_id = '99999'
                 ELSE
                     BEGIN
                         IF  EXISTS (
                                     SELECT *
                                     FROM DBShrpn.dbo.individual_personal e
-                                    WHERE e.national_id_1 = @national_id_1_01
+                                    WHERE e.national_id_1 = @national_id
                                 )
                             BEGIN
 
@@ -620,12 +618,12 @@ BEGIN
                                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
                                 SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
                                 WHERE activity_date	=	@p_activity_date
-                                AND emp_id_01		=	@emp_id_01
-                                AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
+                                AND emp_id		=	@emp_id
+                                AND event_id		=	@v_EVENT_ID_NEW_HIRE
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id						As msg_id
-                                    , REPLACE(REPLACE(t.msg_text, '@1', @emp_id_01), '@2', @national_id_1_01) AS msg_desc
+                                    , REPLACE(REPLACE(t.msg_text, '@1', @emp_id), '@2', @national_id) AS msg_desc
                                 FROM #tbl_msg_master t
                                 WHERE (msg_id = @msg_id)
 
@@ -633,23 +631,23 @@ BEGIN
                                 INSERT INTO DBShrpn.dbo.ghr_historical_message
                                 SELECT  @msg_id					As msg_id,
                                         @v_EVENT_ID_NEW_HIRE						As event_id,
-                                        @emp_id_01 					As emp_id,
-                                        @eff_date_01				As eff_date,
-                                        @pay_element_desc_06		As pay_element_id,
-                                        @emp_id_01					As msg_p1,
-                                        @national_id_1_01			As msg_p2,
+                                        @emp_id 					As emp_id,
+                                        @eff_date				As eff_date,
+                                        @pay_element_id		As pay_element_id,
+                                        @emp_id					As msg_p1,
+                                        @national_id			As msg_p2,
                                         'NIS nbr already exists - defaulting 99999'	As msg_desc,
                                         @p_activity_date			AS activity_date
                                 -- End of Historical Message for reporting purpose
 
-                                SELECT @national_id_1_01 = '99999'
+                                SELECT @national_id = '99999'
                             END
                     END
 
             ---------------------------------------------------------------------------
             -- Check to see if the national id is blank
             ---------------------------------------------------------------------------
-            IF  (@national_id_1_01 = '' or @national_id_1_01 = NULL)
+            IF  (@national_id = '' or @national_id = NULL)
                 BEGIN
 
                     SET @msg_id = 'U00007'
@@ -658,12 +656,12 @@ BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
                     WHERE activity_date	=	@p_activity_date
-                    AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
+                    AND emp_id		=	@emp_id
+                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
-                         , REPLACE(t.msg_text, '@1', @emp_id_01) AS msg_desc
+                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -671,16 +669,16 @@ BEGIN
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
                             @v_EVENT_ID_NEW_HIRE						As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
+                            @emp_id 					As emp_id,
+                            @eff_date				As eff_date,
+                            @pay_element_id		As pay_element_id,
+                            @emp_id					As msg_p1,
                             ''							As msg_p2,
                             'NIS nbr was blank - defaulting 99999'	As msg_desc,
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SELECT @national_id_1_01 = '99999'
+                    SELECT @national_id = '99999'
                 END
 
 
@@ -695,19 +693,19 @@ BEGIN
             IF NOT EXISTS(
                         SELECT *
                         FROM	DBShrpn.dbo.pay_group
-                        WHERE	pay_group_id = @pay_group_id_03
+                        WHERE	pay_group_id = @pay_group_id
                         )
                 BEGIN
 
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	= @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date	=	@p_activity_date
-                    AND emp_id_01		=	@emp_id_01
-                    AND event_id_01		=	@v_EVENT_ID_NEW_HIRE
+                    AND emp_id		=	@emp_id
+                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id_03), '@2', @emp_id_01) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -716,16 +714,16 @@ BEGIN
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
                             @v_EVENT_ID_NEW_HIRE						As event_id,
-                            @emp_id_01 					As emp_id,
-                            @eff_date_01				As eff_date,
-                            @pay_element_desc_06		As pay_element_id,
-                            @emp_id_01					As msg_p1,
-                            @pay_group_id_03			As msg_p2,
+                            @emp_id 					As emp_id,
+                            @eff_date				As eff_date,
+                            @pay_element_id		As pay_element_id,
+                            @emp_id					As msg_p1,
+                            @pay_group_id			As msg_p2,
                             'Pay Group does not exists'	As msg_desc,
                             @p_activity_date			AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SET	@pay_group_id_03 = ' '
+                    SET	@pay_group_id = ' '
 
                     SET  @w_fatal_error = 1
 
@@ -738,7 +736,7 @@ BEGIN
             SELECT @w_conv_employment_type_code = code_value
             FROM DBShrpn.dbo.code_entry_policy
             WHERE (code_tbl_id = '50001')
-              AND (short_descp = @employment_type_code_01)
+              AND (short_descp = @employment_type_code)
 
             IF (@@ROWCOUNT = 0)
                 BEGIN
@@ -753,12 +751,12 @@ BEGIN
                     UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                     WHERE activity_date	= @p_activity_date
-                    AND emp_id_01		= @emp_id_01
-                    AND event_id_01		= @v_EVENT_ID_NEW_HIRE
+                    AND emp_id		= @emp_id
+                    AND event_id		= @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id					        As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code_01), '@2', @emp_id_01) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -767,11 +765,11 @@ BEGIN
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id As msg_id,
                             @v_EVENT_ID_NEW_HIRE            As event_id,
-                            @emp_id_01                      As emp_id,
-                            @eff_date_01                    As eff_date,
-                            @pay_element_desc_06            As pay_element_id,
-                            RTRIM(@employment_type_code_01) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
-                            @emp_id_01                      As msg_p2,
+                            @emp_id                      As emp_id,
+                            @eff_date                    As eff_date,
+                            @pay_element_id            As pay_element_id,
+                            RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
+                            @emp_id                      As msg_p2,
                             'Invalid Employment Type Code'  As msg_desc,
                             @p_activity_date                AS activity_date
 
@@ -795,12 +793,12 @@ BEGIN
                         UPDATE	DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status	= @v_ACTIVITY_STATUS_WARNING
                         WHERE activity_date	= @p_activity_date
-                        AND emp_id_01		= @emp_id_01
-                        AND event_id_01		= @v_EVENT_ID_NEW_HIRE
+                        AND emp_id		= @emp_id
+                        AND event_id		= @v_EVENT_ID_NEW_HIRE
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id					        As msg_id
-                                , REPLACE(REPLACE(t.msg_text, '@1', @w_conv_employment_type_code), '@2', @emp_id_01) AS msg_desc
+                                , REPLACE(REPLACE(t.msg_text, '@1', @w_conv_employment_type_code), '@2', @emp_id) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
 
@@ -809,11 +807,11 @@ BEGIN
                         INSERT INTO DBShrpn.dbo.ghr_historical_message
                         SELECT  @msg_id As msg_id,
                                 @v_EVENT_ID_NEW_HIRE            As event_id,
-                                @emp_id_01                      As emp_id,
-                                @eff_date_01                    As eff_date,
-                                @pay_element_desc_06            As pay_element_id,
-                                RTRIM(@employment_type_code_01) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
-                                @emp_id_01                      As msg_p2,
+                                @emp_id                      As emp_id,
+                                @eff_date                    As eff_date,
+                                @pay_element_id            As pay_element_id,
+                                RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
+                                @emp_id                      As msg_p2,
                                 'Invalid Employment Type Code'  As msg_desc,
                                 @p_activity_date                AS activity_date
 
@@ -833,7 +831,7 @@ BEGIN
             SET @v_step_position = 'Lookup Tax Entity'
             SELECT @w_tax_entity_id = tax_entity_id
             FROM DBShrpn.dbo.empl_tax_entity
-            WHERE (empl_id = @empl_id_01)
+            WHERE (empl_id = @empl_id)
 
 
             ---------------------------------------------------------------------------
@@ -853,7 +851,7 @@ BEGIN
             WHERE (display_name_format = @v_DISPLAY_NAME_FORMAT)    -- Unique value for client
 
             -- Derive employee display name
-            SET @w_emp_display_name = RTRIM(@last_name_01) + ', ' + RTRIM(@first_name_01)
+            SET @w_emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name)
 
 
 
@@ -877,13 +875,13 @@ BEGIN
             SELECT @pay_frequency_code	= pay_frequency_code
                 , @annualizing_factor = annualizing_factor
             FROM DBShrpn.dbo.pay_group
-            WHERE pay_group_id = @pay_group_id_03
+            WHERE pay_group_id = @pay_group_id
             */
 
     /*  -- Disabling Salary Input for GOSL -- CJP 7/17/2025
 
             IF (@pay_frequency_code = 'MONTH')
-                IF (@pay_group_id_03 = 'MONTHLY2')
+                IF (@pay_group_id = 'MONTHLY2')
                     SELECT @w_pd_salary_amt                 = 0.00
                         , @w_pd_salary_tm_pd_id            = ''
                         , @w_standard_work_pd_id           = @pay_frequency_code
@@ -916,154 +914,22 @@ BEGIN
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Create New Hire'
 
-select @v_step_position                                                                AS v_step_position
-, @empl_id_01                                                                          AS empl_id_01
-, @emp_id_01                                                                           AS emp_id_01
-, @ind_idx                                                                             AS ind_idx
-, @eff_date_01                                                                         AS eff_date_01
-, @first_name_01                                                                       AS first_name_01
-, @first_middle_name_01                                                                AS first_middle_name_01
-, @last_name_01                                                                        AS last_name_01
-, @w_preferred_name                                                                    AS w_preferred_name
-, @w_name_suffix                                                                       AS w_name_suffix
-, @w_emp_display_name                                                                  AS w_emp_display_name
-, @w_birth_date                                                                        AS w_birth_date
-, @w_sex_code                                                                          AS w_sex_code
-, @w_marital_status_code_1                                                             AS w_marital_status_code_1
-, @national_id_1_type_code_01                                                          AS national_id_1_type_code_01
-, @national_id_1_01                                                                    AS national_id_1_01
-, @w_addr_1_type_code                                                                  AS w_addr_1_type_code
-, @w_addr_1_fmt_code                                                                   AS w_addr_1_fmt_code
-, @w_addr_1_line_1                                                                     AS w_addr_1_line_1
-, @w_addr_1_line_2                                                                     AS w_addr_1_line_2
-, @w_addr_1_line_3                                                                     AS w_addr_1_line_3
-, @w_addr_1_line_4                                                                     AS w_addr_1_line_4
-, @w_addr_1_line_5                                                                     AS w_addr_1_line_5
-, @w_addr_1_street_or_pob_1                                                            AS w_addr_1_street_or_pob_1
-, @w_addr_1_street_or_pob_2                                                            AS w_addr_1_street_or_pob_2
-, @w_addr_1_street_or_pob_3                                                            AS w_addr_1_street_or_pob_3
-, @w_addr_1_city_name                                                                  AS w_addr_1_city_name
-, @w_addr_1_ctry_sub_entity_code                                                       AS w_addr_1_ctry_sub_entity_code
-, @w_addr_1_postal_code                                                                AS w_addr_1_postal_code
-, @w_addr_1_country_code                                                               AS w_addr_1_country_code
-, @w_assigned_to_code                                                                  AS w_assigned_to_code
-, @w_job_or_pos_id                                                                     AS w_job_or_pos_id
-, @organization_chart_name_01                                                          AS organization_chart_name_01
-, @organization_unit_name_01                                                           AS organization_unit_name_01
-, @emp_status_classn_code_01                                                           AS emp_status_classn_code_01
-, @w_active_reason_code                                                                AS w_active_reason_code
-, @employment_type_code_01                                                             AS employment_type_code_01
-, @w_professional_cat_code                                                             AS w_professional_cat_code
-, @w_labor_grp_code                                                                    AS w_labor_grp_code
-, @w_non_employee_indicator                                                            AS w_non_employee_indicator
-, @w_excluded_from_payroll_ind                                                         AS w_excluded_from_payroll_ind
-, @w_pensioner_indicator                                                               AS w_pensioner_indicator
-, @w_provided_i_9_ind                                                                  AS w_provided_i_9_ind
-, @w_base_rate_tbl_id                                                                  AS w_base_rate_tbl_id
-, @w_base_rate_tbl_entry_code                                                          AS w_base_rate_tbl_entry_code
-, @w_exception_rate_ind                                                                AS w_exception_rate_ind
-, @w_hourly_pay_rate                                                                   AS w_hourly_pay_rate
-, @w_pd_salary_amt                                                                     AS w_pd_salary_amt
-, @w_pd_salary_tm_pd_id                                                                AS w_pd_salary_tm_pd_id
-, @w_annual_salary_amt                                                                 AS w_annual_salary_amt
-, @w_pay_basis_code                                                                    AS w_pay_basis_code
-, @w_curr_code                                                                         AS w_curr_code
-, @w_work_tm_code                                                                      AS w_work_tm_code
-, @w_standard_daily_work_hrs                                                           AS w_standard_daily_work_hrs
-, @w_standard_work_hrs                                                                 AS w_standard_work_hrs
-, @w_standard_work_pd_id                                                               AS w_standard_work_pd_id
-, @w_overtime_status_code                                                              AS w_overtime_status_code
-, @w_pay_on_reported_hrs_ind                                                           AS w_pay_on_reported_hrs_ind
-, @w_work_shift_code                                                                   AS w_work_shift_code
-, @w_tax_entity_id                                                                     AS w_tax_entity_id
-, @time_reporting_meth_code_03                                                         AS time_reporting_meth_code_03
-, @pay_group_id_03                                                                     AS pay_group_id_03
-, @w_clock_nbr                                                                         AS w_clock_nbr
-, @w_prim_disbursal_loc_code                                                           AS w_prim_disbursal_loc_code
-, @w_alt_disbursal_loc_code                                                            AS w_alt_disbursal_loc_code
-, @w_tax_marital_status_code                                                           AS w_tax_marital_status_code
-, @w_fui_status_code                                                                   AS w_fui_status_code
-, @w_oasdi_status_code                                                                 AS w_oasdi_status_code
-, @w_medicare_status_code                                                              AS w_medicare_status_code
-, @w_income_tax_nbr_of_exemps                                                          AS w_income_tax_nbr_of_exemps
-, @w_tax_authority_id                                                                  AS w_tax_authority_id
-, @w_work_resident_status_code                                                         AS w_work_resident_status_code
-, @w_income_tax_calc_meth_cd                                                           AS w_income_tax_calc_meth_cd
-, @w_tax_authority_2                                                                   AS w_tax_authority_2
-, @w_tax_authority_3                                                                   AS w_tax_authority_3
-, @w_tax_authority_4                                                                   AS w_tax_authority_4
-, @w_tax_authority_5                                                                   AS w_tax_authority_5
-, @w_work_resident_status_code_2                                                       AS w_work_resident_status_code_2
-, @w_work_resident_status_code_3                                                       AS w_work_resident_status_code_3
-, @w_work_resident_status_code_4                                                       AS w_work_resident_status_code_4
-, @w_work_resident_status_code_5                                                       AS w_work_resident_status_code_5
-, @w_user_amt_1                                                                        AS w_user_amt_1
-, @w_user_amt_2                                                                        AS w_user_amt_2
-, @w_user_code_1                                                                       AS w_user_code_1
-, @w_user_code_2                                                                       AS w_user_code_2
-, @w_user_date_1                                                                       AS w_user_date_1
-, @w_user_date_2                                                                       AS w_user_date_2
-, @w_user_ind_1                                                                        AS w_user_ind_1
-, @w_user_ind_2                                                                        AS w_user_ind_2
-, @w_user_monetary_amt_1                                                               AS w_user_monetary_amt_1
-, @w_user_monetary_amt_2                                                               AS w_user_monetary_amt_2
-, @w_user_monetary_curr_code                                                           AS w_user_monetary_curr_code
-, @w_user_text_1                                                                       AS w_user_text_1
-, @position_title_01                                                                   AS position_title_01
-, @w_inc_tax_calc_method                                                               AS w_inc_tax_calc_method
-, @w_ei_status_code                                                                    AS w_ei_status_code
-, @w_ppip_status_code                                                                  AS w_ppip_status_code
-, @w_fed_pp_stat_code                                                                  AS w_fed_pp_stat_code
-, @w_provincial_pp_stat_code                                                           AS w_provincial_pp_stat_code
-, @w_income_tax_stat_code                                                              AS w_income_tax_stat_code
-, @w_pit_stat_code                                                                     AS w_pit_stat_code
-, @pay_element_ctrl_grp_id_03                                                          AS pay_element_ctrl_grp_id_03
-, @w_emp_workers_comp_class                                                            AS w_emp_workers_comp_class
-, @w_empl_addr_fmt_code                                                                AS w_empl_addr_fmt_code
-, @w_empl_phone_fmt_code                                                               AS w_empl_phone_fmt_code
-, @w_empl_phone_delimiter                                                              AS w_empl_phone_delimiter
-, @w_empl_recruitment_zone_code                                                        AS w_empl_recruitment_zone_code
-, @w_empl_cma_code                                                                     AS w_empl_cma_code
-, @w_empl_industry_sector_code                                                         AS w_empl_industry_sector_code
-, @w_empl_province_terr_code                                                           AS w_empl_province_terr_code
-, @w_eeo_4_agency_function_code                                                        AS w_eeo_4_agency_function_code
-, @w_eeo_establishment_id                                                              AS w_eeo_establishment_id
-, @w_assignment_end_date                                                               AS w_assignment_end_date
-, @w_location_code                                                                     AS w_location_code
-, @w_salary_structure_id                                                               AS w_salary_structure_id
-, @w_salary_incr_guideline_id                                                          AS w_salary_incr_guideline_id
-, @w_pay_grade_code                                                                    AS w_pay_grade_code
-, @w_job_evaluation_points_nbr                                                         AS w_job_evaluation_points_nbr
-, @w_salary_step_nbr                                                                   AS w_salary_step_nbr
-, @w_employer_taxing_ctry_code                                                         AS w_employer_taxing_ctry_code
-, @organization_group_id_01                                                            AS organization_group_id_01
-, @w_wage_plan_code                                                                    AS w_wage_plan_code
-, @w_emp_health_insurance_cvg_cd                                                       AS w_emp_health_insurance_cvg_cd
-, @w_tax_auth_type_code                                                                AS w_tax_auth_type_code
-, @w_tax_auth_type_code_2                                                              AS w_tax_auth_type_code_2
-, @w_tax_auth_type_code_3                                                              AS w_tax_auth_type_code_3
-, @w_tax_auth_type_code_4                                                              AS w_tax_auth_type_code_4
-, @w_tax_auth_type_code_5                                                              AS w_tax_auth_type_code_5
-, @w_reg_reporting_unit_code                                                           AS w_reg_reporting_unit_code
-, @w_emp_workers_comp_cvg_cd                                                           AS w_emp_workers_comp_cvg_cd
-
-
             EXEC DBShrpn.dbo.usp_ins_hemp
-                  @p_employer_id                       = @empl_id_01
-                , @p_employee_id                       = @emp_id_01
+                  @p_employer_id                       = @empl_id
+                , @p_employee_id                       = @emp_id
                 , @p_individual_id                     = @ind_idx
-                , @p_original_hire_date                = @eff_date_01
-                , @p_first_name                        = @first_name_01
-                , @p_first_middle_name                 = @first_middle_name_01
-                , @p_last_name                         = @last_name_01
+                , @p_original_hire_date                = @eff_date
+                , @p_first_name                        = @first_name
+                , @p_first_middle_name                 = @first_middle_name
+                , @p_last_name                         = @last_name
                 , @p_preferred_name                    = @w_preferred_name
                 , @p_name_suffix                       = @w_name_suffix
                 , @p_emp_display_name                  = @w_emp_display_name
                 , @p_birth_date                        = @w_birth_date
                 , @p_sex_code                          = @w_sex_code
                 , @p_marital_status_code_1             = @w_marital_status_code_1
-                , @p_national_id_1_type_code           = @national_id_1_type_code_01
-                , @p_national_id_1                     = @national_id_1_01
+                , @p_national_id_1_type_code           = @national_id_type_code
+                , @p_national_id_1                     = @national_id
                 , @p_addr_1_type_code                  = @w_addr_1_type_code
                 , @p_addr_1_fmt_code                   = @w_addr_1_fmt_code
                 , @p_addr_1_line_1                     = @w_addr_1_line_1
@@ -1080,11 +946,11 @@ select @v_step_position                                                         
                 , @p_addr_1_country_code               = @w_addr_1_country_code
                 , @p_assigned_to_code                  = @w_assigned_to_code
                 , @p_job_or_pos_id                     = @w_job_or_pos_id       -- need real value
-                , @p_organization_chart_name           = @organization_chart_name_01
-                , @p_organization_unit_name            = @organization_unit_name_01
-                , @p_emp_status_classn_code            = @emp_status_classn_code_01
+                , @p_organization_chart_name           = @organization_chart_name
+                , @p_organization_unit_name            = @organization_unit_name
+                , @p_emp_status_classn_code            = @emp_status_classn_code
                 , @p_active_reason_code                = @w_active_reason_code
-                , @p_employment_type_code              = @w_conv_employment_type_code    --@employment_type_code_01
+                , @p_employment_type_code              = @w_conv_employment_type_code    --@employment_type_code
                 , @p_professional_cat_code             = @w_professional_cat_code
                 , @p_labor_grp_code                    = @labor_grp_code
                 , @p_non_employee_indicator            = @w_non_employee_indicator
@@ -1110,8 +976,8 @@ select @v_step_position                                                         
                 , @p_pay_on_reported_hrs_ind           = @w_pay_on_reported_hrs_ind
                 , @p_work_shift_code                   = @w_work_shift_code
                 , @p_tax_entity_id                     = @w_tax_entity_id
-                , @p_time_reporting_meth_code          = @time_reporting_meth_code_03
-                , @p_pay_group_id                      = @pay_group_id_03
+                , @p_time_reporting_meth_code          = @time_reporting_meth_code
+                , @p_pay_group_id                      = @pay_group_id
                 , @p_clock_nbr                         = @w_clock_nbr
                 , @p_prim_disbursal_loc_code           = @w_prim_disbursal_loc_code
                 , @p_alt_disbursal_loc_code            = @w_alt_disbursal_loc_code
@@ -1143,7 +1009,7 @@ select @v_step_position                                                         
                 , @p_user_monetary_amt_2               = @w_user_monetary_amt_2
                 , @p_user_monetary_curr_code           = @w_user_monetary_curr_code
                 , @p_user_text_1                       = @w_user_text_1
-                , @p_user_text_2                       = @position_title_01     -- CJP 7/8/2025 DBShrpn..emp_assignment.user_text_2     @w_user_text_2
+                , @p_user_text_2                       = @position_title     -- CJP 7/8/2025 DBShrpn..emp_assignment.user_text_2     @w_user_text_2
                 , @p_inc_tax_calc_method               = @w_inc_tax_calc_method
                 , @p_ei_status_code                    = @w_ei_status_code
                 , @p_ppip_status_code                  = @w_ppip_status_code
@@ -1151,7 +1017,7 @@ select @v_step_position                                                         
                 , @p_provincial_pp_stat_code           = @w_provincial_pp_stat_code
                 , @p_income_tax_stat_code              = @w_income_tax_stat_code
                 , @p_pit_stat_code                     = @w_pit_stat_code
-                , @p_pay_element_ctrl_grp              = @pay_element_ctrl_grp_id_03
+                , @p_pay_element_ctrl_grp              = @pay_element_ctrl_grp_id
                 , @p_emp_workers_comp_class            = @w_emp_workers_comp_class
                 , @p_empl_addr_fmt_code                = @w_empl_addr_fmt_code
                 , @p_empl_phone_fmt_code               = @w_empl_phone_fmt_code
@@ -1170,7 +1036,7 @@ select @v_step_position                                                         
                 , @p_job_evaluation_points_nbr         = @w_job_evaluation_points_nbr
                 , @p_salary_step_nbr                   = @w_salary_step_nbr
                 , @p_employer_taxing_ctry_code         = @w_employer_taxing_ctry_code
-                , @p_organization_group_id             = @organization_group_id_01
+                , @p_organization_group_id             = @organization_group_id
                 , @p_wage_plan_code                    = @w_wage_plan_code
                 , @p_emp_health_insurance_cvg_cd       = @w_emp_health_insurance_cvg_cd
                 , @p_tax_auth_type_code                = @w_tax_auth_type_code
@@ -1192,7 +1058,7 @@ select @v_step_position                                                         
                  , @ee_next_eff_date  = eempl.next_eff_date
                  , @ee_prior_eff_date = eempl.prior_eff_date
             FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
-            WHERE (emp_id =	@emp_id_01)
+            WHERE (emp_id =	@emp_id)
 
 
             -- Make sure new record end date = end of time date
@@ -1207,14 +1073,8 @@ select @v_step_position                                                         
 
             SELECT @individual_id = individual_id
             FROM DBShrpn.dbo.employee
-            WHERE emp_id = @emp_id_01
+            WHERE emp_id = @emp_id
 
-            /* Grenada
-            -- GOSL will store it on emp_assignment
-            UPDATE	DBShrpn.dbo.individual_personal
-            SET	user_text_1		=	CAST(@position_title_01 AS CHAR(50))
-            WHERE individual_id	=	@individual_id
-            */
 
             ---------------------------------------------------------------------------
             -- GOSL update NIC and Tax Code
@@ -1234,45 +1094,45 @@ select @v_step_position                                                         
 
             UPDATE DBShrpn.dbo.employee
             SET user_monetary_amt_1 = @tax_ceiling_amt
-            WHERE (emp_id = @emp_id_01)
+            WHERE (emp_id = @emp_id)
 
 
 
 BYPASS_EMPLOYEE:
 
             FETCH crsrHR
-            INTO  @event_id_01
-                , @emp_id_01
-                , @eff_date_01
-                , @first_name_01
-                , @first_middle_name_01
-                , @last_name_01
-                , @empl_id_01
-                , @national_id_1_type_code_01
-                , @national_id_1_01
-                , @organization_group_id_01
-                , @organization_chart_name_01
-                , @organization_unit_name_01
-                , @emp_status_classn_code_01
-                , @position_title_01
-                , @employment_type_code_01
-                , @annual_salary_amt_01
-                , @begin_date_02
-                , @end_date_02
-                , @pay_status_code_03
-                , @pay_group_id_03
-                , @pay_element_ctrl_grp_id_03
-                , @time_reporting_meth_code_03
-                , @employment_info_chg_reason_cd_03
-                , @emp_location_code_03
-                , @emp_status_code_5
-                , @reason_code_5
-                , @emp_expected_return_date_5
-                , @pay_through_date_5
-                , @emp_death_date_5
-                , @consider_for_rehire_ind_5
-                , @pay_element_desc_06
-                , @emp_calculation_06
+            INTO  @event_id
+                , @emp_id
+                , @eff_date
+                , @first_name
+                , @first_middle_name
+                , @last_name
+                , @empl_id
+                , @national_id_type_code
+                , @national_id
+                , @organization_group_id
+                , @organization_chart_name
+                , @organization_unit_name
+                , @emp_status_classn_code
+                , @position_title
+                , @employment_type_code
+                , @annual_salary_amt
+                , @begin_date
+                , @end_date
+                , @pay_status_code
+                , @pay_group_id
+                , @pay_element_ctrl_grp_id
+                , @time_reporting_meth_code
+                , @employment_info_chg_reason_cd
+                , @emp_location_code
+                , @emp_status_code
+                , @reason_code
+                , @emp_expected_return_date
+                , @pay_through_date
+                , @emp_death_date
+                , @consider_for_rehire_ind
+                , @pay_element_id
+                , @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
@@ -1327,7 +1187,7 @@ BYPASS_EMPLOYEE:
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM #ghr_employee_events_temp
-        WHERE (event_id_01 = @v_EVENT_ID_NEW_HIRE)
+        WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
