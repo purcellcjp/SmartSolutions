@@ -27,7 +27,7 @@ VALUES
 , (N'U00017', 1, 0, N'< EMPLOYEE TRANSFER SECTION (3) >', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00018', 1, 0, N'Total Global HR Employee Transfer: @1', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00019', 1, 0, N'Total Global HR Status Changes: @1', N' ', N' ', 0, N'0   ', 0, 0)
-, (N'U00020', 1, 0, N'Pay Group, @1, does not exists for employee, @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
+, (N'U00020', 1, 0, N'Invalid Pay Group ID, (@1), for employee, @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00021', 1, 0, N'Pay Element Control Group, @1 does not exists for employee, @2 - defaulting to 99999.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00022', 1, 0, N'The current status is @1. Cannot rehire an employee, @2, without a current terminated status.', N' ', N' ', 0, N'0   ', 0, 0)
 , (N'U00023', 1, 0, N'< STATUS CHANGE SECTION (5) >', N' ', N' ', 0, N'0   ', 0, 0)
@@ -67,6 +67,13 @@ VALUES
 , (N'U00101', 1, 0, N'Invalid pay element amount, @1, for employee, @2, and pay element id, @3.', N'', N'', 0, N'', 0, 0)
 , (N'U00102', 1, 0, N'Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.', N'', N'', 0, N'', 0, 0)
 , (N'U00103', 1, 0, N'Pay element id, @1, for employee, @2, is not a valid pay element in the system.', N'', N'', 0, N'', 0, 0)
+
+, (N'U00104', 1, 0, N'<PAY GROUP SECTION (8)>', N'', N'', 0, N'', 0, 0)
+, (N'U00105', 1, 0, N'Total Pay Group Changes: @1', N'', N'', 0, N'', 0, 0)
+, (N'U00106', 1, 0, N'New pay group, (@1) is same as current pay group, for employee @2 - bypassing record.', N'', N'', 0, N'', 0, 0)
+
+
+
 GO
 
 select *

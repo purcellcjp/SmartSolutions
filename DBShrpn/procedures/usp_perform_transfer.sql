@@ -330,12 +330,14 @@ BEGIN
                  , @cur_emp_asgn_job_position_end_date      = ea.end_date
                  , @cur_emp_asgn_assigned_to_code           = ea.assigned_to_code
                  , @cur_emp_status_code                     = stat.emp_status_code
-            FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
+            FROM DBShrpn.dbo.employee emp
+            JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
+                 (emp.emp_id = eempl.emp_id)
             JOIN DBShrpn.dbo.uvu_emp_assignment_most_rec ea ON
-                 (eempl.emp_id = ea.emp_id)
+                 (emp.emp_id = ea.emp_id)
             JOIN DBShrpn.dbo.uvu_emp_status_most_rec stat ON
-                 (eempl.emp_id = stat.emp_id)
-            WHERE (eempl.emp_id = @emp_id)
+                 (emp.emp_id = stat.emp_id)
+            WHERE (emp.emp_id = @emp_id)
 
             -- If no records are returned then employee doesn't exist in SS
             IF (@@ROWCOUNT = 0)
@@ -347,25 +349,25 @@ BEGIN
                     UPDATE   DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status   = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date         = @p_activity_date
-                      AND emp_id_01           = @emp_id_01
-                      AND pay_element_desc_06 = @pay_element_desc_06
-                      AND event_id_01         = @v_EVENT_ID_TRANSFER
+                      AND emp_id           = @emp_id
+                      AND pay_element_id = @pay_element_id
+                      AND event_id         = @v_EVENT_ID_TRANSFER
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id AS msg_id
-                         , REPLACE(t.msg_text, '@1', RTRIM(@emp_id_01)) AS msg_desc
+                         , REPLACE(t.msg_text, '@1', RTRIM(@emp_id)) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id AS msg_id,
-                            @v_EVENT_ID_PAY_ELE AS event_id,
-                            @emp_id_01 AS emp_id,
-                            @eff_date_01 AS eff_date,
-                            @pay_element_desc_06 AS pay_element_id,
-                            @emp_id_01 AS msg_p1,
-                            CONVERT(char,@eff_date_01,112) AS msg_p2,
+                            @v_EVENT_ID_TRANSFER AS event_id,
+                            @emp_id AS emp_id,
+                            @eff_date AS eff_date,
+                            @pay_element_id AS pay_element_id,
+                            @emp_id AS msg_p1,
+                            CONVERT(char,@eff_date,112) AS msg_p2,
                             'Employee does not exists' AS msg_desc,
                             @p_activity_date AS activity_date
 
@@ -390,7 +392,7 @@ BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status   = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
-                    AND event_id_01 = @v_EVENT_ID_TRANSFER
+                    AND event_id = @v_EVENT_ID_TRANSFER
                     AND emp_id = @emp_id
 
                     INSERT INTO #tbl_ghr_msg
@@ -440,7 +442,6 @@ BEGIN
             SET @v_step_position = 'Validation - Emp Status Check'
             -- DO I NEED TO ADD LOG ERROR MESSAGE ????
 
-
             IF (@cur_emp_status_code = 'T')
             BEGIN
                 IF (@rehire_override = 1)
@@ -456,6 +457,7 @@ BEGIN
 
                 END
             END
+
 
             ---------------------------------------------------------------------------
             --   Obtain the current record for this employee employment
@@ -798,7 +800,7 @@ BEGIN
             FROM DBShrpn.dbo.employer empl
             JOIN DBShrpn.dbo.empl_tax_entity ete ON
                  (empl.empl_id = ete.empl_id)
-            WHERE (e.empl_id = @empl_id)
+            WHERE (empl.empl_id = @empl_id)
 
 
             ---------------------------------------------------------------------------
@@ -813,7 +815,7 @@ BEGIN
                 , @p_transfer_date                  = @w_eff_date      --CAST(@eff_date AS datetime)
                 , @p_assign_to                      = @cur_emp_asgn_assigned_to_code
                 , @p_job_or_pos_id                  = '99999'                     -- Default Position
-                , @p_org_grp_id                     = CAST(@organization_group_id AS int)
+                , @p_org_grp_id                     = @organization_group_id		--CAST(@organization_group_id AS int)
                 , @p_org_chart_name                 = @organization_chart_name
                 , @p_org_unit_name                  = @organization_unit_name
                 , @p_location                       = @emp_location_code

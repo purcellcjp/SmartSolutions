@@ -18,12 +18,12 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_status_change
 (
-	@p_userid               varchar(30),
-	@p_batchname            varchar(08),
-	@p_qualifier            varchar(30),
+   @p_userid               varchar(30),
+   @p_batchname            varchar(08),
+   @p_qualifier            varchar(30),
     @p_activity_date        datetime,
     @p_user_id              varchar(30),
-	@p_status						int         = 0 OUTPUT
+   @p_status                  int         = 0 OUTPUT
 )
 AS
 
@@ -45,107 +45,107 @@ BEGIN
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
 
-    DECLARE @v_ret_val						int					= 0
+    DECLARE @v_ret_val                  int               = 0
 
-    DECLARE @w_msg_text						varchar(255)
-    DECLARE @w_msg_text_2					varchar(255)
-    DECLARE @w_msg_text_3					varchar(255)
-    DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					bit     = 0         --char(01)
+    DECLARE @w_msg_text                  varchar(255)
+    DECLARE @w_msg_text_2               varchar(255)
+    DECLARE @w_msg_text_3               varchar(255)
+    DECLARE @w_severity_cd               tinyint
+    DECLARE @w_fatal_error               bit     = 0         --char(01)
     DECLARE @w_curr_status_value            CHAR(10)
 
-    DECLARE @special_value_exists			int
-    DECLARE @individual_id					char(10)
-    DECLARE @prior_last_name				char(30)
-    DECLARE @w_status_change_date			datetime
-    DECLARE	@w_previous_emp_id				char(15)
-    DECLARE @w_job_end_date					datetime
-    DECLARE @w_position_end_date			datetime
-    DECLARE @w_todays_date					char(12)
-    DECLARE @w_old_chgstamp					smallint
-    DECLARE	@w_taxing_country_code			char(02)
-    DECLARE	@w_curr_code					char(03)
-    DECLARE @w_eff_date					    datetime
-    DECLARE @w_curr_status					char(02)
-    DECLARE	@w_pos_eff_date					datetime
+    DECLARE @special_value_exists         int
+    DECLARE @individual_id               char(10)
+    DECLARE @prior_last_name            char(30)
+    DECLARE @w_status_change_date         datetime
+    DECLARE   @w_previous_emp_id            char(15)
+    DECLARE @w_job_end_date               datetime
+    DECLARE @w_position_end_date         datetime
+    DECLARE @w_todays_date               char(12)
+    DECLARE @w_old_chgstamp               smallint
+    DECLARE   @w_taxing_country_code         char(02)
+    DECLARE   @w_curr_code               char(03)
+    DECLARE @w_eff_date                   datetime
+    DECLARE @w_curr_status               char(02)
+    DECLARE   @w_pos_eff_date               datetime
     DECLARE @w_assigned_to_code             char(01)
     DECLARE @w_job_or_pos_id                char(10)
     DECLARE @w_pd_salary_tm_pd_id           char(05)
-    DECLARE @old_eff_date					datetime
+    DECLARE @old_eff_date               datetime
 
-    DECLARE @pay_frequency_code		        char(05) = ''
-    DECLARE @rehire_override			    CHAR(01)
+    DECLARE @pay_frequency_code              char(05) = ''
+    DECLARE @rehire_override             CHAR(01)
 
     DECLARE @i_empl_id                      char(10),
-            @i_emp_assignment_exists		char(01),
-            @i_work_tm_code					char(01),
-            @i_base_rate_tbl_id				char(10),
-            @i_base_rate_tbl_entry_code		char(08),
-            @i_pd_salary_tm_pd_id			char(05),
-            @i_salary_change_type_code		char(05)
+            @i_emp_assignment_exists      char(01),
+            @i_work_tm_code               char(01),
+            @i_base_rate_tbl_id            char(10),
+            @i_base_rate_tbl_entry_code      char(08),
+            @i_pd_salary_tm_pd_id         char(05),
+            @i_salary_change_type_code      char(05)
 
-    DECLARE @i_emp_id						char(15)
-    DECLARE @i_assigned_to_code				char(01)
-    DECLARE @i_job_or_pos_id				char(10)
-    DECLARE @i_eff_date						datetime
-    DECLARE @i_next_eff_date				datetime
-    DECLARE @i_prior_eff_date				datetime
-    DECLARE @i_standard_work_pd_id			char(5)
-    DECLARE @i_standard_work_hrs			float
-    DECLARE @i_yearly_std_work_hrs			float
-    DECLARE @i_hourly_rate_amt				money
-    DECLARE @i_period_amt					money
+    DECLARE @i_emp_id                  char(15)
+    DECLARE @i_assigned_to_code            char(01)
+    DECLARE @i_job_or_pos_id            char(10)
+    DECLARE @i_eff_date                  datetime
+    DECLARE @i_next_eff_date            datetime
+    DECLARE @i_prior_eff_date            datetime
+    DECLARE @i_standard_work_pd_id         char(5)
+    DECLARE @i_standard_work_hrs         float
+    DECLARE @i_yearly_std_work_hrs         float
+    DECLARE @i_hourly_rate_amt            money
+    DECLARE @i_period_amt               money
 
-    DECLARE @w_ee_eff_date					datetime
+    DECLARE @w_ee_eff_date               datetime
 
-    DECLARE @max				INT
-    DECLARE @maxx				CHAR(06)
-    DECLARE @cnt				INT
-    DECLARE @ind_id				INT
-    DECLARE @ind_idx			CHAR(10)
-    DECLARE @annual_salary		MONEY
-    DECLARE @tax_entity_id		CHAR(10)
-    DECLARE @display_name		CHAR(45)
-    DECLARE @msg_id				CHAR(10)
-    DECLARE @msg_p1				CHAR(15)
-    DECLARE @msg_p2				CHAR(15)
-    DECLARE @msg_cnt			INT
+    DECLARE @max            INT
+    DECLARE @maxx            CHAR(06)
+    DECLARE @cnt            INT
+    DECLARE @ind_id            INT
+    DECLARE @ind_idx         CHAR(10)
+    DECLARE @annual_salary      MONEY
+    DECLARE @tax_entity_id      CHAR(10)
+    DECLARE @display_name      CHAR(45)
+    DECLARE @msg_id            CHAR(10)
+    DECLARE @msg_p1            CHAR(15)
+    DECLARE @msg_p2            CHAR(15)
+    DECLARE @msg_cnt         INT
 
 
 
     -- This section declares the interface values from Global HR
-    DECLARE	@event_id							    char(02)
-          , @emp_id								    char(15)
-          , @eff_date							    char(10)
-          , @first_name							    char(25)
-          , @first_middle_name					    char(25)
-          , @last_name							    char(30)
-          , @empl_id							    char(10)
-          , @national_id_type_code				    char(05)
-          , @national_id						    char(20)
-          , @organization_group_id				    char(05)
-          , @organization_chart_name			    varchar(64)
-          , @organization_unit_name				    varchar(240)
-          , @emp_status_classn_code				    char(02)
-          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text
-          , @employment_type_code				    varchar(70)     -- increased size to 70 from 5
-          , @annual_salary_amt					    char(15)
-          , @begin_date							    char(10)
-          , @end_date							    char(10)
-          , @pay_status_code					    char(01)
-          , @pay_group_id						    char(10)
-          , @pay_element_ctrl_grp_id			    char(10)
-          , @time_reporting_meth_code			    char(01)
-          , @employment_info_chg_reason_cd		    char(05)
-          , @emp_location_code					    char(10)
-          , @emp_status_code					    char(02)
-          , @reason_code						    char(02)
-          , @emp_expected_return_date			    char(10)
-          , @pay_through_date					    char(10)
-          , @emp_death_date						    char(10)
-          , @consider_for_rehire_ind			    char(01)
-          , @pay_element_id					        char(10)
-          , @emp_calculation						char(15)
+    DECLARE   @event_id                         char(02)
+          , @emp_id                            char(15)
+          , @eff_date                         char(10)
+          , @first_name                         char(25)
+          , @first_middle_name                   char(25)
+          , @last_name                         char(30)
+          , @empl_id                         char(10)
+          , @national_id_type_code                char(05)
+          , @national_id                      char(20)
+          , @organization_group_id                char(05)
+          , @organization_chart_name             varchar(64)
+          , @organization_unit_name                varchar(240)
+          , @emp_status_classn_code                char(02)
+          , @position_title                      char(50)        -- DBShrpn..emp_assignment.user_text
+          , @employment_type_code                varchar(70)     -- increased size to 70 from 5
+          , @annual_salary_amt                   char(15)
+          , @begin_date                         char(10)
+          , @end_date                         char(10)
+          , @pay_status_code                   char(01)
+          , @pay_group_id                      char(10)
+          , @pay_element_ctrl_grp_id             char(10)
+          , @time_reporting_meth_code             char(01)
+          , @employment_info_chg_reason_cd          char(05)
+          , @emp_location_code                   char(10)
+          , @emp_status_code                   char(02)
+          , @reason_code                      char(02)
+          , @emp_expected_return_date             char(10)
+          , @pay_through_date                   char(10)
+          , @emp_death_date                      char(10)
+          , @consider_for_rehire_ind             char(01)
+          , @pay_element_id                       char(10)
+          , @emp_calculation                  char(15)
           , @tax_flag                               char(1)         -- individual_personal.ind_2
           , @nic_flag                               char(1)         -- individual_personal.ind_1
           , @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
@@ -184,11 +184,11 @@ BEGIN
           row_id                int         NULL
         , emp_id                char(15)    NULL
         , assigned_to_code      char(01)    NULL
-        , job_or_pos_id		    char(10)    NULL
-        , eff_date			    datetime    NULL
-        , next_eff_date		    datetime    NULL
-        , prior_eff_date		datetime    NULL
-        , end_date 			    datetime    NULL
+        , job_or_pos_id          char(10)    NULL
+        , eff_date             datetime    NULL
+        , next_eff_date          datetime    NULL
+        , prior_eff_date      datetime    NULL
+        , end_date              datetime    NULL
         )
 
 
@@ -287,7 +287,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
+      WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -342,7 +342,7 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            --	Obtain the current status record
+            --   Obtain the current status record
             ---------------------------------------------------------------------------
             -- using view
             SELECT @w_status_change_date = stat.status_change_date
@@ -360,7 +360,7 @@ BEGIN
 
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
-            --	This section will validate the interface data
+            --   This section will validate the interface data
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Begin Validation'
@@ -379,11 +379,11 @@ BEGIN
                            )
                 BEGIN
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                        AND emp_id		=	@emp_id
-                        AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                    UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date   =   @p_activity_date
+                        AND emp_id      =   @emp_id
+                        AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
 
 
                     INSERT INTO #tbl_ghr_msg
@@ -395,15 +395,15 @@ BEGIN
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						As msg_id,
+                    SELECT  @msg_id                  As msg_id,
                             @v_EVENT_ID_STATUS_CHANGE As event_id,
-                            @emp_id 						As emp_id,
-                            @eff_date					As eff_date,
-                            @pay_element_id			As pay_element_id,
-                            @emp_id						As msg_p1,
-                            ''						        As msg_p2,
-                            'Employee does not exist'		As msg_desc,
-                            @p_activity_date				AS activity_date
+                            @emp_id                   As emp_id,
+                            @eff_date               As eff_date,
+                            @pay_element_id         As pay_element_id,
+                            @emp_id                  As msg_p1,
+                            ''                          As msg_p2,
+                            'Employee does not exist'      As msg_desc,
+                            @p_activity_date            AS activity_date
 
                     SET @w_fatal_error = 1
 
@@ -428,32 +428,32 @@ BEGIN
                                 FROM DBShrpn.dbo.employer
                                 WHERE empl_id = '0' + @empl_id
                                 )
-                        SELECT @empl_id	= '0' + @empl_id
+                        SELECT @empl_id   = '0' + @empl_id
                     ELSE
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	= @p_activity_date
-                            AND emp_id		= @emp_id
-                            AND event_id		= '01'
+                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   = @p_activity_date
+                            AND emp_id      = @emp_id
+                            AND event_id      = @v_EVENT_ID_STATUS_CHANGE
 
                             INSERT INTO #tbl_ghr_msg
-                            SELECT @msg_id					    As msg_id
+                            SELECT @msg_id                   As msg_id
                                 , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id					As msg_id,
-                                    @v_EVENT_ID_STATUS_CHANGE					As event_id,
-                                    @emp_id 					As emp_id,
-                                    @eff_date				As eff_date,
-                                    @pay_element_id		As pay_element_id,
-                                    @emp_id					As msg_p1,
-                                    @empl_id					As msg_p2,
-                                    'Employer does not exists - defaulting 99999'	As msg_desc,
-                                    @p_activity_date			AS activity_date
+                            SELECT  @msg_id               As msg_id,
+                                    @v_EVENT_ID_STATUS_CHANGE               As event_id,
+                                    @emp_id                As emp_id,
+                                    @eff_date            As eff_date,
+                                    @pay_element_id      As pay_element_id,
+                                    @emp_id               As msg_p1,
+                                    @empl_id               As msg_p2,
+                                    'Employer does not exists - defaulting 99999'   As msg_desc,
+                                    @p_activity_date         AS activity_date
                             -- End of Historical Message for reporting purpose
 
                             SELECT @empl_id = '99999'
@@ -471,29 +471,29 @@ BEGIN
 
             IF  @w_status_change_date >= @eff_date
                 BEGIN
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                        AND emp_id		=	@emp_id
-                        AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                    UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date   =   @p_activity_date
+                        AND emp_id      =   @emp_id
+                        AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
 
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id					    As msg_id
+                        SELECT @msg_id                   As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                            @emp_id 						As emp_id,
-                            @eff_date					As eff_date,
-                            @pay_element_id			As pay_element_id,
-                            @emp_id						As msg_p1,
-                            @emp_id						As msg_p2,
-                            'New Status Effective date must be greater than current effective date.'	As msg_desc,
-                            @p_activity_date				AS activity_date
+                    SELECT  @msg_id                      As msg_id,
+                            @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                            @emp_id                   As emp_id,
+                            @eff_date               As eff_date,
+                            @pay_element_id         As pay_element_id,
+                            @emp_id                  As msg_p1,
+                            @emp_id                  As msg_p2,
+                            'New Status Effective date must be greater than current effective date.'   As msg_desc,
+                            @p_activity_date            AS activity_date
                     -- End of Historical Message for reporting purpose
 
                     SET @w_fatal_error = 1
@@ -511,28 +511,28 @@ BEGIN
             IF  @w_pos_eff_date > CAST(@eff_date AS datetime)
                 BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date	=	@p_activity_date
-                        AND emp_id		=	@emp_id
-                        AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date   =   @p_activity_date
+                        AND emp_id      =   @emp_id
+                        AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					    As msg_id
+                    SELECT @msg_id                   As msg_id
                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                            @emp_id 						As emp_id,
-                            @eff_date					As eff_date,
-                            @pay_element_id			As pay_element_id,
-                            @emp_id						As msg_p1,
-                            @empl_id						As msg_p2,
-                            'Transfer date must be greater than default position effective date'		As msg_desc,
-                            @p_activity_date				AS activity_date
+                    SELECT  @msg_id                      As msg_id,
+                            @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                            @emp_id                   As emp_id,
+                            @eff_date               As eff_date,
+                            @pay_element_id         As pay_element_id,
+                            @emp_id                  As msg_p1,
+                            @empl_id                  As msg_p2,
+                            'Transfer date must be greater than default position effective date'      As msg_desc,
+                            @p_activity_date            AS activity_date
                         -- End of Historical Message for reporting purpose
 
                     SET @w_fatal_error = 1
@@ -562,22 +562,22 @@ BEGIN
                     AND event_id   = @v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					    As msg_id
+                    SELECT @msg_id                   As msg_id
                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id						    As msg_id,
-                            @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                            @emp_id 						As emp_id,
-                            @eff_date					As eff_date,
-                            @pay_element_id			As pay_element_id,
-                            @emp_id						As msg_p1,
-                            @empl_id						As msg_p2,
-                            'Rehire date must be greater than current employee employment effective date'		As msg_desc,
-                            @p_activity_date				AS activity_date
+                    SELECT  @msg_id                      As msg_id,
+                            @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                            @emp_id                   As emp_id,
+                            @eff_date               As eff_date,
+                            @pay_element_id         As pay_element_id,
+                            @emp_id                  As msg_p1,
+                            @empl_id                  As msg_p2,
+                            'Rehire date must be greater than current employee employment effective date'      As msg_desc,
+                            @p_activity_date            AS activity_date
                     -- End of Historical Message for reporting purpose
 
                     SET @w_fatal_error = 1
@@ -588,26 +588,26 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            --	Check to see if pay group id exists
+            --   Check to see if pay group id exists
             ---------------------------------------------------------------------------
             SET @msg_id = 'U00020'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF NOT EXISTS(
                         SELECT *
-                        FROM	DBShrpn.dbo.pay_group
-                        WHERE	pay_group_id = @pay_group_id
+                        FROM   DBShrpn.dbo.pay_group
+                        WHERE   pay_group_id = @pay_group_id
                         )
                 BEGIN
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id		=	@emp_id
-                    AND event_id		=	'01'
+                    UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date   =   @p_activity_date
+                    AND emp_id      =   @emp_id
+                    AND event_id      = @v_EVENT_ID_STATUS_CHANGE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					As msg_id
+                    SELECT @msg_id As msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -615,18 +615,18 @@ BEGIN
 
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_STATUS_CHANGE					As event_id,
-                            @emp_id 					As emp_id,
-                            @eff_date				As eff_date,
-                            @pay_element_id		As pay_element_id,
-                            @emp_id					As msg_p1,
-                            @pay_group_id			As msg_p2,
-                            'Pay Group does not exists'	As msg_desc,
-                            @p_activity_date			AS activity_date
+                    SELECT  @msg_id               As msg_id,
+                            @v_EVENT_ID_STATUS_CHANGE As event_id,
+                            @emp_id                As emp_id,
+                            @eff_date            As eff_date,
+                            @pay_element_id      As pay_element_id,
+                            @emp_id               As msg_p1,
+                            @pay_group_id         As msg_p2,
+                            'Pay Group does not exists'   As msg_desc,
+                            @p_activity_date         AS activity_date
                     -- End of Historical Message for reporting purpose
 
-                    SET	@pay_group_id = ' '
+                    -- SET   @pay_group_id = ' '
 
                     SET @w_fatal_error = 1
 
@@ -642,20 +642,20 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            --	Check to see if the rehire date is greater than the termination date. Reject the record
+            --   Check to see if the rehire date is greater than the termination date. Reject the record
             ---------------------------------------------------------------------------
             SET @msg_id = 'U00032'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            IF	@emp_status_code = 'RH'
+            IF   @emp_status_code = 'RH'
                 BEGIN
                     IF @w_curr_status = 'T' AND @w_eff_date <= @w_status_change_date
                         BEGIN
 
-                            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id		=	@emp_id
+                            UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   =   @p_activity_date
+                            AND emp_id      =   @emp_id
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id      As msg_id
@@ -665,15 +665,15 @@ BEGIN
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						    As msg_id,
+                            SELECT  @msg_id                      As msg_id,
                                     @v_EVENT_ID_STATUS_CHANGE As event_id,
-                                    @emp_id 						As emp_id,
-                                    @eff_date					As eff_date,
-                                    @pay_element_id			As pay_element_id,
-                                    @emp_id						As msg_p1,
-                                    @emp_id						As msg_p2,
-                                    'The rehire date must be greater than the termination date - By passing the employee.'	 As msg_desc,
-                                    @p_activity_date				AS activity_date
+                                    @emp_id                   As emp_id,
+                                    @eff_date               As eff_date,
+                                    @pay_element_id         As pay_element_id,
+                                    @emp_id                  As msg_p1,
+                                    @emp_id                  As msg_p2,
+                                    'The rehire date must be greater than the termination date - By passing the employee.'    As msg_desc,
+                                    @p_activity_date            AS activity_date
                             -- End of Historical Message for reporting purpose
 
                             SET @w_fatal_error = 1
@@ -682,37 +682,37 @@ BEGIN
                 END
 
             ---------------------------------------------------------------------------
-            --	Check to see if the reactivation date is greater than the inactivation date. Reject the record
+            --   Check to see if the reactivation date is greater than the inactivation date. Reject the record
             ---------------------------------------------------------------------------
             SET @msg_id = 'U00033'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            IF	@emp_status_code = 'RA'
+            IF   @emp_status_code = 'RA'
                 BEGIN
                     IF @w_curr_status = 'I' AND @w_eff_date <= @w_status_change_date
                         BEGIN
-                            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id		=	@emp_id
+                            UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   =   @p_activity_date
+                            AND emp_id      =   @emp_id
 
                             INSERT INTO DBShrpn.dbo.ghr_msg_tbl
-                            SELECT @msg_id					    As msg_id,
-                                    @emp_id					As msg_p1,
-                                    @emp_id					As msg_p2,
-                                    'The Reactivation date must be greater than the inactivation date - By passing the employee.'	As msg_desc
+                            SELECT @msg_id                   As msg_id,
+                                    @emp_id               As msg_p1,
+                                    @emp_id               As msg_p2,
+                                    'The Reactivation date must be greater than the inactivation date - By passing the employee.'   As msg_desc
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						    As msg_id,
-                                    @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                                    @emp_id 						As emp_id,
-                                    @eff_date					As eff_date,
-                                    @pay_element_id			As pay_element_id,
-                                    @emp_id						As msg_p1,
-                                    @emp_id						As msg_p2,
-                                    'The Reactivation date must be greater than the inactivation date - By passing the employee.'	 As msg_desc,
-                                    @p_activity_date				AS activity_date
+                            SELECT  @msg_id                      As msg_id,
+                                    @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                                    @emp_id                   As emp_id,
+                                    @eff_date               As eff_date,
+                                    @pay_element_id         As pay_element_id,
+                                    @emp_id                  As msg_p1,
+                                    @emp_id                  As msg_p2,
+                                    'The Reactivation date must be greater than the inactivation date - By passing the employee.'    As msg_desc,
+                                    @p_activity_date            AS activity_date
                             -- End of Historical Message for reporting purpose
 
                             SET @w_fatal_error = 1
@@ -726,7 +726,7 @@ BEGIN
 
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
-            --	Obtain the setup variables
+            --   Obtain the setup variables
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
 
@@ -762,40 +762,40 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            --	Find the Job_position end date and Assignment end date
+            --   Find the Job_position end date and Assignment end date
             ---------------------------------------------------------------------------
-            SELECT	@w_position_end_date		=	@v_END_OF_TIME_DATE
-            SELECT	@w_job_end_date				=	@v_END_OF_TIME_DATE
+            SELECT   @w_position_end_date      =   @v_END_OF_TIME_DATE
+            SELECT   @w_job_end_date            =   @v_END_OF_TIME_DATE
 
 
 
             ---------------------------------------------------------------------------
-            --	Obtain prior employee number
+            --   Obtain prior employee number
             ---------------------------------------------------------------------------
             SELECT @w_previous_emp_id = prior_emp_id
             FROM employee, emp_status
-            WHERE employee.emp_id				=	@emp_id
-            AND emp_status.emp_id				=	@emp_id
-            AND emp_status.status_change_date	<=	@w_todays_date
-            AND emp_status.next_change_date	>	@w_todays_date
+            WHERE employee.emp_id            =   @emp_id
+            AND emp_status.emp_id            =   @emp_id
+            AND emp_status.status_change_date   <=   @w_todays_date
+            AND emp_status.next_change_date   >   @w_todays_date
 
-            IF	@w_previous_emp_id = ' '
-                SELECT	@w_previous_emp_id	=	@emp_id
+            IF   @w_previous_emp_id = ' '
+                SELECT   @w_previous_emp_id   =   @emp_id
 
 
-            SELECT	@w_taxing_country_code		=	e.taxing_country_code,
-                    @w_curr_code				=	e.curr_code
-            FROM	DBShrpn.dbo.employer e
-            WHERE  e.empl_id	=	@empl_id
-
-            --
-            --
-            --
-            SELECT	@w_eff_date = CAST(@eff_date	As datetime)
+            SELECT   @w_taxing_country_code      =   e.taxing_country_code,
+                    @w_curr_code            =   e.curr_code
+            FROM   DBShrpn.dbo.employer e
+            WHERE  e.empl_id   =   @empl_id
 
             --
             --
-            --	Perform the main logic
+            --
+            SELECT   @w_eff_date = CAST(@eff_date   As datetime)
+
+            --
+            --
+            --   Perform the main logic
             --
             --
             IF (@emp_status_code = 'RH')
@@ -807,86 +807,86 @@ BEGIN
 
                             SET @v_step_position = 'Rehire RH ' + @w_curr_status
 
-                            SELECT	@i_eff_date = ea.eff_date
-                            FROM DBShrpn.dbo.emp_assignment	ea
+                            SELECT   @i_eff_date = ea.eff_date
+                            FROM DBShrpn.dbo.emp_assignment   ea
                             WHERE emp_id  = @emp_id
-                            AND  prime_assignment_ind	=	'Y'
+                            AND  prime_assignment_ind   =   'Y'
                             AND  eff_date = (
                                             SELECT MAX(eff_date)
                                             FROM DBShrpn.dbo.emp_assignment t
-                                            WHERE (t.emp_id =	ea.emp_id)
+                                            WHERE (t.emp_id =   ea.emp_id)
                                             AND (prime_assignment_ind = 'Y')
                                             )
 
 
                             EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire
-                                @p_emp_id                       =	@emp_id,
-                                @p_previous_emp_id				=	@w_previous_emp_id,
-                                @p_status_change_date			=	@w_status_change_date,
-                                @p_new_empl_id					=	@empl_id,
-                                @p_new_tax_entity_id			=	@tax_entity_id,
-                                @p_new_hire_date				=	@w_eff_date,
-                                @p_new_classn_cd				=	@emp_status_classn_code,
-                                @p_new_reason_cd				=	' ',
-                                @p_new_assigned_to_code			=	@w_assigned_to_code,
-                                @p_new_job_or_pos_id			=   @w_job_or_pos_id,
-                                @p_new_pay_group_id				=	@pay_group_id,
-                                @p_new_time_reporting_meth		=	@time_reporting_meth_code,
-                                @p_job_end_date					=	@w_job_end_date,							--	datetime,			--'29991231'
-                                @p_position_end_date			=	@w_position_end_date,						--	datetime,			--'29991231'
-                                @p_taxing_country              	=	@w_taxing_country_code,						--	char(2),			--'GD'
-                                @p_new_pay_elem_ctrl_grp_id		=	@pay_element_ctrl_grp_id,				--	'MTH'
-                                @p_allow_pay_updates_ind		=	'Y',
-                                @p_old_chgstamp					=	@w_old_chgstamp								--	0
+                                @p_emp_id                       =   @emp_id,
+                                @p_previous_emp_id            =   @w_previous_emp_id,
+                                @p_status_change_date         =   @w_status_change_date,
+                                @p_new_empl_id               =   @empl_id,
+                                @p_new_tax_entity_id         =   @tax_entity_id,
+                                @p_new_hire_date            =   @w_eff_date,
+                                @p_new_classn_cd            =   @emp_status_classn_code,
+                                @p_new_reason_cd            =   ' ',
+                                @p_new_assigned_to_code         =   @w_assigned_to_code,
+                                @p_new_job_or_pos_id         =   @w_job_or_pos_id,
+                                @p_new_pay_group_id            =   @pay_group_id,
+                                @p_new_time_reporting_meth      =   @time_reporting_meth_code,
+                                @p_job_end_date               =   @w_job_end_date,                     --   datetime,         --'29991231'
+                                @p_position_end_date         =   @w_position_end_date,                  --   datetime,         --'29991231'
+                                @p_taxing_country                 =   @w_taxing_country_code,                  --   char(2),         --'GD'
+                                @p_new_pay_elem_ctrl_grp_id      =   @pay_element_ctrl_grp_id,            --   'MTH'
+                                @p_allow_pay_updates_ind      =   'Y',
+                                @p_old_chgstamp               =   @w_old_chgstamp                        --   0
 
                             EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy
-                                @p_emp_id                       =	@emp_id,
-                                @p_empl_id                      =	@empl_id,
-                                @p_new_pay_group_id             =	@pay_group_id,
-                                @p_new_pecg_id					=	@pay_element_ctrl_grp_id,
-                                @p_as_of_date					=	@w_eff_date
+                                @p_emp_id                       =   @emp_id,
+                                @p_empl_id                      =   @empl_id,
+                                @p_new_pay_group_id             =   @pay_group_id,
+                                @p_new_pecg_id               =   @pay_element_ctrl_grp_id,
+                                @p_as_of_date               =   @w_eff_date
 
 
                             ---------------------------------------------------------------------------
                             ---------------------------------------------------------------------------
-                            --	Obtain the current record for this employee assignment
+                            --   Obtain the current record for this employee assignment
                             ---------------------------------------------------------------------------
                             ---------------------------------------------------------------------------
 
 
                             ---------------------------------------------------------------------------
-                            --	Update the Salary and Position Title in the Assignment Record
+                            --   Update the Salary and Position Title in the Assignment Record
                             ---------------------------------------------------------------------------
 
 
-                            SELECT	@i_emp_id				=	emp_id,
-                                    @i_assigned_to_code		=	assigned_to_code,
-                                    @i_job_or_pos_id		=	job_or_pos_id,
-                                    @i_eff_date				=	eff_date,
-                                    @i_next_eff_date		=	next_eff_date,
-                                    @i_prior_eff_date		=	prior_eff_date
-                            FROM DBShrpn.dbo.emp_assignment	ea
-                            WHERE emp_id =	@emp_id
-                            AND prime_assignment_ind	=	'Y'
+                            SELECT   @i_emp_id            =   emp_id,
+                                    @i_assigned_to_code      =   assigned_to_code,
+                                    @i_job_or_pos_id      =   job_or_pos_id,
+                                    @i_eff_date            =   eff_date,
+                                    @i_next_eff_date      =   next_eff_date,
+                                    @i_prior_eff_date      =   prior_eff_date
+                            FROM DBShrpn.dbo.emp_assignment   ea
+                            WHERE emp_id =   @emp_id
+                            AND prime_assignment_ind   =   'Y'
                             AND eff_date = (
                                             SELECT MAX(eff_date)
-                                            FROM	DBShrpn.dbo.emp_assignment t
-                                            WHERE	t.emp_id =	ea.emp_id
+                                            FROM   DBShrpn.dbo.emp_assignment t
+                                            WHERE   t.emp_id =   ea.emp_id
                                                 AND prime_assignment_ind = 'Y'
                                             )
 
                             -- GOSL: HCM Salary data will not be extracted to SS
                             -- Blank them out
-                            SELECT @annual_salary				=	0.00
-                                , @i_hourly_rate_amt			=	0.00
-                                , @i_period_amt				=	0.00
-                                , @i_salary_change_type_code	=	''
-                                , @i_work_tm_code				=	''
-                                , @i_base_rate_tbl_id			=	''
-                                , @i_base_rate_tbl_entry_code	=	''
-                                , @i_standard_work_pd_id		=	''
-                                , @i_standard_work_hrs		    =	0.00
-                                , @i_pd_salary_tm_pd_id		=	''
+                            SELECT @annual_salary            =   0.00
+                                , @i_hourly_rate_amt         =   0.00
+                                , @i_period_amt            =   0.00
+                                , @i_salary_change_type_code   =   ''
+                                , @i_work_tm_code            =   ''
+                                , @i_base_rate_tbl_id         =   ''
+                                , @i_base_rate_tbl_entry_code   =   ''
+                                , @i_standard_work_pd_id      =   ''
+                                , @i_standard_work_hrs          =   0.00
+                                , @i_pd_salary_tm_pd_id      =   ''
 
 
 
@@ -919,29 +919,29 @@ BEGIN
                             SET @msg_id = 'U00022'
                             SET @v_step_position = 'Rehire Not Terminated ' + RTRIM(@msg_id)
 
-                            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id		=	@emp_id
-                            AND event_id		= @v_EVENT_ID_STATUS_CHANGE
+                            UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   =   @p_activity_date
+                            AND emp_id      =   @emp_id
+                            AND event_id      = @v_EVENT_ID_STATUS_CHANGE
 
                                     INSERT INTO #tbl_ghr_msg
-                                    SELECT @msg_id					    As msg_id
+                                    SELECT @msg_id                   As msg_id
                                         , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@w_curr_status_value)), '@2', @emp_id) AS msg_desc
                                     FROM #tbl_msg_master t
                                     WHERE (msg_id = @msg_id)
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						    As msg_id,
+                            SELECT  @msg_id                      As msg_id,
                                     @v_EVENT_ID_STATUS_CHANGE As event_id,
-                                    @emp_id 						As emp_id,
-                                    @eff_date					As eff_date,
-                                    @pay_element_id			As pay_element_id,
-                                    @w_curr_status					As msg_p1,
-                                    @emp_id						As msg_p2,
-                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot rehire an employee if the current status is not terminated.'	 As msg_desc,
-                                    @p_activity_date				AS activity_date
+                                    @emp_id                   As emp_id,
+                                    @eff_date               As eff_date,
+                                    @pay_element_id         As pay_element_id,
+                                    @w_curr_status               As msg_p1,
+                                    @emp_id                  As msg_p2,
+                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot rehire an employee if the current status is not terminated.'    As msg_desc,
+                                    @p_activity_date            AS activity_date
 
 
                         END
@@ -957,16 +957,16 @@ BEGIN
 
                             SET @v_step_position = @v_step_position + ' - Active'
 
-                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate	@p_emp_id	=	@emp_id,
-                                @p_status_change_date			=	@w_status_change_date,
-                                @p_inactivate_date				=	@w_eff_date,
-                                @p_new_reason					=	' ',
-                                @p_new_loa_expd_date			=	@v_END_OF_TIME_DATE,
-                                @p_new_classification_cd		=	@emp_status_classn_code,
-                                @p_allow_emp_pay_updates_ind	=	'Y',
-                                @p_pay_status_code				=	@pay_status_code,
-                                @p_last_day_paid				=	@v_BEG_OF_TIME_DATE,
-                                @p_old_chgstamp				=	@w_old_chgstamp
+                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate   @p_emp_id   =   @emp_id,
+                                @p_status_change_date         =   @w_status_change_date,
+                                @p_inactivate_date            =   @w_eff_date,
+                                @p_new_reason               =   ' ',
+                                @p_new_loa_expd_date         =   @v_END_OF_TIME_DATE,
+                                @p_new_classification_cd      =   @emp_status_classn_code,
+                                @p_allow_emp_pay_updates_ind   =   'Y',
+                                @p_pay_status_code            =   @pay_status_code,
+                                @p_last_day_paid            =   @v_BEG_OF_TIME_DATE,
+                                @p_old_chgstamp            =   @w_old_chgstamp
 
                         END
                     ELSE
@@ -974,10 +974,10 @@ BEGIN
                             SET @msg_id = 'U00024'
                             SET @v_step_position = @v_step_position + ' - ' + @w_curr_status + ' - ' + RTRIM(@msg_id)
 
-                            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	=	@v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id		=	@emp_id
+                            UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status   =   @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   =   @p_activity_date
+                            AND emp_id      =   @emp_id
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id      As msg_id
@@ -988,15 +988,15 @@ BEGIN
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						    As msg_id,
-                                    @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                                    @emp_id 						As emp_id,
-                                    @eff_date					As eff_date,
-                                    @pay_element_id			As pay_element_id,
-                                    @w_curr_status					As msg_p1,
-                                    @emp_id						As msg_p2,
-                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot inactivate an employee if the current status is not active.'	 As msg_desc,
-                                    @p_activity_date				AS activity_date
+                            SELECT  @msg_id                      As msg_id,
+                                    @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                                    @emp_id                   As emp_id,
+                                    @eff_date               As eff_date,
+                                    @pay_element_id         As pay_element_id,
+                                    @w_curr_status               As msg_p1,
+                                    @emp_id                  As msg_p2,
+                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot inactivate an employee if the current status is not active.'    As msg_desc,
+                                    @p_activity_date            AS activity_date
                             -- End of Historical Message for reporting purpose
 
                         END
@@ -1021,17 +1021,17 @@ BEGIN
 
                             -- Note: proc needs temp tables #temp1 and #temp2 to work
                             EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate
-                                @p_emp_id                       =	@emp_id,
-                                @p_status_change_date           =	@w_status_change_date,
-                                @p_termination_date             =	@w_eff_date,
-                                @p_new_classn_cd                =	@emp_status_classn_code,
-                                @p_date_of_death                =	@v_END_OF_TIME_DATE,
-                                @p_new_reason_code              =	@reason_code,
-                                @p_new_pay_through_date         =	@w_eff_date,
-                                @p_new_rehire_conson            =	@consider_for_rehire_ind,
-                                @p_pay_status_code              =	@pay_status_code,
-                                @p_last_day_paid                =	@v_BEG_OF_TIME_DATE,
-                                @p_old_chgstamp                 =	@w_old_chgstamp
+                                @p_emp_id                       =   @emp_id,
+                                @p_status_change_date           =   @w_status_change_date,
+                                @p_termination_date             =   @w_eff_date,
+                                @p_new_classn_cd                =   @emp_status_classn_code,
+                                @p_date_of_death                =   @v_END_OF_TIME_DATE,
+                                @p_new_reason_code              =   @reason_code,
+                                @p_new_pay_through_date         =   @w_eff_date,
+                                @p_new_rehire_conson            =   @consider_for_rehire_ind,
+                                @p_pay_status_code              =   @pay_status_code,
+                                @p_last_day_paid                =   @v_BEG_OF_TIME_DATE,
+                                @p_old_chgstamp                 =   @w_old_chgstamp
 
 
 
@@ -1054,29 +1054,29 @@ BEGIN
                             SET @msg_id = 'U00042'
                             SET @v_step_position = @v_step_position + ' (''T'') ' + @msg_id
 
-                            UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	=	@v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date	=	@p_activity_date
-                            AND emp_id		=	@emp_id
-                            AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                            UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status   =   @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date   =   @p_activity_date
+                            AND emp_id      =   @emp_id
+                            AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
 
                             INSERT INTO #tbl_ghr_msg
-                            SELECT @msg_id						As msg_id
+                            SELECT @msg_id                  As msg_id
                                 , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
 
                             -- Historical Message for reporting purpose
                             INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id						    As msg_id,
-                                    @v_EVENT_ID_STATUS_CHANGE						As event_id,
-                                    @emp_id 						As emp_id,
-                                    @eff_date					As eff_date,
-                                    @pay_element_id			As pay_element_id,
-                                    @w_curr_status					As msg_p1,
-                                    @emp_id						As msg_p2,
-                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot terminate an employee if the current status is not active or inactive.'	 As msg_desc,
-                                    @p_activity_date				AS activity_date
+                            SELECT  @msg_id                      As msg_id,
+                                    @v_EVENT_ID_STATUS_CHANGE                  As event_id,
+                                    @emp_id                   As emp_id,
+                                    @eff_date               As eff_date,
+                                    @pay_element_id         As pay_element_id,
+                                    @w_curr_status               As msg_p1,
+                                    @emp_id                  As msg_p2,
+                                    'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot terminate an employee if the current status is not active or inactive.'    As msg_desc,
+                                    @p_activity_date            AS activity_date
                             -- End of Historical Message for reporting purpose
 
                         END
@@ -1102,21 +1102,21 @@ BEGIN
             --
             --
 
-            IF	(@emp_status_code = 'RA')
+            IF   (@emp_status_code = 'RA')
                 BEGIN --1
 
                     IF @w_curr_status = 'I'
                         BEGIN  --2
                             SET @v_step_position = 'Rehire RA Inactive'
 
-                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate	@p_emp_id	=	@emp_id,
-                                @p_status_change_date				=	@w_status_change_date,
-                                @p_reactivate_date					=	@w_eff_date,
-                                @p_new_reason						=	@reason_code,
-                                @p_new_classification_cd			=	@emp_status_classn_code,
-                                @p_allow_emp_pay_updates_ind		=	'Y',
-                                @p_pay_status_code					=	@pay_status_code,
-                                @p_old_chgstamp					    =	@w_old_chgstamp
+                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate   @p_emp_id   =   @emp_id,
+                                @p_status_change_date            =   @w_status_change_date,
+                                @p_reactivate_date               =   @w_eff_date,
+                                @p_new_reason                  =   @reason_code,
+                                @p_new_classification_cd         =   @emp_status_classn_code,
+                                @p_allow_emp_pay_updates_ind      =   'Y',
+                                @p_pay_status_code               =   @pay_status_code,
+                                @p_old_chgstamp                   =   @w_old_chgstamp
 
                         END  --2
                     ELSE
@@ -1127,42 +1127,42 @@ BEGIN
                                     SET @msg_id = 'U00025'
                                     SET @v_step_position = 'Rehire Overide - ''0'' - ' + @msg_id
 
-                                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                                    SET activity_status	=	@v_ACTIVITY_STATUS_BAD
-                                    WHERE activity_date	=	@p_activity_date
-                                    AND emp_id		=	@emp_id
-                                    AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                                    UPDATE   DBShrpn.dbo.ghr_employee_events_aud
+                                    SET activity_status   =   @v_ACTIVITY_STATUS_BAD
+                                    WHERE activity_date   =   @p_activity_date
+                                    AND emp_id      =   @emp_id
+                                    AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
 
                                     INSERT INTO #tbl_ghr_msg
-                                    SELECT @msg_id						As msg_id
+                                    SELECT @msg_id                  As msg_id
                                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                                     FROM #tbl_msg_master t
                                     WHERE (msg_id = @msg_id)
 
                                     -- Historical Message for reporting purpose
                                     INSERT INTO DBShrpn.dbo.ghr_historical_message
-                                    SELECT  @msg_id						As msg_id,
-                                            @v_EVENT_ID_STATUS_CHANGE							As event_id,
-                                            @emp_id 						As emp_id,
-                                            @eff_date					As eff_date,
-                                            @pay_element_id			As pay_element_id,
-                                            @w_curr_status					As msg_p1,
-                                            @emp_id						As msg_p2,
-                                            -- 'Cannot Reactivate an employee if the current status is not inactivate.'	 As msg_desc,
+                                    SELECT  @msg_id                  As msg_id,
+                                            @v_EVENT_ID_STATUS_CHANGE                     As event_id,
+                                            @emp_id                   As emp_id,
+                                            @eff_date               As eff_date,
+                                            @pay_element_id         As pay_element_id,
+                                            @w_curr_status               As msg_p1,
+                                            @emp_id                  As msg_p2,
+                                            -- 'Cannot Reactivate an employee if the current status is not inactivate.'    As msg_desc,
                                             'The current status is ' + RTRIM(@w_curr_status_value) + '.' + ' Cannot Reactivate an employee if the current status is not inactivate.'  As msg_desc,
-                                            @p_activity_date				AS activity_date
+                                            @p_activity_date            AS activity_date
                                     -- End of Historical Message for reporting purpose
-                                END	 --4
+                                END    --4
                             ELSE
                                 BEGIN --5
 
                                     SET @v_step_position = 'Rehire RA - ' + @w_curr_status + ' - ' + 'Activity Status ''' + @v_ACTIVITY_STATUS_WARNING + ''''
 
                                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                    SET activity_status	=   @v_ACTIVITY_STATUS_WARNING
-                                    WHERE activity_date	=	@p_activity_date
-                                    AND emp_id		=	@emp_id
-                                    AND event_id		=	@v_EVENT_ID_STATUS_CHANGE
+                                    SET activity_status   =   @v_ACTIVITY_STATUS_WARNING
+                                    WHERE activity_date   =   @p_activity_date
+                                    AND emp_id      =   @emp_id
+                                    AND event_id      =   @v_EVENT_ID_STATUS_CHANGE
                                     AND emp_status_code=   'RA'
 
                                 END  --5
@@ -1185,8 +1185,8 @@ BEGIN
                     -- CJP 7/7/2025
                     SET @v_step_position = 'Update NIC/Tax Code'
 
-                    UPDATE	DBShrpn.dbo.individual_personal
-                    SET	user_ind_1 = @nic_flag
+                    UPDATE   DBShrpn.dbo.individual_personal
+                    SET   user_ind_1 = @nic_flag
                     , user_ind_2 = @tax_flag
                     WHERE (individual_id = @individual_id)
 

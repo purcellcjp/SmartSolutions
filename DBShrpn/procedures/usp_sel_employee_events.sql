@@ -45,6 +45,10 @@ BEGIN
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
 
+    DECLARE @v_EVENT_ID_PAY_GROUP           char(2)             = '08'
+    DECLARE @v_EVENT_ID_LABOR_GROUP         char(2)             = '09'
+    DECLARE @v_EVENT_ID_POSITION_TITLE      char(2)             = '10'
+
     DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
 
@@ -226,7 +230,7 @@ BEGIN
 
 
         ---------------------------------------------------------------------------
-        -- New Hires
+        -- New Hires (Event 01)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute New Hires'
         SET @v_event_id = @v_EVENT_ID_NEW_HIRE
@@ -250,7 +254,7 @@ BEGIN
 /*
         -- GOSL: Salaries are not interfaced into SS. Will be managed manually by user
         ---------------------------------------------------------------------------
-        -- Salary Change
+        -- Salary Change (Event 02)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Salary Change'
         SET @v_event_id = @v_EVENT_ID_SALARY_CHANGE
@@ -272,7 +276,7 @@ BEGIN
 */
 
         ---------------------------------------------------------------------------
-        -- Employee Transfer
+        -- Employee Transfer (Event 03)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Transfer'
         SET @v_event_id = @v_EVENT_ID_TRANSFER
@@ -294,7 +298,7 @@ BEGIN
 
 
         ---------------------------------------------------------------------------
-        -- Name Change
+        -- Name Change  (Event 04)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Name Change'
         SET @v_event_id = @v_EVENT_ID_NAME_CHANGE
@@ -317,7 +321,7 @@ BEGIN
 
 
         ---------------------------------------------------------------------------
-        -- Status Change
+        -- Status Change (Event 05)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Status Change'
         SET @v_event_id = @v_EVENT_ID_STATUS_CHANGE
@@ -339,7 +343,7 @@ BEGIN
 
 
         ---------------------------------------------------------------------------
-        -- Pay Element
+        -- Pay Element (Event 06)
         ---------------------------------------------------------------------------
         SET @v_step_position = 'Execute Pay Allowances'
         SET @v_event_id = @v_EVENT_ID_PAY_ELE
@@ -358,6 +362,73 @@ BEGIN
                       , @p_user_id         = @w_userid
                       , @p_status          = @w_status
         END
+
+
+        ---------------------------------------------------------------------------
+        -- Pay Group (Event 08)
+        ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Pay Group Update'
+        SET @v_event_id = @v_EVENT_ID_PAY_GROUP
+
+        IF  EXISTS (
+                    SELECT event_id
+                    FROM DBShrpn.dbo.ghr_employee_events
+                    WHERE event_id = @v_EVENT_ID_PAY_GROUP
+                   )
+        BEGIN
+            EXEC DBShrpn.dbo.usp_ins_pay_group
+                        @p_userid          = @w_userid
+                      , @p_batchname       = @v_PSC_BATCHNAME
+                      , @p_qualifier       = @w_PSC_QUALIFIER
+                      , @p_activity_date   = @w_activity_date
+                      , @p_user_id         = @w_userid
+                      , @p_status          = @w_status
+        END
+
+
+        ---------------------------------------------------------------------------
+        -- Labor Group Update (Event 09)
+        ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Labor Group Update'
+        SET @v_event_id = @v_EVENT_ID_LABOR_GROUP
+
+        IF  EXISTS (
+                    SELECT event_id
+                    FROM DBShrpn.dbo.ghr_employee_events
+                    WHERE event_id = @v_EVENT_ID_LABOR_GROUP
+                   )
+        BEGIN
+            EXEC DBShrpn.dbo.usp_ins_labor_group
+                        @p_userid          = @w_userid
+                      , @p_batchname       = @v_PSC_BATCHNAME
+                      , @p_qualifier       = @w_PSC_QUALIFIER
+                      , @p_activity_date   = @w_activity_date
+                      , @p_user_id         = @w_userid
+                      , @p_status          = @w_status
+        END
+
+
+        ---------------------------------------------------------------------------
+        -- Position Title (Event 10)
+        ---------------------------------------------------------------------------
+        SET @v_step_position = 'Execute Pay Group Update'
+        SET @v_event_id = @v_EVENT_ID_POSITION_TITLE
+
+        IF  EXISTS (
+                    SELECT event_id
+                    FROM DBShrpn.dbo.ghr_employee_events
+                    WHERE event_id = @v_EVENT_ID_POSITION_TITLE
+                   )
+        BEGIN
+            EXEC DBShrpn.dbo.usp_ins_position_title
+                        @p_userid          = @w_userid
+                      , @p_batchname       = @v_PSC_BATCHNAME
+                      , @p_qualifier       = @w_PSC_QUALIFIER
+                      , @p_activity_date   = @w_activity_date
+                      , @p_user_id         = @w_userid
+                      , @p_status          = @w_status
+        END
+
 
 
     END TRY

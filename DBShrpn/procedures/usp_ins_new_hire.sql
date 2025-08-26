@@ -244,7 +244,7 @@ BEGIN
           , @organization_chart_name			    varchar(64)
           , @organization_unit_name				    varchar(240)
           , @emp_status_classn_code				    char(02)
-          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text
+          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text_2
           , @employment_type_code				    varchar(70)     -- increased size to 70 from 5
           , @annual_salary_amt					    char(15)
           , @begin_date							    char(10)
@@ -713,7 +713,7 @@ BEGIN
                     -- Historical Message for reporting purpose
                     INSERT INTO DBShrpn.dbo.ghr_historical_message
                     SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_NEW_HIRE						As event_id,
+                            @v_EVENT_ID_NEW_HIRE As event_id,
                             @emp_id 					As emp_id,
                             @eff_date				As eff_date,
                             @pay_element_id		As pay_element_id,
