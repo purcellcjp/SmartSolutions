@@ -44,7 +44,6 @@ BEGIN
     DECLARE @v_EVENT_ID_NAME_CHANGE         char(2)             = '04'
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
-
     DECLARE @v_EVENT_ID_PAY_GROUP           char(2)             = '08'
     DECLARE @v_EVENT_ID_LABOR_GROUP         char(2)             = '09'
     DECLARE @v_EVENT_ID_POSITION_TITLE      char(2)             = '10'
@@ -446,20 +445,30 @@ BEGIN
             , @ErrorState    AS err_state
         */
 
+        -- Log error to message queue
+        EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
+              @userid   = @w_userid
+            , @batch    = @v_PSC_BATCHNAME
+            , @qual     = @w_PSC_QUALIFIER
+            , @msgno    = @ErrorNumber
+            , @severity = 0
+            , @text     = @ErrorMessage
+            , @text_2   = ''
+            , @text_3   = ''
+
+
         -- Log system error
-        INSERT INTO DBShrpn.dbo.ghr_historical_message
-        VALUES
-        (
-          @ErrorNumber      -- msg_id
-        , @v_event_id       -- event_id
-        , ''                -- emp_id
-        , ''                -- eff_date
-        , ''                -- pay_element_desc
-        , @v_step_position  -- msg_p1
-        , ''                -- msg_p2
-        , @ErrorMessage     -- msg_desc
-        , @w_activity_date  -- activity_date
-        )
+        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+              @p_msg_id             = @ErrorNumber
+            , @p_event_id           = @v_event_id
+            , @p_emp_id             = ''
+            , @p_eff_date           = ''
+            , @p_pay_element_id     = ''
+            , @p_msg_p1             = ''
+            , @p_msg_p2             = ''
+            , @p_msg_desc           = @ErrorMessage
+            , @p_activity_date      = @w_activity_date
+
 
     END CATCH
 

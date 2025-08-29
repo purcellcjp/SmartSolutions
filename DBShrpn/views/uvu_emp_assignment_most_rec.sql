@@ -122,16 +122,7 @@ SELECT ea.emp_id
      , ea.unemployment_loc_code
      , ea.include_salary_in_autopay_ind
      , ea.chgstamp
-FROM DBShrpn.dbo.emp_assignment ea
-WHERE (ea.next_eff_date = '12/31/2999')
-  AND (ea.prime_assignment_ind = 'Y')
-  AND (ea.end_date = (
-                      SELECT MAX(ea2.end_date)
-                      FROM DBShrpn..emp_assignment ea2
-                      WHERE (ea2.emp_id               = ea.emp_id)
-                        AND (ea2.prime_assignment_ind = ea.prime_assignment_ind)
-                        AND (ea2.next_eff_date        = '12/31/2999')
-                     ))
++
 GO
 
 ALTER AUTHORIZATION ON dbo.uvu_emp_assignment_most_rec TO  SCHEMA OWNER

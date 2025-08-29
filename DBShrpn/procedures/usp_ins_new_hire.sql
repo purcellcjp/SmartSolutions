@@ -18,12 +18,12 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_new_hire
 (
-	@p_userid						varchar(30),
-	@p_batchname					varchar(08),
-	@p_qualifier					varchar(30),
-    @p_activity_date				datetime,
-    @p_user_id						varchar(30),
-	@p_status						int         = 0 OUTPUT
+ @p_userid      varchar(30),
+ @p_batchname     varchar(08),
+ @p_qualifier     varchar(30),
+    @p_activity_date    datetime,
+    @p_user_id      varchar(30),
+ @p_status      int         = 0 OUTPUT
 )
 AS
 
@@ -46,48 +46,48 @@ BEGIN
     DECLARE @ErrorState                     int
 
     DECLARE @v_ret_val                      int = 0
-    DECLARE @w_msg_text						varchar(255)
-    DECLARE @w_msg_text_2					varchar(255)
-    DECLARE @w_msg_text_3					varchar(255)
-    DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					bit     = 0         --char(01)
-    DECLARE @w_trace_sw						char(01)
+    DECLARE @w_msg_text      varchar(255)
+    DECLARE @w_msg_text_2     varchar(255)
+    DECLARE @w_msg_text_3     varchar(255)
+    DECLARE @w_severity_cd     tinyint
+    DECLARE @w_fatal_error     bit     = 0         --char(01)
+    DECLARE @w_trace_sw      char(01)
 
-    DECLARE @special_value_exists			int
-    DECLARE @i_emp_id						char(15)
-    DECLARE @i_assigned_to_code				char(01)
-    DECLARE @i_job_or_pos_id				char(10)
-    DECLARE @i_eff_date						datetime
-    DECLARE @i_next_eff_date				datetime
-    DECLARE @i_prior_eff_date				datetime
-    DECLARE @i_standard_work_pd_id			char(5)
-    DECLARE @i_standard_work_hrs			float
-    DECLARE @i_yearly_std_work_hrs			float
-    DECLARE @i_hourly_rate_amt				money
-    DECLARE @i_period_amt					money
+    DECLARE @special_value_exists   int
+    DECLARE @i_emp_id      char(15)
+    DECLARE @i_assigned_to_code    char(01)
+    DECLARE @i_job_or_pos_id    char(10)
+    DECLARE @i_eff_date      datetime
+    DECLARE @i_next_eff_date    datetime
+    DECLARE @i_prior_eff_date    datetime
+    DECLARE @i_standard_work_pd_id   char(5)
+    DECLARE @i_standard_work_hrs   float
+    DECLARE @i_yearly_std_work_hrs   float
+    DECLARE @i_hourly_rate_amt    money
+    DECLARE @i_period_amt     money
 
-    DECLARE @ee_emp_id	char(15)
+    DECLARE @ee_emp_id char(15)
     DECLARE @ee_eff_date datetime
     DECLARE @ee_next_eff_date datetime
-    DECLARE @ee_prior_eff_date	datetime
+    DECLARE @ee_prior_eff_date datetime
 
 
 
 
-    --DECLARE @max			INT
-    DECLARE @maxx			VARCHAR(06)
-    --DECLARE @cnt			INT
-    --DECLARE @ind_id			INT
-    DECLARE @ind_idx		CHAR(10)
-    DECLARE @annual_salary	MONEY
-    DECLARE @tax_entity_id	CHAR(10)
-    --DECLARE @display_name	CHAR(45)
-    DECLARE @msg_id			CHAR(10)
-    --DECLARE @msg_p1			CHAR(15)
-    --DECLARE @msg_p2			CHAR(15)
-    --DECLARE @msg_cnt		INT
-    DECLARE @individual_id	CHAR(10)
-    DECLARE @pay_frequency_code		char(05)
+    --DECLARE @max   INT
+    DECLARE @maxx   VARCHAR(06)
+    --DECLARE @cnt   INT
+    --DECLARE @ind_id   INT
+    DECLARE @ind_idx  CHAR(10)
+    DECLARE @annual_salary MONEY
+    DECLARE @tax_entity_id CHAR(10)
+    --DECLARE @display_name CHAR(45)
+    DECLARE @msg_id   CHAR(10)
+    --DECLARE @msg_p1   CHAR(15)
+    --DECLARE @msg_p2   CHAR(15)
+    --DECLARE @msg_cnt  INT
+    DECLARE @individual_id CHAR(10)
+    DECLARE @pay_frequency_code  char(05)
     DECLARE @annualizing_factor float
 
 
@@ -222,47 +222,47 @@ BEGIN
     DECLARE @w_tax_auth_type_code_3                 char(01)        = ''
     DECLARE @w_tax_auth_type_code_4                 char(01)        = ''
     DECLARE @w_tax_auth_type_code_5                 char(01)        = ''
-    DECLARE @w_reg_reporting_unit_code			    char(10)        = ''
-    DECLARE @w_emp_workers_comp_cvg_cd			    char(01)        = ''
+    DECLARE @w_reg_reporting_unit_code       char(10)        = ''
+    DECLARE @w_emp_workers_comp_cvg_cd       char(01)        = ''
 
-    DECLARE @w_conv_employment_type_code			char(05)
+    DECLARE @w_conv_employment_type_code   char(05)
     DECLARE @w_eff_date                             datetime
     DECLARE @w_begin_date                           datetime
     DECLARE @w_end_date                             datetime
 
     -- This section declares the interface values from Global HR
-    DECLARE	@event_id							    char(02)
-          , @emp_id								    char(15)
-          , @eff_date							    char(10)
-          , @first_name							    char(25)
-          , @first_middle_name					    char(25)
-          , @last_name							    char(30)
-          , @empl_id							    char(10)
-          , @national_id_type_code				    char(05)
-          , @national_id						    char(20)
-          , @organization_group_id				    char(05)
-          , @organization_chart_name			    varchar(64)
-          , @organization_unit_name				    varchar(240)
-          , @emp_status_classn_code				    char(02)
-          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text_2
-          , @employment_type_code				    varchar(70)     -- increased size to 70 from 5
-          , @annual_salary_amt					    char(15)
-          , @begin_date							    char(10)
-          , @end_date							    char(10)
-          , @pay_status_code					    char(01)
-          , @pay_group_id						    char(10)
-          , @pay_element_ctrl_grp_id			    char(10)
-          , @time_reporting_meth_code			    char(01)
-          , @employment_info_chg_reason_cd		    char(05)
-          , @emp_location_code					    char(10)
-          , @emp_status_code					    char(02)
-          , @reason_code						    char(02)
-          , @emp_expected_return_date			    char(10)
-          , @pay_through_date					    char(10)
-          , @emp_death_date						    char(10)
-          , @consider_for_rehire_ind			    char(01)
-          , @pay_element_id					        char(10)
-          , @emp_calculation						char(15)
+    DECLARE @event_id           char(02)
+          , @emp_id            char(15)
+          , @eff_date           char(10)
+          , @first_name           char(25)
+          , @first_middle_name         char(25)
+          , @last_name           char(30)
+          , @empl_id           char(10)
+          , @national_id_type_code        char(05)
+          , @national_id          char(20)
+          , @organization_group_id        char(05)
+          , @organization_chart_name       varchar(64)
+          , @organization_unit_name        varchar(240)
+          , @emp_status_classn_code        char(02)
+          , @position_title          char(50)        -- DBShrpn..emp_assignment.user_text_2
+          , @employment_type_code        varchar(70)     -- increased size to 70 from 5
+          , @annual_salary_amt         char(15)
+          , @begin_date           char(10)
+          , @end_date           char(10)
+          , @pay_status_code         char(01)
+          , @pay_group_id          char(10)
+          , @pay_element_ctrl_grp_id       char(10)
+          , @time_reporting_meth_code       char(01)
+          , @employment_info_chg_reason_cd      char(05)
+          , @emp_location_code         char(10)
+          , @emp_status_code         char(02)
+          , @reason_code          char(02)
+          , @emp_expected_return_date       char(10)
+          , @pay_through_date         char(10)
+          , @emp_death_date          char(10)
+          , @consider_for_rehire_ind       char(01)
+          , @pay_element_id             char(10)
+          , @emp_calculation      char(15)
           , @tax_flag                               char(1)         -- individual_personal.ind_2
           , @nic_flag                               char(1)         -- individual_personal.ind_1
           , @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
@@ -378,7 +378,7 @@ BEGIN
              , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
+  WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -459,7 +459,7 @@ BEGIN
 
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
-            --	This section will validate the interface data
+            -- This section will validate the interface data
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Validation'
@@ -479,32 +479,31 @@ BEGIN
                     SET @msg_id = 'U00003'
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	=	@v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                        AND emp_id		=	@emp_id
-                        AND event_id		=	@v_EVENT_ID_NEW_HIRE
+                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                        AND emp_id  = @emp_id
+                        AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					    As msg_id
+                    SELECT @msg_id As msg_id
                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_NEW_HIRE As event_id,
-                            @emp_id 					As emp_id,
-                            @eff_date				As eff_date,
-                            @pay_element_id		As pay_element_id,
-                            @emp_id					As msg_p1,
-                            ''							As msg_p2,
-                            'Employee already exists'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Employee id already exists'
+                        , @p_activity_date      = @p_activity_date
 
-                    SELECT  @w_fatal_error = 1
+                    SET  @w_fatal_error = 1
 
                 END
 
@@ -528,33 +527,32 @@ BEGIN
                                 FROM DBShrpn.dbo.employer
                                 WHERE empl_id = '0' + @empl_id
                                 )
-                        SELECT @empl_id	= '0' + @empl_id
+                        SELECT @empl_id = '0' + @empl_id
                     ELSE
                         BEGIN
                             UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status	= @v_ACTIVITY_STATUS_WARNING
-                            WHERE activity_date	= @p_activity_date
-                            AND emp_id		= @emp_id
-                            AND event_id		= @v_EVENT_ID_NEW_HIRE
+                            SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                            WHERE activity_date = @p_activity_date
+                            AND emp_id  = @emp_id
+                            AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                             INSERT INTO #tbl_ghr_msg
-                            SELECT @msg_id					    As msg_id
+                            SELECT @msg_id         As msg_id
                                 , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
 
                             -- Historical Message for reporting purpose
-                            INSERT INTO DBShrpn.dbo.ghr_historical_message
-                            SELECT  @msg_id					As msg_id,
-                                    @v_EVENT_ID_NEW_HIRE						As event_id,
-                                    @emp_id 					As emp_id,
-                                    @eff_date				As eff_date,
-                                    @pay_element_id		As pay_element_id,
-                                    @emp_id					As msg_p1,
-                                    @empl_id					As msg_p2,
-                                    'Employer does not exists - defaulting 99999'	As msg_desc,
-                                    @p_activity_date			AS activity_date
-                            -- End of Historical Message for reporting purpose
+                            EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                                @p_msg_id             = @msg_id
+                                , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                                , @p_emp_id             = @emp_id
+                                , @p_eff_date           = @eff_date
+                                , @p_pay_element_id     = ''
+                                , @p_msg_p1             = ''
+                                , @p_msg_p2             = ''
+                                , @p_msg_desc           = 'Invalid Employer id - defaulting to 99999'
+                                , @p_activity_date      = @p_activity_date
 
                             SELECT @empl_id = '99999'
 
@@ -565,45 +563,40 @@ BEGIN
             ---------------------------------------------------------------------------
             -- Check for the exists of the national id
             ---------------------------------------------------------------------------
-
-
-            IF	(@national_id = '')
+            IF (@national_id = '')
                 BEGIN
 
                     SET @msg_id = 'U00046'
                     SET @v_step_position = 'Validation - ' + @msg_id
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	@v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id		=	@emp_id
-                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
+                    SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id  = @emp_id
+                    AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id						As msg_id
+                    SELECT @msg_id      As msg_id
                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					    As msg_id,
-                            @v_EVENT_ID_NEW_HIRE					As event_id,
-                            @emp_id 					As emp_id,
-                            @eff_date				As eff_date,
-                            @pay_element_id		As pay_element_id,
-                            @emp_id					As msg_p1,
-                            @national_id			As msg_p2,
-                            'NIS nbr is blank - defaulting 99999'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                        , @p_activity_date      = @p_activity_date
 
-                    SELECT  @national_id = '99999'
+                    SET  @national_id = '99999'
                 END
             ELSE
-                IF	(@national_id = '99999')
-                    SELECT @national_id = '99999'
-                ELSE
+                IF (@national_id <> '99999')
                     BEGIN
                         IF  EXISTS (
                                     SELECT *
@@ -616,31 +609,30 @@ BEGIN
                                 SET @v_step_position = 'Begin ' + @msg_id
 
                                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
-                                WHERE activity_date	=	@p_activity_date
-                                AND emp_id		=	@emp_id
-                                AND event_id		=	@v_EVENT_ID_NEW_HIRE
+                                SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                                WHERE activity_date = @p_activity_date
+                                AND emp_id  = @emp_id
+                                AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                                 INSERT INTO #tbl_ghr_msg
-                                SELECT @msg_id						As msg_id
+                                SELECT @msg_id      As msg_id
                                     , REPLACE(REPLACE(t.msg_text, '@1', @emp_id), '@2', @national_id) AS msg_desc
                                 FROM #tbl_msg_master t
                                 WHERE (msg_id = @msg_id)
 
                                 -- Historical Message for reporting purpose
-                                INSERT INTO DBShrpn.dbo.ghr_historical_message
-                                SELECT  @msg_id					As msg_id,
-                                        @v_EVENT_ID_NEW_HIRE						As event_id,
-                                        @emp_id 					As emp_id,
-                                        @eff_date				As eff_date,
-                                        @pay_element_id		As pay_element_id,
-                                        @emp_id					As msg_p1,
-                                        @national_id			As msg_p2,
-                                        'NIS nbr already exists - defaulting 99999'	As msg_desc,
-                                        @p_activity_date			AS activity_date
-                                -- End of Historical Message for reporting purpose
+                                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                                    @p_msg_id             = @msg_id
+                                    , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                                    , @p_emp_id             = @emp_id
+                                    , @p_eff_date           = @eff_date
+                                    , @p_pay_element_id     = ''
+                                    , @p_msg_p1             = @national_id
+                                    , @p_msg_p2             = ''
+                                    , @p_msg_desc           = 'NIS number already in use - defaulting to 99999'
+                                    , @p_activity_date      = @p_activity_date
 
-                                SELECT @national_id = '99999'
+                                SET @national_id = '99999'
                             END
                     END
 
@@ -654,76 +646,75 @@ BEGIN
                     SET @v_step_position = 'Begin ' + @msg_id
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	=	@v_ACTIVITY_STATUS_WARNING
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id		=	@emp_id
-                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
+                    SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id  = @emp_id
+                    AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					As msg_id
+                    SELECT @msg_id     As msg_id
                          , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_NEW_HIRE						As event_id,
-                            @emp_id 					As emp_id,
-                            @eff_date				As eff_date,
-                            @pay_element_id		As pay_element_id,
-                            @emp_id					As msg_p1,
-                            ''							As msg_p2,
-                            'NIS nbr was blank - defaulting 99999'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                        , @p_activity_date      = @p_activity_date
 
-                    SELECT @national_id = '99999'
+                    SET @national_id = '99999'
                 END
 
 
 
 
             ---------------------------------------------------------------------------
-            --	Check to see if pay group id exists
+            -- Check to see if pay group id exists
             ---------------------------------------------------------------------------
             SET @msg_id = 'U00020'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF NOT EXISTS(
                         SELECT *
-                        FROM	DBShrpn.dbo.pay_group
-                        WHERE	pay_group_id = @pay_group_id
+                        FROM DBShrpn.dbo.pay_group
+                        WHERE pay_group_id = @pay_group_id
                         )
                 BEGIN
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	=	@p_activity_date
-                    AND emp_id		=	@emp_id
-                    AND event_id		=	@v_EVENT_ID_NEW_HIRE
+                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id  = @emp_id
+                    AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					As msg_id
+                    SELECT @msg_id     As msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id					As msg_id,
-                            @v_EVENT_ID_NEW_HIRE As event_id,
-                            @emp_id 					As emp_id,
-                            @eff_date				As eff_date,
-                            @pay_element_id		As pay_element_id,
-                            @emp_id					As msg_p1,
-                            @pay_group_id			As msg_p2,
-                            'Pay Group does not exists'	As msg_desc,
-                            @p_activity_date			AS activity_date
-                    -- End of Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = @pay_group_id
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Invalid pay group id'
+                        , @p_activity_date      = @p_activity_date
 
-                    SET	@pay_group_id = ' '
+
+                    SET @pay_group_id = ' '
 
                     SET  @w_fatal_error = 1
 
@@ -748,14 +739,14 @@ BEGIN
                     -- Use default employee type value
                     --SET @w_conv_employment_type_code = 'XXXXX'
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status	= @v_ACTIVITY_STATUS_WARNING
-                    WHERE activity_date	= @p_activity_date
-                    AND emp_id		= @emp_id
-                    AND event_id		= @v_EVENT_ID_NEW_HIRE
+                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id  = @emp_id
+                    AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id					        As msg_id
+                    SELECT @msg_id             As msg_id
                          , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -790,14 +781,14 @@ BEGIN
                         -- Use default employee type value
                         --SET @w_conv_employment_type_code = 'XXXXX'
 
-                        UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= @v_ACTIVITY_STATUS_WARNING
-                        WHERE activity_date	= @p_activity_date
-                        AND emp_id		= @emp_id
-                        AND event_id		= @v_EVENT_ID_NEW_HIRE
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                        WHERE activity_date = @p_activity_date
+                        AND emp_id  = @emp_id
+                        AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id					        As msg_id
+                        SELECT @msg_id             As msg_id
                                 , REPLACE(REPLACE(t.msg_text, '@1', @w_conv_employment_type_code), '@2', @emp_id) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -872,7 +863,7 @@ BEGIN
             ---------------------------------------------------------------------------
             -- GOSL not using tm_pd_policy
             /*
-            SELECT @pay_frequency_code	= pay_frequency_code
+            SELECT @pay_frequency_code = pay_frequency_code
                 , @annualizing_factor = annualizing_factor
             FROM DBShrpn.dbo.pay_group
             WHERE pay_group_id = @pay_group_id
@@ -1054,18 +1045,18 @@ BEGIN
             SET @v_step_position = 'Lookup emp_employment'
 
             SELECT @ee_emp_id         = eempl.emp_id
-                 , @ee_eff_date		  = eempl.eff_date
+                 , @ee_eff_date    = eempl.eff_date
                  , @ee_next_eff_date  = eempl.next_eff_date
                  , @ee_prior_eff_date = eempl.prior_eff_date
             FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
-            WHERE (emp_id =	@emp_id)
+            WHERE (emp_id = @emp_id)
 
 
             -- Make sure new record end date = end of time date
             SET @v_step_position = 'Set emp_employment end date'
 
-            IF	(@ee_next_eff_date <> @v_END_OF_TIME_DATE)
-                UPDATE	DBShrpn.dbo.emp_employment
+            IF (@ee_next_eff_date <> @v_END_OF_TIME_DATE)
+                UPDATE DBShrpn.dbo.emp_employment
                 SET  next_eff_date = @v_END_OF_TIME_DATE
                 WHERE (emp_id = @ee_emp_id)
                   AND (eff_date = @ee_eff_date)
@@ -1082,8 +1073,8 @@ BEGIN
             -- CJP 7/7/2025
             SET @v_step_position = 'Update NIC/Tax Code'
 
-            UPDATE	DBShrpn.dbo.individual_personal
-            SET	user_ind_1 = @nic_flag
+            UPDATE DBShrpn.dbo.individual_personal
+            SET user_ind_1 = @nic_flag
               , user_ind_2 = @tax_flag
             WHERE (individual_id = @individual_id)
 

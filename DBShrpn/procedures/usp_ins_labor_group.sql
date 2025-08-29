@@ -6,17 +6,17 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF OBJECT_ID(N'dbo.usp_ins_pay_group', N'P') IS NOT NULL
+IF OBJECT_ID(N'dbo.usp_ins_labor_group', N'P') IS NOT NULL
 BEGIN
-    DROP PROCEDURE dbo.usp_ins_pay_group
-    IF OBJECT_ID(N'dbo.usp_ins_pay_group') IS NOT NULL
-        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_pay_group >>>'
+    DROP PROCEDURE dbo.usp_ins_labor_group
+    IF OBJECT_ID(N'dbo.usp_ins_labor_group') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_labor_group >>>'
     ELSE
-        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_pay_group >>>'
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_labor_group >>>'
 END
 GO
 
-CREATE PROCEDURE dbo.usp_ins_pay_group
+CREATE PROCEDURE dbo.usp_ins_labor_group
     (
       @p_userid             varchar(30)
     , @p_batchname          varchar(08)
@@ -72,14 +72,14 @@ BEGIN
     DECLARE @cur_empl_id                    char(10)
     DECLARE @cur_eempl_eff_date             datetime
     DECLARE @cur_tax_entity_id              char(10)
-    DECLARE @cur_pay_group_id               char(10)
+    DECLARE @cur_labor_grp_code             char(05)
     DECLARE @w_eff_date                     datetime
 
     -- This section declares the interface values from Global HR
     DECLARE @emp_id                         char(15)
           , @eff_date                       char(10)
           , @empl_id                        char(10)
-          , @pay_group_id                   char(10)
+          , @labor_grp_code                 char(05)
           , @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
 
@@ -198,16 +198,17 @@ BEGIN
             , msg_text_3
             , 'N' AS loop_flag
         FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00013'
+        WHERE (msg_id IN (
+                         'U00107'
                         ,'U00009'
                         ,'U00010'
                         ,'U00011'
                         ,'U00027'
                         ,'U00102'
-                        ,'U00104'
-                        ,'U00105'
-                        ,'U00106'
-                        ,'U00012'
+                        ,'U00108'
+                        ,'U00109'
+                        ,'U00110'
+                        ,'U00111'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -217,6 +218,9 @@ BEGIN
                           'U00012'
                          ,'U00020'
                          ,'U00027'
+                         ,'U00109'
+                         ,'U00110'
+                         ,'U00111'
                         ))
 
 
@@ -230,7 +234,7 @@ BEGIN
              , t.pay_group_id
              , t.file_source
         FROM #ghr_employee_events_temp t
-        WHERE (event_id = @v_EVENT_ID_PAY_GROUP)
+        WHERE (event_id = @v_EVENT_ID_LABOR_GROUP)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -240,7 +244,7 @@ BEGIN
         INTO  @emp_id
             , @eff_date
             , @empl_id
-            , @pay_group_id
+            , @labor_grp_code
             , @file_source
 
 
@@ -277,10 +281,42 @@ BEGIN
                 SET activity_status   = @v_ACTIVITY_STATUS_WARNING
                 WHERE activity_date   = @p_activity_date
                   AND emp_id =   @emp_id
-                  AND event_id = @v_EVENT_ID_PAY_GROUP
+                  AND event_id = @v_EVENT_ID_LABOR_GROUP
 
                 -- Skip record and al other validations
                 -- since pay group will be processed in the other events
+                GOTO BYPASS_EMPLOYEE
+
+            END
+
+
+            ---------------------------------------------------------------------------
+            -- Skip record if labor group code is blank
+            ---------------------------------------------------------------------------
+            IF (LEN(RTRIM(@labor_grp_code)) = 0)
+            BEGIN
+
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                WHERE activity_date   = @p_activity_date
+                  AND emp_id =   @emp_id
+                  AND event_id = @v_EVENT_ID_LABOR_GROUP
+
+                -- Historical Message for reporting purpose
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @msg_id
+                    , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
+                    , @p_emp_id             = @emp_id
+                    , @p_eff_date           = @eff_date
+                    , @p_pay_element_id     = ''
+                    , @p_msg_p1             = ''
+                    , @p_msg_p2             = ''
+                    , @p_msg_desc           = 'Labor group code is blank - bypassing record'
+                    , @p_activity_date      = @p_activity_date
+
+
+                -- Skip record and all other validations
+
                 GOTO BYPASS_EMPLOYEE
 
             END
@@ -301,19 +337,19 @@ BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status   = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
+                    AND event_id = @v_EVENT_ID_LABOR_GROUP
                     AND emp_id = @emp_id
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      AS msg_id
-                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_PAY_GROUP) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_LABOR_GROUP) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
@@ -321,6 +357,7 @@ BEGIN
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Invalid Effective Date'
                         , @p_activity_date      = @p_activity_date
+
 
                     SET @w_fatal_error = 1
 
@@ -338,10 +375,10 @@ BEGIN
             SET @msg_id = 'U00012'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            SELECT @cur_empl_id                             = eempl.empl_id
-                 , @cur_tax_entity_id                       = eempl.tax_entity_id
-                 , @cur_eempl_eff_date                      = eempl.eff_date
-                 , @cur_pay_group_id                        = eempl.pay_group_id
+            SELECT @cur_empl_id        = eempl.empl_id
+                 , @cur_tax_entity_id  = eempl.tax_entity_id
+                 , @cur_eempl_eff_date = eempl.eff_date
+                 , @cur_labor_grp_code = eempl.labor_grp_code
             FROM DBShrpn.dbo.employee emp
             JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
                  (emp.emp_id = eempl.emp_id)
@@ -354,11 +391,11 @@ BEGIN
                         SET activity_status = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
                         AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
+                        AND event_id = @v_EVENT_ID_LABOR_GROUP
 
 
                     INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id As msg_id
+                    SELECT @msg_id      As msg_id
                          , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
@@ -367,14 +404,15 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Invalid employee id.'
+                        , @p_msg_desc           = 'Employee does not exist'
                         , @p_activity_date      = @p_activity_date
+
 
                     SET @w_fatal_error = 1
 
@@ -382,24 +420,24 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            -- Is new pay group same as old pay group?
+            -- Is new labor group code same as old labor group code?
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00106'
+            SET @msg_id = 'U00109'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            IF (@pay_group_id = @cur_pay_group_id)
+            IF (@labor_grp_code = @cur_labor_grp_code)
                 BEGIN
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
                         AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
+                        AND event_id = @v_EVENT_ID_LABOR_GROUP
 
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @labor_grp_code), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -407,13 +445,13 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @pay_group_id
-                        , @p_msg_p2             = @cur_pay_group_id
-                        , @p_msg_desc           = 'New pay group is same as current pay group - bypassing record.'
+                        , @p_msg_p1             = @labor_grp_code
+                        , @p_msg_p2             = @cur_labor_grp_code
+                        , @p_msg_desc           = 'New labor group code is same as current labor group code - bypassing record.'
                         , @p_activity_date      = @p_activity_date
 
                     SET @w_fatal_error = 1
@@ -423,15 +461,16 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            -- Check to see if new pay group id exists
+            -- Is Labor Group Code Valid
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00020'
+            SET @msg_id = 'U00111'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF NOT EXISTS(
                         SELECT 1
-                        FROM DBShrpn.dbo.pay_group
-                        WHERE (pay_group_id = @pay_group_id)
+                        FROM DBShrpn.dbo.code_entry_policy
+                        WHERE (code_tbl_id = '10204')   -- 'Labor Group' code table id
+                          and (code_value = @labor_grp_code)
                         )
                 BEGIN
 
@@ -439,11 +478,11 @@ BEGIN
                     SET activity_status = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
                     AND emp_id = @emp_id
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
+                    AND event_id = @v_EVENT_ID_LABOR_GROUP
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @labor_grp_code), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -451,13 +490,13 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @emp_id
-                        , @p_msg_p2             = @pay_group_id
-                        , @p_msg_desc           = 'Invalid pay group id.'
+                        , @p_msg_p1             = @labor_grp_code
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Invalid labor group code.'
                         , @p_activity_date      = @p_activity_date
 
                     SET  @w_fatal_error = 1
@@ -479,14 +518,14 @@ BEGIN
                     SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_eff_date, 112)
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date   =   @p_activity_date
-                    AND emp_id      =   @emp_id
-                    AND event_id      =   @v_EVENT_ID_PAY_GROUP
+                    SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id = @emp_id
+                    AND event_id = @v_EVENT_ID_LABOR_GROUP
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -499,7 +538,7 @@ BEGIN
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = @w_msg_text_2
-                        , @p_msg_p2             = @pay_group_id
+                        , @p_msg_p2             = ''
                         , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
                         , @p_activity_date      = @p_activity_date
 
@@ -527,9 +566,9 @@ BEGIN
             -- Create new record
             INSERT INTO #temp14
             SELECT emp_id
-                 , @w_eff_date      -- eff_date
-                 , @v_END_OF_TIME_DATE      -- next_eff_date
-                 , @cur_eempl_eff_date      -- prior_eff_date
+                 , @w_eff_date                      -- eff_date
+                 , @v_END_OF_TIME_DATE              -- next_eff_date
+                 , @cur_eempl_eff_date              -- prior_eff_date
                  , employment_type_code
                  , work_tm_code
                  , official_title_code
@@ -557,13 +596,13 @@ BEGIN
                  , time_reporting_meth_code
                  , regular_hrs_tracked_code
                  , pay_element_ctrl_grp_id
-                 , @pay_group_id        -- pay_group_id
+                 , pay_group_id
                  , us_pension_ind
                  , professional_cat_code
                  , corporate_officer_ind
                  , prim_disbursal_loc_code
                  , alternate_disbursal_loc_code
-                 , labor_grp_code
+                 , @labor_grp_code                  -- labor_grp_code
                  , employment_info_chg_reason_cd
                  , highly_compensated_emp_ind
                  , nbr_of_dependent_children
@@ -719,7 +758,7 @@ BYPASS_EMPLOYEE:
             INTO  @emp_id
                 , @eff_date
                 , @empl_id
-                , @pay_group_id
+                , @labor_grp_code
                 , @file_source
 
 
@@ -734,7 +773,7 @@ BYPASS_EMPLOYEE:
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00013  -- < PAY GROUP SECTION (8) >
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U00104'
+        SET @msg_id = 'U00107'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @w_msg_text    = msg_text
@@ -785,7 +824,7 @@ BYPASS_EMPLOYEE:
         SET @msg_id = 'U00011'
         SET @v_step_position = 'Log ' + @msg_id
 
-        SELECT @w_msg_text    = msg_text
+        SELECT @w_msg_text   = msg_text
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
@@ -809,7 +848,7 @@ BYPASS_EMPLOYEE:
         SET @msg_id = 'U00016'
         SET @v_step_position = 'Log ' + @msg_id
 
-        SELECT @msg_id        = msg_id
+        SELECT @msg_id       = msg_id
             , @w_msg_text    = msg_text
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
@@ -820,13 +859,13 @@ BYPASS_EMPLOYEE:
         -- Get total name records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM #ghr_employee_events_temp
-        WHERE (event_id =   @v_EVENT_ID_PAY_GROUP)
+        WHERE (event_id =   @v_EVENT_ID_LABOR_GROUP)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+              @userid   = @p_userid
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1008,11 +1047,11 @@ BYPASS_EMPLOYEE:
 END
 GO
 
-ALTER AUTHORIZATION ON dbo.usp_ins_pay_group TO  SCHEMA OWNER
+ALTER AUTHORIZATION ON dbo.usp_ins_labor_group TO  SCHEMA OWNER
 GO
 
-IF OBJECT_ID(N'dbo.usp_ins_pay_group', N'P') IS NOT NULL
-    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_pay_group >>>'
+IF OBJECT_ID(N'dbo.usp_ins_labor_group', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_labor_group >>>'
 ELSE
-    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_pay_group >>>'
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_labor_group >>>'
 GO

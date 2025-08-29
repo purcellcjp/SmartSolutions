@@ -6,17 +6,17 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF OBJECT_ID(N'dbo.usp_ins_pay_group', N'P') IS NOT NULL
+IF OBJECT_ID(N'dbo.usp_ins_position_title', N'P') IS NOT NULL
 BEGIN
-    DROP PROCEDURE dbo.usp_ins_pay_group
-    IF OBJECT_ID(N'dbo.usp_ins_pay_group') IS NOT NULL
-        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_pay_group >>>'
+    DROP PROCEDURE dbo.usp_ins_position_title
+    IF OBJECT_ID(N'dbo.usp_ins_position_title') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_position_title >>>'
     ELSE
-        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_pay_group >>>'
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_position_title >>>'
 END
 GO
 
-CREATE PROCEDURE dbo.usp_ins_pay_group
+CREATE PROCEDURE dbo.usp_ins_position_title
     (
       @p_userid             varchar(30)
     , @p_batchname          varchar(08)
@@ -63,25 +63,22 @@ BEGIN
     DECLARE @w_severity_cd                  tinyint
     DECLARE @w_fatal_error                  bit     = 0         --char(01)
 
-    DECLARE @individual_id                  char(10)
-    DECLARE @prior_last_name                char(30)
-
     DECLARE @maxx                           char(06)
     DECLARE @msg_id                         char(10)
+    DECLARE @cur_ea_assigned_to_code        char(1)
+    DECLARE @cur_ea_job_or_pos_id           char(10)
+    DECLARE @cur_ea_eff_date                datetime
+    DECLARE @cur_ea_user_text_2             char(50)
 
-    DECLARE @cur_empl_id                    char(10)
-    DECLARE @cur_eempl_eff_date             datetime
-    DECLARE @cur_tax_entity_id              char(10)
-    DECLARE @cur_pay_group_id               char(10)
     DECLARE @w_eff_date                     datetime
+
 
     -- This section declares the interface values from Global HR
     DECLARE @emp_id                         char(15)
-          , @eff_date                       char(10)
-          , @empl_id                        char(10)
-          , @pay_group_id                   char(10)
-          , @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
-
+    DECLARE @eff_date                       char(10)
+    DECLARE @empl_id                        char(10)
+    DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+    DECLARE @position_title				    char(50)        -- DBShrpn..emp_assignment.user_text_2
 
     CREATE TABLE #tbl_ghr_msg
         (
@@ -100,89 +97,6 @@ BEGIN
         , loop_flag                         char(1)             NOT NULL
         )
 
-
-    -- work table for emp employment insert
-    CREATE TABLE #temp14
-        (
-          emp_id                            char(15)            NOT NULL
-        , eff_date                          datetime            NOT NULL
-        , next_eff_date                     datetime            NOT NULL
-        , prior_eff_date                    datetime            NOT NULL
-        , employment_type_code              char(5)             NOT NULL
-        , work_tm_code                      char(1)             NOT NULL
-        , official_title_code               char(5)             NOT NULL
-        , official_title_date               datetime            NOT NULL
-        , mgr_ind                           char(1)             NOT NULL
-        , recruiter_ind                     char(1)             NOT NULL
-        , pensioner_indicator               char(1)             NOT NULL
-        , payroll_company_code              char(5)             NOT NULL
-        , pmt_ctrl_code                     char(5)             NOT NULL
-        , us_federal_tax_meth_code          char(1)             NOT NULL
-        , us_federal_tax_amt                money               NOT NULL
-        , us_federal_tax_pct                money               NOT NULL
-        , us_federal_marital_status_code    char(1)             NOT NULL
-        , us_federal_exemp_nbr              tinyint             NOT NULL
-        , us_work_st_code                   char(2)             NOT NULL
-        , canadian_work_province_code       char(2)             NOT NULL
-        , ipp_payroll_id                    char(5)             NOT NULL
-        , ipp_max_pay_level_amt             money               NOT NULL
-        , pay_through_date                  datetime            NOT NULL
-        , empl_id                           char(10)            NOT NULL
-        , tax_entity_id                     char(10)            NOT NULL
-        , pay_status_code                   char(1)             NOT NULL
-        , clock_nbr                         char(10)            NOT NULL
-        , provided_i_9_ind                  char(1)             NOT NULL
-        , time_reporting_meth_code          char(1)             NOT NULL
-        , regular_hrs_tracked_code          char(1)             NOT NULL
-        , pay_element_ctrl_grp_id           char(10)            NOT NULL
-        , pay_group_id                      char(10)            NOT NULL
-        , us_pension_ind                    char(1)             NOT NULL
-        , professional_cat_code             char(5)             NOT NULL
-        , corporate_officer_ind             char(1)             NOT NULL
-        , prim_disbursal_loc_code           char(10)            NOT NULL
-        , alternate_disbursal_loc_code      char(10)            NOT NULL
-        , labor_grp_code                    char(5)             NOT NULL
-        , employment_info_chg_reason_cd     char(5)             NOT NULL
-        , highly_compensated_emp_ind        char(1)             NOT NULL
-        , nbr_of_dependent_children         tinyint             NOT NULL
-        , canadian_federal_tax_meth_cd      char(1)             NOT NULL
-        , canadian_federal_tax_amt          money               NOT NULL
-        , canadian_federal_tax_pct          money               NOT NULL
-        , canadian_federal_claim_amt        money               NOT NULL
-        , canadian_province_claim_amt       money               NOT NULL
-        , tax_unit_code                     char(5)             NOT NULL
-        , requires_tm_card_ind              char(1)             NOT NULL
-        , xfer_type_code                    char(1)             NOT NULL
-        , tax_clear_code                    char(1)             NOT NULL
-        , pay_type_code                     char(1)             NOT NULL
-        , labor_distn_code                  char(14)            NOT NULL
-        , labor_distn_ext_code              char(30)            NOT NULL
-        , us_fui_status_code                char(1)             NOT NULL
-        , us_fica_status_code               char(1)             NOT NULL
-        , payable_through_bank_id           char(11)            NOT NULL
-        , disbursal_seq_nbr_1               char(30)            NOT NULL
-        , disbursal_seq_nbr_2               char(30)            NOT NULL
-        , non_employee_indicator            char(1)             NOT NULL
-        , excluded_from_payroll_ind         char(1)             NOT NULL
-        , emp_info_source_code              char(1)             NOT NULL
-        , user_amt_1                        float               NOT NULL
-        , user_amt_2                        float               NOT NULL
-        , user_monetary_amt_1               money               NOT NULL
-        , user_monetary_amt_2               money               NOT NULL
-        , user_monetary_curr_code           char(3)             NOT NULL
-        , user_code_1                       char(5)             NOT NULL
-        , user_code_2                       char(5)             NOT NULL
-        , user_date_1                       datetime            NOT NULL
-        , user_date_2                       datetime            NOT NULL
-        , user_ind_1                        char(1)             NOT NULL
-        , user_ind_2                        char(1)             NOT NULL
-        , user_text_1                       char(50)            NOT NULL
-        , user_text_2                       char(50)            NOT NULL
-        , t4_employ_code                    char(2)             NOT NULL
-        , chgstamp                          smallint            NOT NULL
-        )
-
-
     BEGIN TRY
 
         SET @v_step_position = '#tbl_msg_master'
@@ -198,16 +112,17 @@ BEGIN
             , msg_text_3
             , 'N' AS loop_flag
         FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00013'
-                        ,'U00009'
+        WHERE (msg_id IN (
+                         'U00009'
                         ,'U00010'
                         ,'U00011'
+                        ,'U00012'
                         ,'U00027'
                         ,'U00102'
-                        ,'U00104'
-                        ,'U00105'
-                        ,'U00106'
-                        ,'U00012'
+                        ,'U00115'
+                        ,'U00116'
+                        ,'U00117'
+                        ,'U00118'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -215,8 +130,9 @@ BEGIN
         SET loop_flag = 'Y'
         WHERE (msg_id IN (
                           'U00012'
-                         ,'U00020'
                          ,'U00027'
+                         ,'U00117'
+                         ,'U00118'
                         ))
 
 
@@ -227,10 +143,10 @@ BEGIN
         SELECT t.emp_id
              , t.eff_date
              , t.empl_id
-             , t.pay_group_id
+             , t.position_title
              , t.file_source
         FROM #ghr_employee_events_temp t
-        WHERE (event_id = @v_EVENT_ID_PAY_GROUP)
+        WHERE (event_id = @v_EVENT_ID_POSITION_TITLE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -240,7 +156,7 @@ BEGIN
         INTO  @emp_id
             , @eff_date
             , @empl_id
-            , @pay_group_id
+            , @position_title
             , @file_source
 
 
@@ -259,8 +175,38 @@ BEGIN
             SET @v_step_position = 'Begin Validation'
 
 
+            ---------------------------------------------------------------------------
+            -- Skip record if position title is blank
+            ---------------------------------------------------------------------------
+            IF (LEN(RTRIM(@position_title)) = 0)
+            BEGIN
 
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                WHERE activity_date   = @p_activity_date
+                  AND emp_id =   @emp_id
+                  AND event_id = @v_EVENT_ID_POSITION_TITLE
+
+                -- Historical Message for reporting purpose
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @msg_id
+                    , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
+                    , @p_emp_id             = @emp_id
+                    , @p_eff_date           = @eff_date
+                    , @p_pay_element_id     = ''
+                    , @p_msg_p1             = ''
+                    , @p_msg_p2             = ''
+                    , @p_msg_desc           = 'Position title is blank - bypassing record'
+                    , @p_activity_date      = @p_activity_date
+
+                -- Skip record and all other validations
+                GOTO BYPASS_EMPLOYEE
+
+            END
+
+            ---------------------------------------------------------------------------
             --Skip Record if associate also has New Hire, Transfer, Status Change
+            ---------------------------------------------------------------------------
             IF EXISTS (
                 SELECT 1
                 FROM #ghr_employee_events_temp
@@ -277,10 +223,11 @@ BEGIN
                 SET activity_status   = @v_ACTIVITY_STATUS_WARNING
                 WHERE activity_date   = @p_activity_date
                   AND emp_id =   @emp_id
-                  AND event_id = @v_EVENT_ID_PAY_GROUP
+                  AND event_id = @v_EVENT_ID_POSITION_TITLE
 
-                -- Skip record and al other validations
-                -- since pay group will be processed in the other events
+
+                -- Skip record and all other validations
+                -- since labor group will be processed in the other events
                 GOTO BYPASS_EMPLOYEE
 
             END
@@ -301,19 +248,19 @@ BEGIN
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                     SET activity_status   = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
+                    AND event_id = @v_EVENT_ID_POSITION_TITLE
                     AND emp_id = @emp_id
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      AS msg_id
-                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_PAY_GROUP) AS msg_desc
+                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_POSITION_TITLE) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
@@ -321,6 +268,7 @@ BEGIN
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Invalid Effective Date'
                         , @p_activity_date      = @p_activity_date
+
 
                     SET @w_fatal_error = 1
 
@@ -338,13 +286,13 @@ BEGIN
             SET @msg_id = 'U00012'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            SELECT @cur_empl_id                             = eempl.empl_id
-                 , @cur_tax_entity_id                       = eempl.tax_entity_id
-                 , @cur_eempl_eff_date                      = eempl.eff_date
-                 , @cur_pay_group_id                        = eempl.pay_group_id
+            SELECT @cur_ea_assigned_to_code     = ea.assigned_to_code
+                 , @cur_ea_job_or_pos_id        = ea.job_or_pos_id
+                 , @cur_ea_eff_date             = ea.eff_date
+                 , @cur_ea_user_text_2          = ea.user_text_2
             FROM DBShrpn.dbo.employee emp
-            JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
-                 (emp.emp_id = eempl.emp_id)
+            JOIN DBShrpn.dbo.uvu_emp_assignment_most_rec ea ON
+                 (emp.emp_id = ea.emp_id)
             WHERE (emp.emp_id = @emp_id)
 
             IF (@@ROWCOUNT = 0)
@@ -354,7 +302,7 @@ BEGIN
                         SET activity_status = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
                         AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
+                        AND event_id = @v_EVENT_ID_POSITION_TITLE
 
 
                     INSERT INTO #tbl_ghr_msg
@@ -367,13 +315,13 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Invalid employee id.'
+                        , @p_msg_desc           = 'Employee does not exist'
                         , @p_activity_date      = @p_activity_date
 
                     SET @w_fatal_error = 1
@@ -382,24 +330,24 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            -- Is new pay group same as old pay group?
+            -- Is new position title same as old position title?
             ---------------------------------------------------------------------------
-            SET @msg_id = 'U00106'
+            SET @msg_id = 'U00117'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            IF (@pay_group_id = @cur_pay_group_id)
+            IF (@position_title = @cur_ea_user_text_2)
                 BEGIN
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
                         SET activity_status = @v_ACTIVITY_STATUS_BAD
                     WHERE activity_date = @p_activity_date
                         AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
+                        AND event_id = @v_EVENT_ID_POSITION_TITLE
 
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
+                         , REPLACE(REPLACE(t.msg_text, '@1', @position_title), '@2', @emp_id) AS msg_desc
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
@@ -407,14 +355,15 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @pay_group_id
-                        , @p_msg_p2             = @cur_pay_group_id
-                        , @p_msg_desc           = 'New pay group is same as current pay group - bypassing record.'
+                        , @p_msg_p1             = @position_title
+                        , @p_msg_p2             = @cur_ea_user_text_2
+                        , @p_msg_desc           = 'New position title is same as current position title - bypassing record.'
                         , @p_activity_date      = @p_activity_date
+
 
                     SET @w_fatal_error = 1
 
@@ -422,47 +371,6 @@ BEGIN
 
 
 
-            ---------------------------------------------------------------------------
-            -- Check to see if new pay group id exists
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00020'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-            IF NOT EXISTS(
-                        SELECT 1
-                        FROM DBShrpn.dbo.pay_group
-                        WHERE (pay_group_id = @pay_group_id)
-                        )
-                BEGIN
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                    AND emp_id = @emp_id
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @emp_id
-                        , @p_msg_p2             = @pay_group_id
-                        , @p_msg_desc           = 'Invalid pay group id.'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET  @w_fatal_error = 1
-
-                END
 
 
             ---------------------------------------------------------------------------
@@ -472,17 +380,17 @@ BEGIN
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
             IF (@w_fatal_error = 0) AND
-               (@w_eff_date <= @cur_eempl_eff_date)
+               (@w_eff_date <= @cur_ea_eff_date)
                 BEGIN
 
                     -- Convert date to string for log table
-                    SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_eff_date, 112)
+                    SET @w_msg_text_2 = CONVERT(char(8), @cur_ea_eff_date, 112)
 
                     UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date   =   @p_activity_date
-                    AND emp_id      =   @emp_id
-                    AND event_id      =   @v_EVENT_ID_PAY_GROUP
+                    SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                    AND emp_id = @emp_id
+                    AND event_id = @v_EVENT_ID_POSITION_TITLE
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id As msg_id
@@ -494,14 +402,15 @@ BEGIN
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                           @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
+                        , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = @w_msg_text_2
-                        , @p_msg_p2             = @pay_group_id
+                        , @p_msg_p2             = ''
                         , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
                         , @p_activity_date      = @p_activity_date
+
 
                     SET  @w_fatal_error = 1
 
@@ -514,203 +423,116 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            -- Update Employee Employment with new Pay Group
+            -- Update Employee Assignment with new position title
             ---------------------------------------------------------------------------
 
-            -- Update current record date pointers
-            UPDATE DBShrpn.dbo.emp_employment
+            -- Update date pointer on old record
+            UPDATE DBShrpn.dbo.emp_assignment
             SET next_eff_date = @w_eff_date
-            WHERE (emp_id = @emp_id)
-              AND (eff_date = @w_eff_date)
+            WHERE emp_id = @emp_id
+              AND (assigned_to_code = @cur_ea_assigned_to_code)
+              AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
+              AND (eff_date         = @cur_ea_eff_date)
 
 
-            -- Create new record
-            INSERT INTO #temp14
-            SELECT emp_id
-                 , @w_eff_date      -- eff_date
-                 , @v_END_OF_TIME_DATE      -- next_eff_date
-                 , @cur_eempl_eff_date      -- prior_eff_date
-                 , employment_type_code
-                 , work_tm_code
-                 , official_title_code
-                 , official_title_date
-                 , mgr_ind
-                 , recruiter_ind
-                 , pensioner_indicator
-                 , payroll_company_code
-                 , pmt_ctrl_code
-                 , us_federal_tax_meth_code
-                 , us_federal_tax_amt
-                 , us_federal_tax_pct
-                 , us_federal_marital_status_code
-                 , us_federal_exemp_nbr
-                 , us_work_st_code
-                 , canadian_work_province_code
-                 , ipp_payroll_id
-                 , ipp_max_pay_level_amt
-                 , pay_through_date
-                 , empl_id
-                 , tax_entity_id
-                 , pay_status_code
-                 , clock_nbr
-                 , provided_i_9_ind
-                 , time_reporting_meth_code
-                 , regular_hrs_tracked_code
-                 , pay_element_ctrl_grp_id
-                 , @pay_group_id        -- pay_group_id
-                 , us_pension_ind
-                 , professional_cat_code
-                 , corporate_officer_ind
-                 , prim_disbursal_loc_code
-                 , alternate_disbursal_loc_code
-                 , labor_grp_code
-                 , employment_info_chg_reason_cd
-                 , highly_compensated_emp_ind
-                 , nbr_of_dependent_children
-                 , canadian_federal_tax_meth_cd
-                 , canadian_federal_tax_amt
-                 , canadian_federal_tax_pct
-                 , canadian_federal_claim_amt
-                 , canadian_province_claim_amt
-                 , tax_unit_code
-                 , requires_tm_card_ind
-                 , xfer_type_code
-                 , tax_clear_code
-                 , pay_type_code
-                 , labor_distn_code
-                 , labor_distn_ext_code
-                 , us_fui_status_code
-                 , us_fica_status_code
-                 , payable_through_bank_id
-                 , disbursal_seq_nbr_1
-                 , disbursal_seq_nbr_2
-                 , non_employee_indicator
-                 , excluded_from_payroll_ind
-                 , emp_info_source_code
-                 , user_amt_1
-                 , user_amt_2
-                 , user_monetary_amt_1
-                 , user_monetary_amt_2
-                 , user_monetary_curr_code
-                 , user_code_1
-                 , user_code_2
-                 , user_date_1
-                 , user_date_2
-                 , user_ind_1
-                 , user_ind_2
-                 , user_text_1
-                 , user_text_2
-                 , t4_employ_code
-                 , chgstamp
-            FROM DBShrpn.dbo.emp_employment
-            WHERE (emp_id   = @emp_id)
-              AND (eff_date = @cur_eempl_eff_date)
-
-
-            INSERT INTO emp_employment
-            SELECT emp_id
-                , eff_date
-                , next_eff_date
-                , prior_eff_date
-                , employment_type_code
-                , work_tm_code
-                , official_title_code
-                , official_title_date
-                , mgr_ind
-                , recruiter_ind
-                , pensioner_indicator
-                , payroll_company_code
-                , pmt_ctrl_code
-                , us_federal_tax_meth_code
-                , us_federal_tax_amt
-                , us_federal_tax_pct
-                , us_federal_marital_status_code
-                , us_federal_exemp_nbr
-                , us_work_st_code
-                , canadian_work_province_code
-                , ipp_payroll_id
-                , ipp_max_pay_level_amt
-                , pay_through_date
-                , empl_id
-                , tax_entity_id
-                , pay_status_code
-                , clock_nbr
-                , provided_i_9_ind
-                , time_reporting_meth_code
-                , regular_hrs_tracked_code
-                , pay_element_ctrl_grp_id
-                , pay_group_id
-                , us_pension_ind
-                , professional_cat_code
-                , corporate_officer_ind
-                , prim_disbursal_loc_code
-                , alternate_disbursal_loc_code
-                , labor_grp_code
-                , employment_info_chg_reason_cd
-                , highly_compensated_emp_ind
-                , nbr_of_dependent_children
-                , canadian_federal_tax_meth_cd
-                , canadian_federal_tax_amt
-                , canadian_federal_tax_pct
-                , canadian_federal_claim_amt
-                , canadian_province_claim_amt
-                , tax_unit_code
-                , requires_tm_card_ind
-                , xfer_type_code
-                , tax_clear_code
-                , pay_type_code
-                , labor_distn_code
-                , labor_distn_ext_code
-                , us_fui_status_code
-                , us_fica_status_code
-                , payable_through_bank_id
-                , disbursal_seq_nbr_1
-                , disbursal_seq_nbr_2
-                , non_employee_indicator
-                , excluded_from_payroll_ind
-                , emp_info_source_code
-                , user_amt_1
-                , user_amt_2
-                , user_monetary_amt_1
-                , user_monetary_amt_2
-                , user_monetary_curr_code
-                , user_code_1
-                , user_code_2
-                , user_date_1
-                , user_date_2
-                , user_ind_1
-                , user_ind_2
-                , user_text_1
-                , user_text_2
-                , t4_employ_code
-                , chgstamp
-            FROM #temp14 t14
-            WHERE NOT EXISTS (
-                              SELECT 1
-                              FROM DBShrpn.dbo.emp_employment t2
-                              WHERE (t2.emp_id = t14.emp_id)
-                                AND (t2.eff_date = @w_eff_date)
-                             )
-
-
-
-/*  DO WE NEED TO CREATE AN AUDIT RECORD?????
-    -- WE'LL NEED AN ACTIVITY ACTION CODE
-
-        INSERT INTO work_emp_employment_aud
-            (user_id, activity_action_code, action_date, emp_id, eff_date,
-            next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
-            new_tax_entity_id, xfer_date, pay_through_date)
-        VALUES
-            (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
-            @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
-
-        DELETE work_emp_employment_aud
-        WHERE user_id = @W_ACTION_USER
-        AND activity_action_code = 'ERTRANSFER'
-        AND emp_id = @emp_id
-*/
-
+            -- insert new record
+            INSERT DBShrpn.dbo.emp_assignment
+            SELECT emp_id                                                    -- emp_id                                 char(15)
+                        , assigned_to_code                                          -- assigned_to_code                       char(1)
+                        , job_or_pos_id                                             -- job_or_pos_id                          char(10)
+                        , @w_eff_date                                               -- eff_date                               datetime
+                        , @v_END_OF_TIME_DATE                                       -- next_eff_date                          datetime
+                        , @cur_ea_eff_date                                          -- prior_eff_date                         datetime
+                        , next_assigned_to_code                                     -- next_assigned_to_code                  char(1)
+                        , next_job_or_pos_id                                        -- next_job_or_pos_id                     char(10)
+                        , prior_assigned_to_code                                    -- prior_assigned_to_code                 char(1)
+                        , prior_job_or_pos_id                                       -- prior_job_or_pos_id                    char(10)
+                        , begin_date                                                -- begin_date                             datetime
+                        , end_date                                                  -- end_date                               datetime
+                        , assignment_reason_code                                    -- assignment_reason_code                 char(5)
+                        , organization_chart_name                                   -- organization_chart_name                varchar(
+                        , organization_unit_name                                    -- organization_unit_name                 varchar(
+                        , organization_group_id                                     -- organization_group_id                  int
+                        , organization_change_reason_cd                             -- organization_change_reason_cd          char(5)
+                        , loc_code                                                  -- loc_code                               char(10)
+                        , mgr_emp_id                                                -- mgr_emp_id                             char(15)
+                        , official_title_code                                       -- official_title_code                    char(5)
+                        , official_title_date                                       -- official_title_date                    datetime
+                        , salary_change_date                                        -- salary_change_date                     datetime
+                        , annual_salary_amt                                         -- annual_salary_amt                      money
+                        , pd_salary_amt                                             -- pd_salary_amt                          money
+                        , pd_salary_tm_pd_id                                        -- pd_salary_tm_pd_id                     char(5)
+                        , hourly_pay_rate                                           -- hourly_pay_rate                        float
+                        , curr_code                                                 -- curr_code                              char(3)
+                        , pay_on_reported_hrs_ind                                   -- pay_on_reported_hrs_ind                char(1)
+                        , ''                                                        -- salary_change_type_code                char(5)
+                        , standard_work_pd_id                                       -- standard_work_pd_id                    char(5)
+                        , standard_work_hrs                                         -- standard_work_hrs                      float
+                        , work_tm_code                                           -- work_tm_code                           char(1)
+                        , work_shift_code                                           -- work_shift_code                        char(5)
+                        , salary_structure_id                                       -- salary_structure_id                    char(10)
+                        , salary_increase_guideline_id                              -- salary_increase_guideline_id           char(10)
+                        , pay_grade_code                                            -- pay_grade_code                         char(6)
+                        , pay_grade_date                                            -- pay_grade_date                         datetime
+                        , job_evaluation_points_nbr                                 -- job_evaluation_points_nbr              smallint
+                        , salary_step_nbr                                           -- salary_step_nbr                        smallint
+                        , salary_step_date                                          -- salary_step_date                       datetime
+                        , phone_1_type_code                                         -- phone_1_type_code                      char(5)
+                        , phone_1_fmt_code                                          -- phone_1_fmt_code                       char(6)
+                        , phone_1_fmt_delimiter                                     -- phone_1_fmt_delimiter                  char(1)
+                        , phone_1_intl_code                                         -- phone_1_intl_code                      char(4)
+                        , phone_1_country_code                                      -- phone_1_country_code                   char(4)
+                        , phone_1_area_city_code                                    -- phone_1_area_city_code                 char(5)
+                        , phone_1_nbr                                               -- phone_1_nbr                            char(12)
+                        , phone_1_extension_nbr                                     -- phone_1_extension_nbr                  char(5)
+                        , phone_2_type_code                                         -- phone_2_type_code                      char(5)
+                        , phone_2_fmt_code                                          -- phone_2_fmt_code                       char(6)
+                        , phone_2_fmt_delimiter                                     -- phone_2_fmt_delimiter                  char(1)
+                        , phone_2_intl_code                                         -- phone_2_intl_code                      char(4)
+                        , phone_2_country_code                                      -- phone_2_country_code                   char(4)
+                        , phone_2_area_city_code                                    -- phone_2_area_city_code                 char(5)
+                        , phone_2_nbr                                               -- phone_2_nbr                            char(12)
+                        , phone_2_extension_nbr                                     -- phone_2_extension_nbr                  char(5)
+                        , prime_assignment_ind                                      -- prime_assignment_ind                   char(1)
+                        , pay_basis_code                                            -- pay_basis_code                         char(1)
+                        , occupancy_code                                            -- occupancy_code                         char(1)
+                        , regulatory_reporting_unit_code                            -- regulatory_reporting_unit_code         char(10)
+                        , base_rate_tbl_id                                       -- base_rate_tbl_id                       char(10)
+                        , base_rate_tbl_entry_code                               -- base_rate_tbl_entry_code               char(8)
+                        , shift_differential_rate_tbl_id                            -- shift_differential_rate_tbl_id         char(10)
+                        , ref_annual_salary_amt                                     -- ref_annual_salary_amt                  money
+                        , ref_pd_salary_amt                                         -- ref_pd_salary_amt                      money
+                        , ref_pd_salary_tm_pd_id                                    -- ref_pd_salary_tm_pd_id                 char(5)
+                        , ref_hourly_pay_rate                                       -- ref_hourly_pay_rate                    float
+                        , guaranteed_annual_salary_amt                              -- guaranteed_annual_salary_amt           money
+                        , guaranteed_pd_salary_amt                                  -- guaranteed_pd_salary_amt               money
+                        , guaranteed_pd_salary_tm_pd_id                             -- guaranteed_pd_salary_tm_pd_id          char(5)
+                        , guaranteed_hourly_pay_rate                                -- guaranteed_hourly_pay_rate             float
+                        , exception_rate_ind                                        -- exception_rate_ind                     char(1)
+                        , overtime_status_code                                      -- overtime_status_code                   char(2)
+                        , shift_differential_status_code                            -- shift_differential_status_code         char(2)
+                        , standard_daily_work_hrs                                   -- standard_daily_work_hrs                money
+                        , user_amt_1                                                -- user_amt_1                             float
+                        , user_amt_2                                                -- user_amt_2                             float
+                        , user_code_1                                               -- user_code_1                            char(5)
+                        , user_code_2                                               -- user_code_2                            char(5)
+                        , user_date_1                                               -- user_date_1                            datetime
+                        , user_date_2                                               -- user_date_2                            datetime
+                        , user_ind_1                                                -- user_ind_1                             char(1)
+                        , user_ind_2                                                -- user_ind_2                             char(1)
+                        , user_monetary_amt_1                                       -- user_monetary_amt_1                    money
+                        , user_monetary_amt_2                                       -- user_monetary_amt_2                    money
+                        , user_monetary_curr_code                                   -- user_monetary_curr_code                char(3)
+                        , user_text_1                                               -- user_text_1                            char(50)
+                        , @position_title                                           -- user_text_2                            char(50)
+                        , unemployment_loc_code                                     -- unemployment_loc_code                  char(10)
+                        , include_salary_in_autopay_ind                             -- include_salary_in_autopay_ind          char(1)
+                        , chgstamp                                                  -- chgstamp                               smallint
+                FROM DBShrpn.dbo.emp_assignment
+                WHERE (emp_id =	@emp_id)
+                  AND (assigned_to_code = @cur_ea_assigned_to_code)
+                  AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
+                  AND (eff_date         = @cur_ea_eff_date)
 
 
 BYPASS_EMPLOYEE:
@@ -719,7 +541,7 @@ BYPASS_EMPLOYEE:
             INTO  @emp_id
                 , @eff_date
                 , @empl_id
-                , @pay_group_id
+                , @position_title
                 , @file_source
 
 
@@ -732,9 +554,9 @@ BYPASS_EMPLOYEE:
 
 
         ---------------------------------------------------------------------------
-        -- Send notification of warning message U00013  -- < PAY GROUP SECTION (8) >
+        -- Send notification of warning message U00115  -- < POSITION TITLE SECTION (10) >
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U00104'
+        SET @msg_id = 'U000115'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @w_msg_text    = msg_text
@@ -804,9 +626,9 @@ BYPASS_EMPLOYEE:
 
 
         ---------------------------------------------------------------------------
-        -- Send notification of warning message U00105 - Total nbr of employees pay group changes
+        -- Send notification of warning message U00116 - Total nbr of changes
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U00016'
+        SET @msg_id = 'U00116'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @msg_id        = msg_id
@@ -1002,17 +824,16 @@ BYPASS_EMPLOYEE:
     -- Cleanup temp tables
     DROP TABLE #tbl_ghr_msg
     DROP TABLE #tbl_msg_master
-    DROP TABLE #temp14
 
 
 END
 GO
 
-ALTER AUTHORIZATION ON dbo.usp_ins_pay_group TO  SCHEMA OWNER
+ALTER AUTHORIZATION ON dbo.usp_ins_position_title TO  SCHEMA OWNER
 GO
 
-IF OBJECT_ID(N'dbo.usp_ins_pay_group', N'P') IS NOT NULL
-    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_pay_group >>>'
+IF OBJECT_ID(N'dbo.usp_ins_position_title', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_position_title >>>'
 ELSE
-    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_pay_group >>>'
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_position_title >>>'
 GO

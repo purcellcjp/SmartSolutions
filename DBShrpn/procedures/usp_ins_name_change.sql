@@ -17,14 +17,15 @@ END
 GO
 
 CREATE PROCEDURE dbo.usp_ins_name_change
-(
-	@p_userid               varchar(30),
-	@p_batchname            varchar(08),
-	@p_qualifier            varchar(30),
-    @p_activity_date        datetime,
-    @p_user_id              varchar(30),
-	@p_status				int         = 0 OUTPUT
-)
+    (
+      @p_userid             varchar(30)
+    , @p_batchname          varchar(08)
+    , @p_qualifier          varchar(30)
+    , @p_activity_date      datetime
+    , @p_user_id            varchar(30)
+    , @p_status             int             = 0 OUTPUT
+    )
+
 AS
 
 
@@ -36,11 +37,15 @@ BEGIN
 
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
 
+    DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
     DECLARE @v_EVENT_ID_NAME_CHANGE         char(2)             = '04'
     DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
     DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
+    DECLARE @v_EVENT_ID_PAY_GROUP           char(2)             = '08'
+    DECLARE @v_EVENT_ID_LABOR_GROUP         char(2)             = '09'
+    DECLARE @v_EVENT_ID_POSITION_TITLE      char(2)             = '10'
 
     DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
@@ -53,74 +58,48 @@ BEGIN
 
     DECLARE @v_ret_val                      int = 0
 
-    DECLARE @w_msg_text						varchar(255)
-    DECLARE @w_msg_text_2					varchar(255)
-    DECLARE @w_msg_text_3					varchar(255)
-    DECLARE @w_severity_cd					tinyint
-    DECLARE @w_fatal_error					bit     = 0         --char(01)
+    DECLARE @w_msg_text                     varchar(255)
+    DECLARE @w_msg_text_2                   varchar(255)
+    DECLARE @w_msg_text_3                   varchar(255)
+    DECLARE @w_severity_cd                  tinyint
+    DECLARE @w_fatal_error                  bit     = 0         --char(01)
 
-    DECLARE @individual_id					char(10)
-    DECLARE @prior_last_name				char(30)
+    DECLARE @individual_id                  char(10)
+    DECLARE @prior_last_name                char(30)
 
-    DECLARE @maxx			CHAR(06)
-    DECLARE @msg_id			CHAR(10)
+    DECLARE @maxx                           CHAR(06)
+    DECLARE @msg_id                         CHAR(10)
 
 
     -- This section declares the interface values from Global HR
-    DECLARE	@event_id							    char(02)
-          , @emp_id								    char(15)
-          , @eff_date							    char(10)
-          , @first_name							    char(25)
-          , @first_middle_name					    char(25)
-          , @last_name							    char(30)
-          , @empl_id							    char(10)
-          , @national_id_type_code				    char(05)
-          , @national_id						    char(20)
-          , @organization_group_id				    char(05)
-          , @organization_chart_name			    varchar(64)
-          , @organization_unit_name				    varchar(240)
-          , @emp_status_classn_code				    char(02)
-          , @position_title						    char(50)        -- DBShrpn..emp_assignment.user_text
-          , @employment_type_code				    varchar(70)     -- increased size to 70 from 5
-          , @annual_salary_amt					    char(15)
-          , @begin_date							    char(10)
-          , @end_date							    char(10)
-          , @pay_status_code					    char(01)
-          , @pay_group_id						    char(10)
-          , @pay_element_ctrl_grp_id			    char(10)
-          , @time_reporting_meth_code			    char(01)
-          , @employment_info_chg_reason_cd		    char(05)
-          , @emp_location_code					    char(10)
-          , @emp_status_code					    char(02)
-          , @reason_code						    char(02)
-          , @emp_expected_return_date			    char(10)
-          , @pay_through_date					    char(10)
-          , @emp_death_date						    char(10)
-          , @consider_for_rehire_ind			    char(01)
-          , @pay_element_id					        char(10)
-          , @emp_calculation						char(15)
-          , @tax_flag                               char(1)         -- individual_personal.ind_2
-          , @nic_flag                               char(1)         -- individual_personal.ind_1
-          , @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
-          , @labor_grp_code                         char(5)         -- DBShrpn..emp_employment.labor_grp_code
-          , @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+
+    DECLARE @emp_id                         char(15)
+    DECLARE @eff_date                       char(10)
+    DECLARE @first_name                     char(25)
+    DECLARE @first_middle_name              char(25)
+    DECLARE @last_name                      char(30)
+    DECLARE @empl_id                        char(10)
+    DECLARE @tax_flag                       char(1)         -- individual_personal.ind_2
+    DECLARE @nic_flag                       char(1)         -- individual_personal.ind_1
+    DECLARE @tax_ceiling_amt                char(15)        -- employee.user_monetary_amt_1
+    DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
 
     CREATE TABLE #tbl_ghr_msg
         (
-          msg_id                                    char(15)            NOT NULL
-        , msg_desc                                  varchar(255)        NOT NULL
+          msg_id                           char(15)         NOT NULL
+        , msg_desc                         varchar(255)     NOT NULL
         )
 
 
     CREATE TABLE #tbl_msg_master
         (
-          msg_id            char(15)    NOT NULL
-        , severity_cd       tinyint     NOT NULL
-        , msg_text          varchar(255)    NOT NULL
-        , msg_text_2        varchar(255)    NOT NULL
-        , msg_text_3        varchar(255)    NOT NULL
-        , loop_flag         char(1)     NOT NULL
+          msg_id                            char(15)        NOT NULL
+        , severity_cd                       tinyint         NOT NULL
+        , msg_text                          varchar(255)    NOT NULL
+        , msg_text_2                        varchar(255)    NOT NULL
+        , msg_text_3                        varchar(255)    NOT NULL
+        , loop_flag                         char(1)         NOT NULL
         )
 
     BEGIN TRY
@@ -158,87 +137,33 @@ BEGIN
 
         -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT t.event_id
-             , t.emp_id
+        SELECT t.emp_id
              , t.eff_date
              , t.first_name
              , t.first_middle_name
              , t.last_name
              , t.empl_id
-             , t.national_id_type_code
-             , t.national_id
-             , t.organization_group_id
-             , ''       -- t.organization_chart_name
-             , ''       -- t.organization_unit_name
-             , t.emp_status_classn_code
-             , t.position_title
-             , t.employment_type_code
-             , t.annual_salary_amt
-             , t.begin_date
-             , t.end_date
-             , t.pay_status_code
-             , t.pay_group_id
-             , t.pay_element_ctrl_grp_id
-             , t.time_reporting_meth_code
-             , t.employment_info_chg_reason_cd
-             , t.emp_location_code
-             , t.emp_status_code
-             , t.reason_code
-             , t.emp_expected_return_date
-             , t.pay_through_date
-             , t.emp_death_date
-             , t.consider_for_rehire_ind
-             , t.pay_element_id
-             , t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
-             , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
-		WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
+  WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
 
         SET @v_step_position = 'Fetching cursor crsrHR'
         FETCH crsrHR
-        INTO  @event_id
-            , @emp_id
+        INTO  @emp_id
             , @eff_date
             , @first_name
             , @first_middle_name
             , @last_name
             , @empl_id
-            , @national_id_type_code
-            , @national_id
-            , @organization_group_id
-            , @organization_chart_name
-            , @organization_unit_name
-            , @emp_status_classn_code
-            , @position_title
-            , @employment_type_code
-            , @annual_salary_amt
-            , @begin_date
-            , @end_date
-            , @pay_status_code
-            , @pay_group_id
-            , @pay_element_ctrl_grp_id
-            , @time_reporting_meth_code
-            , @employment_info_chg_reason_cd
-            , @emp_location_code
-            , @emp_status_code
-            , @reason_code
-            , @emp_expected_return_date
-            , @pay_through_date
-            , @emp_death_date
-            , @consider_for_rehire_ind
-            , @pay_element_id
-            , @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
-            , @labor_grp_code
             , @file_source
 
 
@@ -251,7 +176,7 @@ BEGIN
 
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
-            --	This section will validate the interface data
+            -- This section will validate the interface data
             ---------------------------------------------------------------------------
             ---------------------------------------------------------------------------
             SET @v_step_position = 'Begin Validation'
@@ -262,17 +187,22 @@ BEGIN
             SET @msg_id = 'U00012'
             SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-            IF  NOT EXISTS (
-                            SELECT 1
-                            FROM DBShrpn.dbo.employee
-                            WHERE emp_id = @emp_id
-                           )
+
+            -- Lookup individual_id and Prior Last Name
+            SELECT @individual_id = emp.individual_id
+                 , @prior_last_name = ind.last_name
+            FROM DBShrpn.dbo.employee emp
+            JOIN DBShrpn.dbo.individual ind ON
+                 (emp.individual_id = ind.individual_id)
+            WHERE (emp_id = @emp_id)
+
+            IF (@@ROWCOUNT = 0)
                 BEGIN
 
-                    UPDATE	DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status	= @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date	= @p_activity_date
-                        AND emp_id =	@emp_id
+                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status = @v_ACTIVITY_STATUS_BAD
+                    WHERE activity_date = @p_activity_date
+                        AND emp_id = @emp_id
                         AND event_id = @v_EVENT_ID_NAME_CHANGE
 
 
@@ -284,19 +214,16 @@ BEGIN
 
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    VALUES
-                    (
-                      @msg_id                       -- msg_id
-                    , @v_EVENT_ID_NAME_CHANGE       -- event_id,
-                    , @emp_id 					    -- emp_id
-                    , @eff_date					    -- eff_date
-                    , @pay_element_id			    -- pay_element_id
-                    , @emp_id					    -- msg_p1
-                    , ''						    -- msg_p2
-                    , 'Employee does not exist'	    -- msg_desc
-                    , @p_activity_date			    -- activity_date
-                    )
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Employee does not exist'
+                        , @p_activity_date      = @p_activity_date
 
                     SET @w_fatal_error = 1
 
@@ -306,17 +233,7 @@ BEGIN
                 GOTO BYPASS_EMPLOYEE
 
 
-            ---------------------------------------------------------------------------
-            -- Lookup individual_id and Prior Last Name
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Lookup Ind ID Prior Last Name'
 
-            SELECT @individual_id = emp.individual_id
-                 , @prior_last_name = ind.last_name
-            FROM DBShrpn.dbo.employee emp
-            JOIN DBShrpn.dbo.individual ind ON
-                 (emp.individual_id = ind.individual_id)
-            WHERE (emp_id = @emp_id)
 
 
             ---------------------------------------------------------------------------
@@ -325,7 +242,7 @@ BEGIN
             SET @v_step_position = 'Update Name Fields'
 
             UPDATE DBShrpn.dbo.individual
-            SET	first_name        = RTRIM(@first_name)
+            SET first_name        = RTRIM(@first_name)
               , first_middle_name = RTRIM(@first_middle_name)
               , last_name         = RTRIM(@last_name)
               , prior_last_name   = RTRIM(@prior_last_name)
@@ -339,7 +256,7 @@ BEGIN
             SET @v_step_position = 'Update Emp Display Name Tax Ceiling'
 
             UPDATE DBShrpn.dbo.employee
-            SET	emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
+            SET emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
               , user_monetary_amt_1 = @tax_ceiling_amt
             WHERE (emp_id = @emp_id)
 
@@ -350,81 +267,24 @@ BEGIN
             -- CJP 7/7/2025
             SET @v_step_position = 'Update NIC/Tax Code'
 
-            UPDATE	DBShrpn.dbo.individual_personal
-            SET	user_ind_1 = @nic_flag
+            UPDATE DBShrpn.dbo.individual_personal
+            SET user_ind_1 = @nic_flag
               , user_ind_2 = @tax_flag
             WHERE (individual_id = @individual_id)
-
-
-            ---------------------------------------------------------------------------
-            -- Update Labor Group
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Update Labor Group'
-
-            UPDATE DBShrpn..emp_employment
-            SET labor_grp_code = @labor_grp_code
-            WHERE (emp_id = @emp_id)
-              AND (next_eff_date = @v_END_OF_TIME_DATE)
-
-
-            ---------------------------------------------------------------------------
-            -- Update Position Title
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Update Position'
-
-            -- Note: GOSL uses DBShrpn..emp_assignment.user_text_2;
-            --       Grenada uses DBShrpn.dbo.individual_personal.user_text_1
-            UPDATE	DBShrpn.dbo.emp_assignment
-            SET	user_text_2 = @position_title
-            FROM DBShrpn.dbo.emp_assignment ea
-            WHERE (ea.next_eff_date = @v_END_OF_TIME_DATE)
-              AND (ea.end_date = (
-                                    SELECT MAX(ea2.end_date)
-                                    FROM DBShrpn..emp_assignment ea2
-                                    WHERE (ea2.emp_id        = ea.emp_id)
-                                      AND (ea2.next_eff_date = @v_END_OF_TIME_DATE)
-                                 ))
 
 
 BYPASS_EMPLOYEE:
 
             FETCH crsrHR
-            INTO  @event_id
-                , @emp_id
+            INTO  @emp_id
                 , @eff_date
                 , @first_name
                 , @first_middle_name
                 , @last_name
                 , @empl_id
-                , @national_id_type_code
-                , @national_id
-                , @organization_group_id
-                , @organization_chart_name
-                , @organization_unit_name
-                , @emp_status_classn_code
-                , @position_title
-                , @employment_type_code
-                , @annual_salary_amt
-                , @begin_date
-                , @end_date
-                , @pay_status_code
-                , @pay_group_id
-                , @pay_element_ctrl_grp_id
-                , @time_reporting_meth_code
-                , @employment_info_chg_reason_cd
-                , @emp_location_code
-                , @emp_status_code
-                , @reason_code
-                , @emp_expected_return_date
-                , @pay_through_date
-                , @emp_death_date
-                , @consider_for_rehire_ind
-                , @pay_element_id
-                , @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
-                , @labor_grp_code
                 , @file_source
 
 
@@ -525,7 +385,7 @@ BYPASS_EMPLOYEE:
         -- Get total name records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM #ghr_employee_events_temp
-        WHERE (event_id =	@v_EVENT_ID_NAME_CHANGE)
+        WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
