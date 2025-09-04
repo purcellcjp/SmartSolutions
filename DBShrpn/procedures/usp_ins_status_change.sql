@@ -936,16 +936,16 @@ BEGIN
 
                             -- GOSL: HCM Salary data will not be extracted to SS
                             -- Blank them out
-                            SELECT @annual_salary            =   0.00
-                                , @i_hourly_rate_amt         =   0.00
-                                , @i_period_amt            =   0.00
-                                , @i_salary_change_type_code   =   ''
-                                , @i_work_tm_code            =   ''
-                                , @i_base_rate_tbl_id         =   ''
-                                , @i_base_rate_tbl_entry_code   =   ''
-                                , @i_standard_work_pd_id      =   ''
-                                , @i_standard_work_hrs          =   0.00
-                                , @i_pd_salary_tm_pd_id      =   ''
+                            SELECT @annual_salary               = 0.00
+                                , @i_hourly_rate_amt            = 0.00
+                                , @i_period_amt                 = 0.00
+                                , @i_salary_change_type_code    = ''
+                                , @i_work_tm_code               = ''
+                                , @i_base_rate_tbl_id           = ''
+                                , @i_base_rate_tbl_entry_code   = ''
+                                , @i_standard_work_pd_id        = ''
+                                , @i_standard_work_hrs          = 0.00
+                                , @i_pd_salary_tm_pd_id         = ''
 
 
 
@@ -979,16 +979,16 @@ BEGIN
                             SET @v_step_position = 'Rehire Not Terminated ' + RTRIM(@msg_id)
 
                             UPDATE   DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date   =   @p_activity_date
-                            AND emp_id      =   @emp_id
-                            AND event_id      = @v_EVENT_ID_STATUS_CHANGE
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                            WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_STATUS_CHANGE
 
-                                    INSERT INTO #tbl_ghr_msg
-                                    SELECT @msg_id                   As msg_id
-                                        , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@w_curr_status_value)), '@2', @emp_id) AS msg_desc
-                                    FROM #tbl_msg_master t
-                                    WHERE (msg_id = @msg_id)
+                            INSERT INTO #tbl_ghr_msg
+                            SELECT @msg_id As msg_id
+                                , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@w_curr_status_value)), '@2', @emp_id) AS msg_desc
+                            FROM #tbl_msg_master t
+                            WHERE (msg_id = @msg_id)
 
                             -- Historical Message for reporting purpose
                             EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -1021,7 +1021,7 @@ BEGIN
                                 @p_new_reason               =   ' ',
                                 @p_new_loa_expd_date         =   @v_END_OF_TIME_DATE,
                                 @p_new_classification_cd      =   @emp_status_classn_code,
-                                @p_allow_emp_pay_updates_ind   =   'Y',
+                                @p_allow_emp_pay_updates_ind =   'Y',
                                 @p_pay_status_code            =   @pay_status_code,
                                 @p_last_day_paid            =   @v_BEG_OF_TIME_DATE,
                                 @p_old_chgstamp            =   @w_old_chgstamp
@@ -1167,7 +1167,8 @@ BEGIN
                         BEGIN  --2
                             SET @v_step_position = 'Rehire RA Inactive'
 
-                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate   @p_emp_id   =   @emp_id,
+                            EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate
+                                @p_emp_id   =   @emp_id,
                                 @p_status_change_date            =   @w_status_change_date,
                                 @p_reactivate_date               =   @w_eff_date,
                                 @p_new_reason                  =   @reason_code,
@@ -1234,6 +1235,14 @@ BEGIN
                 BEGIN
 
                     ---------------------------------------------------------------------------
+                    -- Update Labor Group Code
+                    ---------------------------------------------------------------------------
+                    -- update latest emp employment record with labor group code
+                    UPDATE DBShrpn.dbo.emp_employment
+                    SET labor_grp_code = @labor_grp_code
+                    WHERE (next_eff_date = @v_END_OF_TIME_DATE)
+
+                    ---------------------------------------------------------------------------
                     -- GOSL update NIC and Tax Code
                     ---------------------------------------------------------------------------
                     -- CJP 7/7/2025
@@ -1252,7 +1261,6 @@ BEGIN
                     UPDATE DBShrpn.dbo.employee
                     SET user_monetary_amt_1 = @tax_ceiling_amt
                     WHERE (emp_id = @emp_id)
-
 
                 END
 

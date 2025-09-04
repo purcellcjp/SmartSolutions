@@ -626,24 +626,24 @@ BEGIN
 
                     -- If salary Change Record Exists in this run, bypass transfer record
                     -- NEED TO UPDATE THIS LOGIC SINCE GOSL WILL NOT INTERFACE IN SALARY
-                    IF EXISTS (
-                               SELECT 1
-                               FROM #ghr_employee_events_temp
-                               WHERE emp_id   = @emp_id
-                                 AND event_id = @v_EVENT_ID_SALARY_CHANGE
-                              )
-                        BEGIN
-                            UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                            WHERE emp_id = @emp_id
-                              AND activity_date = @p_activity_date
-                              AND event_id = @v_EVENT_ID_TRANSFER
+                    -- IF EXISTS (
+                    --            SELECT 1
+                    --            FROM #ghr_employee_events_temp
+                    --            WHERE emp_id   = @emp_id
+                    --              AND event_id = @v_EVENT_ID_SALARY_CHANGE
+                    --           )
+                    --     BEGIN
+                    --         UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                    --         SET activity_status = @v_ACTIVITY_STATUS_WARNING
+                    --         WHERE emp_id = @emp_id
+                    --           AND activity_date = @p_activity_date
+                    --           AND event_id = @v_EVENT_ID_TRANSFER
 
-                            --CJP 8/6/2025 set skip flag instead of jumping to GOTO BYPASS_EMPLOYEE
-                            SET @w_fatal_error = 1
-                        END
-                    ELSE
-                        BEGIN
+                    --         --CJP 8/6/2025 set skip flag instead of jumping to GOTO BYPASS_EMPLOYEE
+                    --         SET @w_fatal_error = 1
+                    --     END
+                    -- ELSE
+                        --BEGIN
                             SET @msg_id = 'U00034'
                             SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
@@ -672,7 +672,7 @@ BEGIN
                                 , @p_activity_date      = @p_activity_date
 
                             SET @w_fatal_error = 1
-                        END
+                        --END
 
                 END
 
@@ -891,6 +891,15 @@ BEGIN
               AND (assigned_to_code = @new_emp_asgn_assigned_to_code)
               AND (job_or_pos_id    = @new_emp_asgn_job_or_pos_id)
               AND (eff_date         = @new_emp_asgn_eff_date)
+
+
+            ---------------------------------------------------------------------------
+            -- Update Labor Group Code
+            ---------------------------------------------------------------------------
+            -- update latest emp employment record with labor group code
+            UPDATE DBShrpn.dbo.emp_employment
+            SET labor_grp_code = @labor_grp_code
+            WHERE (next_eff_date = @v_END_OF_TIME_DATE)
 
 
             ---------------------------------------------------------------------------

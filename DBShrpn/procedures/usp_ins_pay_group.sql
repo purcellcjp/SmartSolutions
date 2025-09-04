@@ -273,11 +273,26 @@ BEGIN
             )
             BEGIN
 
+                SET @msg_id = 'U00119'  -- New code
+                SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
+
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
                 SET activity_status   = @v_ACTIVITY_STATUS_WARNING
                 WHERE activity_date   = @p_activity_date
                   AND emp_id =   @emp_id
                   AND event_id = @v_EVENT_ID_PAY_GROUP
+
+                -- Historical Message for reporting purpose
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @msg_id
+                    , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                    , @p_emp_id             = @emp_id
+                    , @p_eff_date           = @eff_date
+                    , @p_pay_element_id     = ''
+                    , @p_msg_p1             = ''
+                    , @p_msg_p2             = ''
+                    , @p_msg_desc           = 'Bypassing pay group record since employee has either a new hire, transfer, or status change event in this extract.'
+                    , @p_activity_date      = @p_activity_date
 
                 -- Skip record and al other validations
                 -- since pay group will be processed in the other events

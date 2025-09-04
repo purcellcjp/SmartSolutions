@@ -209,6 +209,7 @@ BEGIN
                         ,'U00109'
                         ,'U00110'
                         ,'U00111'
+                        ,'U00119'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -221,6 +222,7 @@ BEGIN
                          ,'U00109'
                          ,'U00110'
                          ,'U00111'
+                         ,'U00119'
                         ))
 
 
@@ -231,7 +233,7 @@ BEGIN
         SELECT t.emp_id
              , t.eff_date
              , t.empl_id
-             , t.pay_group_id
+             , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_LABOR_GROUP)
@@ -277,11 +279,26 @@ BEGIN
             )
             BEGIN
 
+                SET @msg_id = 'U00119'  -- New code
+                SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
+
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
                 SET activity_status   = @v_ACTIVITY_STATUS_WARNING
                 WHERE activity_date   = @p_activity_date
                   AND emp_id =   @emp_id
                   AND event_id = @v_EVENT_ID_LABOR_GROUP
+
+                -- Historical Message for reporting purpose
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @msg_id
+                    , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
+                    , @p_emp_id             = @emp_id
+                    , @p_eff_date           = @eff_date
+                    , @p_pay_element_id     = ''
+                    , @p_msg_p1             = ''
+                    , @p_msg_p2             = ''
+                    , @p_msg_desc           = 'Bypassing labor group record since employee has either a new hire, transfer, or status change event in this extract.'
+                    , @p_activity_date      = @p_activity_date
 
                 -- Skip record and al other validations
                 -- since pay group will be processed in the other events
@@ -295,6 +312,9 @@ BEGIN
             ---------------------------------------------------------------------------
             IF (LEN(RTRIM(@labor_grp_code)) = 0)
             BEGIN
+
+                SET @msg_id = 'U00110'
+                SET @v_step_position = 'Labor group code is blank'
 
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
                 SET activity_status   = @v_ACTIVITY_STATUS_BAD

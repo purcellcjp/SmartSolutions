@@ -73,7 +73,7 @@ BEGIN
     , organization_chart_name               varchar(64)         NULL
     , organization_unit_name                varchar(240)        NULL
     , emp_status_classn_code                char(02)            NULL
-    , position_title                        char(50)            NULL
+    , position_title                        char(50)            NULL    -- DBShrpn..emp_assignment.user_text_2
     , employment_type_code                  varchar(70)         NULL    -- increased size to 70 from 5
     , annual_salary_amt                     char(15)            NULL
     , begin_date                            char(10)            NULL
@@ -92,10 +92,10 @@ BEGIN
     , consider_for_rehire_ind               char(01)            NULL
     , pay_element_id                        char(10)            NULL
     , emp_calculation                       char(15)            NULL
-    , tax_flag                              char(1)             NULL    -- individual_personal.ind_2
-    , nic_flag                              char(1)             NULL    -- individual_personal.ind_1
+    , tax_flag                              char(1)             NULL    -- individual_personal.user_ind_2
+    , nic_flag                              char(1)             NULL    -- individual_personal.user_ind_1
     , tax_ceiling_amt                       char(15)            NULL    -- employee.user_monetary_amt_1
-    , labor_grp_code                        char(50)            NULL    -- emp_assignment.user_text_1
+    , labor_grp_code                        char(50)            NULL    -- DBShrpn..emp_employment.labor_grp_code   char(5)
     , file_source                           char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
     )
 
@@ -165,8 +165,8 @@ BEGIN
             , consider_for_rehire_ind
             , UPPER(pay_element_id)
             , emp_calculation
-            , tax_flag
-            , nic_flag
+            , CASE tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
+            , CASE nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
             , tax_ceiling_amt
             , labor_grp_code
             , file_source

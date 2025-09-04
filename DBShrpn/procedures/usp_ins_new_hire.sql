@@ -751,18 +751,19 @@ BEGIN
                     FROM #tbl_msg_master t
                     WHERE (msg_id = @msg_id)
 
+                    SET @w_msg_text = RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'
 
                     -- Historical Message for reporting purpose
-                    INSERT INTO DBShrpn.dbo.ghr_historical_message
-                    SELECT  @msg_id As msg_id,
-                            @v_EVENT_ID_NEW_HIRE            As event_id,
-                            @emp_id                      As emp_id,
-                            @eff_date                    As eff_date,
-                            @pay_element_id            As pay_element_id,
-                            RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
-                            @emp_id                      As msg_p2,
-                            'Invalid Employment Type Code'  As msg_desc,
-                            @p_activity_date                AS activity_date
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                          @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = @w_msg_text
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Invalid Employment Type Code'
+                        , @p_activity_date      = @p_activity_date
 
                 END
             ELSE
@@ -793,18 +794,19 @@ BEGIN
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
 
+                        SET @w_msg_text = RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'
 
                         -- Historical Message for reporting purpose
-                        INSERT INTO DBShrpn.dbo.ghr_historical_message
-                        SELECT  @msg_id As msg_id,
-                                @v_EVENT_ID_NEW_HIRE            As event_id,
-                                @emp_id                      As emp_id,
-                                @eff_date                    As eff_date,
-                                @pay_element_id            As pay_element_id,
-                                RTRIM(@employment_type_code) + ' (' + RTRIM(@w_conv_employment_type_code) + ')'       As msg_p1,
-                                @emp_id                      As msg_p2,
-                                'Invalid Employment Type Code'  As msg_desc,
-                                @p_activity_date                AS activity_date
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @w_msg_text
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Invalid Employment Type Code'
+                            , @p_activity_date      = @p_activity_date
 
                     END
 
