@@ -198,16 +198,17 @@ BEGIN
             , msg_text_3
             , 'N' AS loop_flag
         FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00013'
+        WHERE (msg_id IN ('U00104'
                         ,'U00009'
                         ,'U00010'
                         ,'U00011'
+                        ,'U00012'
+                        ,'U00020'
                         ,'U00027'
                         ,'U00102'
-                        ,'U00104'
                         ,'U00105'
                         ,'U00106'
-                        ,'U00012'
+                        ,'U00119'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -217,6 +218,9 @@ BEGIN
                           'U00012'
                          ,'U00020'
                          ,'U00027'
+                         ,'U00102'
+                         ,'U00106'
+                         ,'U00119'
                         ))
 
 

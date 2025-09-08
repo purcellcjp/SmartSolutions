@@ -123,6 +123,7 @@ BEGIN
                         ,'U00116'
                         ,'U00117'
                         ,'U00118'
+                        ,'U00119'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -131,8 +132,10 @@ BEGIN
         WHERE (msg_id IN (
                           'U00012'
                          ,'U00027'
+                         ,'U00102'
                          ,'U00117'
                          ,'U00118'
+                         ,'U00119'
                         ))
 
 
@@ -180,6 +183,9 @@ BEGIN
             ---------------------------------------------------------------------------
             IF (LEN(RTRIM(@position_title)) = 0)
             BEGIN
+
+                SET @msg_id = 'U00118'
+                SET @v_step_position = 'Position title is blank'
 
                 UPDATE DBShrpn.dbo.ghr_employee_events_aud
                 SET activity_status   = @v_ACTIVITY_STATUS_BAD
@@ -570,7 +576,7 @@ BYPASS_EMPLOYEE:
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00115  -- < POSITION TITLE SECTION (10) >
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U000115'
+        SET @msg_id = 'U00115'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @w_msg_text    = msg_text

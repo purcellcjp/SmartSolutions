@@ -49,7 +49,17 @@ BEGIN
     INNER JOIN [DBShrpn].[dbo].[individual] i ON i.individual_id = e.individual_id
     INNER JOIN [DBShrpn].[dbo].[individual_personal] p ON p.individual_id = e.individual_id
     INNER JOIN [DBShrpn].[dbo].[emp_employment] ee ON ee.emp_id = e.emp_id AND ee.eff_date = (SELECT MAX(eff_date) FROM DBShrpn.dbo.emp_employment t WHERE t.emp_id = ee.emp_id AND t.eff_date <= GETDATE())
-    INNER JOIN [DBShrpn].[dbo].[emp_assignment] ea ON ea.emp_id = e.emp_id AND ea.eff_date = (SELECT MAX(eff_date) FROM DBShrpn.dbo.emp_assignment t WHERE t.emp_id = ea.emp_id AND t.prime_assignment_ind = 'Y' AND t.eff_date <= GETDATE()) AND ea.prime_assignment_ind = 'Y' AND end_date > GETDATE()
+    INNER JOIN [DBShrpn].[dbo].[emp_assignment] ea ON
+        ea.emp_id = e.emp_id AND
+        ea.eff_date = (
+                        SELECT MAX(eff_date)
+                        FROM DBShrpn.dbo.emp_assignment t
+                        WHERE t.emp_id = ea.emp_id
+                        AND t.prime_assignment_ind = 'Y'
+                        AND t.eff_date <= GETDATE()
+                    ) AND
+        ea.prime_assignment_ind = 'Y' AND
+        end_date > GETDATE()
     INNER JOIN [DBShrpn].[dbo].[emp_status]     es ON es.emp_id = e.emp_id AND es.status_change_date = (SELECT MAX(status_change_date) FROM DBShrpn.dbo.emp_status t WHERE t.emp_id = es.emp_id
 	--AND (t.emp_status_code = 'A')
 	AND t.status_change_date <= GETDATE())
@@ -83,15 +93,17 @@ BEGIN
     INNER JOIN [DBShrpn].[dbo].[individual] i ON i.individual_id = e.individual_id
     INNER JOIN [DBShrpn].[dbo].[individual_personal] p ON p.individual_id = e.individual_id
     INNER JOIN [DBShrpn].[dbo].[emp_employment] ee ON ee.emp_id = e.emp_id AND ee.eff_date = (SELECT MAX(eff_date) FROM DBShrpn.dbo.emp_employment t WHERE t.emp_id = ee.emp_id AND t.eff_date <= GETDATE())
-    INNER JOIN [DBShrpn].[dbo].[emp_assignment] ea ON ea.emp_id = e.emp_id AND ea.eff_date = (
-        SELECT MAX(eff_date)
-        FROM DBShrpn.dbo.emp_assignment t
-        WHERE t.emp_id = ea.emp_id
-        AND t.prime_assignment_ind = 'Y'
-        AND t.eff_date <= GETDATE()
-        )
-    AND ea.prime_assignment_ind = 'Y'
-    AND end_date < GETDATE()
+    INNER JOIN [DBShrpn].[dbo].[emp_assignment] ea ON
+        ea.emp_id = e.emp_id AND
+        ea.eff_date = (
+                        SELECT MAX(eff_date)
+                        FROM DBShrpn.dbo.emp_assignment t
+                        WHERE t.emp_id = ea.emp_id
+                        AND t.prime_assignment_ind = 'Y'
+                        AND t.eff_date <= GETDATE()
+                        ) AND
+        ea.prime_assignment_ind = 'Y' AND
+        ea.end_date < GETDATE()
     INNER JOIN [DBShrpn].[dbo].[emp_status]     es ON es.emp_id = e.emp_id AND es.status_change_date = (SELECT MAX(status_change_date) FROM DBShrpn.dbo.emp_status t WHERE t.emp_id = es.emp_id
 	--AND (t.emp_status_code = 'A')
 	AND t.status_change_date <= GETDATE())
