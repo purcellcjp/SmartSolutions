@@ -50,7 +50,7 @@ BEGIN
     DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
 
-
+    DECLARE @ErrorNumber                    varchar(10)
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
@@ -251,485 +251,516 @@ BEGIN
         WHILE (@@FETCH_STATUS = 0)
         BEGIN
 
-            SET @v_step_position = 'Begin crsrHR While Loop'
+            BEGIN TRY
 
-            SET @w_fatal_error = 0
+                SET @v_step_position = 'Begin crsrHR While Loop'
 
-            ---------------------------------------------------------------------------
-            ---------------------------------------------------------------------------
-            --   This section will validate the interface data
-            ---------------------------------------------------------------------------
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Begin Validation'
+                SET @w_fatal_error = 0
+
+                BEGIN TRAN
+
+                ---------------------------------------------------------------------------
+                ---------------------------------------------------------------------------
+                --   This section will validate the interface data
+                ---------------------------------------------------------------------------
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Begin Validation'
 
 
 
-            --Skip Record if associate also has New Hire, Transfer, Status Change
-            IF EXISTS (
-                SELECT 1
-                FROM #ghr_employee_events_temp
+                --Skip Record if associate also has New Hire, Transfer, Status Change
+                IF EXISTS (
+                    SELECT 1
+                    FROM #ghr_employee_events_temp
+                    WHERE (emp_id = @emp_id)
+                    AND (event_id IN (
+                                        @v_EVENT_ID_NEW_HIRE
+                                    , @v_EVENT_ID_TRANSFER
+                                    , @v_EVENT_ID_STATUS_CHANGE
+                                    ))
+                )
+                BEGIN
+
+                    SET @msg_id = 'U00119'  -- New code
+                    SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
+
+                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                    SET activity_status   = @v_ACTIVITY_STATUS_WARNING
+                    WHERE activity_date   = @p_activity_date
+                    AND emp_id =   @emp_id
+                    AND event_id = @v_EVENT_ID_PAY_GROUP
+
+                    -- Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                        @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Bypassing pay group record since employee has either a new hire, transfer, or status change event in this extract.'
+                        , @p_activity_date      = @p_activity_date
+
+                    -- Skip record and al other validations
+                    -- since pay group will be processed in the other events
+                    GOTO BYPASS_EMPLOYEE
+
+                END
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Effective Date
+                ---------------------------------------------------------------------------
+                -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
+
+                -- Effective Date
+                IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
+                    BEGIN
+
+                        SET @msg_id = 'U00102'  -- New code
+                        SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                        AND event_id = @v_EVENT_ID_PAY_GROUP
+                        AND emp_id = @emp_id
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id      AS msg_id
+                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_PAY_GROUP) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = ''
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Invalid Effective Date'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+                ELSE
+                    -- Convert amount to money data type
+                    SELECT @w_eff_date = CONVERT(datetime, @eff_date)
+
+
+
+
+                ---------------------------------------------------------------------------
+                -- Check to see if the employee exists
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00012'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                SELECT @cur_empl_id                             = eempl.empl_id
+                    , @cur_tax_entity_id                       = eempl.tax_entity_id
+                    , @cur_eempl_eff_date                      = eempl.eff_date
+                    , @cur_pay_group_id                        = eempl.pay_group_id
+                FROM DBShrpn.dbo.employee emp
+                JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
+                    (emp.emp_id = eempl.emp_id)
+                WHERE (emp.emp_id = @emp_id)
+
+                IF (@@ROWCOUNT = 0)
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_PAY_GROUP
+
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id As msg_id
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = ''
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Invalid employee id.'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+                ---------------------------------------------------------------------------
+                -- Is new pay group same as old pay group?
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00106'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                IF (@pay_group_id = @cur_pay_group_id)
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_PAY_GROUP
+
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id      As msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @pay_group_id
+                            , @p_msg_p2             = @cur_pay_group_id
+                            , @p_msg_desc           = 'New pay group is same as current pay group - bypassing record.'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+
+                ---------------------------------------------------------------------------
+                -- Check to see if new pay group id exists
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00020'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                IF NOT EXISTS(
+                            SELECT 1
+                            FROM DBShrpn.dbo.pay_group
+                            WHERE (pay_group_id = @pay_group_id)
+                            )
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                        AND emp_id = @emp_id
+                        AND event_id = @v_EVENT_ID_PAY_GROUP
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id As msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @emp_id
+                            , @p_msg_p2             = @pay_group_id
+                            , @p_msg_desc           = 'Invalid pay group id.'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET  @w_fatal_error = 1
+
+                    END
+
+
+                ---------------------------------------------------------------------------
+                -- Effective date must be greater than current effective date
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00027'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                IF (@w_fatal_error = 0) AND
+                (@w_eff_date <= @cur_eempl_eff_date)
+                    BEGIN
+
+                        -- Convert date to string for log table
+                        SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_eff_date, 112)
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date   =   @p_activity_date
+                        AND emp_id      =   @emp_id
+                        AND event_id      =   @v_EVENT_ID_PAY_GROUP
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id As msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @w_msg_text_2
+                            , @p_msg_p2             = @pay_group_id
+                            , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET  @w_fatal_error = 1
+
+                    END
+
+
+                IF (@w_fatal_error = 1)
+                    GOTO BYPASS_EMPLOYEE
+
+
+
+                ---------------------------------------------------------------------------
+                -- Update Employee Employment with new Pay Group
+                ---------------------------------------------------------------------------
+
+                -- Update current record date pointers
+                UPDATE DBShrpn.dbo.emp_employment
+                SET next_eff_date = @w_eff_date
                 WHERE (emp_id = @emp_id)
-                  AND (event_id IN (
-                                     @v_EVENT_ID_NEW_HIRE
-                                   , @v_EVENT_ID_TRANSFER
-                                   , @v_EVENT_ID_STATUS_CHANGE
-                                   ))
-            )
-            BEGIN
+                AND (eff_date = @w_eff_date)
 
-                SET @msg_id = 'U00119'  -- New code
-                SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
 
-                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                SET activity_status   = @v_ACTIVITY_STATUS_WARNING
-                WHERE activity_date   = @p_activity_date
-                  AND emp_id =   @emp_id
-                  AND event_id = @v_EVENT_ID_PAY_GROUP
+                -- Create new record
+                INSERT INTO #temp14
+                SELECT emp_id
+                    , @w_eff_date      -- eff_date
+                    , @v_END_OF_TIME_DATE      -- next_eff_date
+                    , @cur_eempl_eff_date      -- prior_eff_date
+                    , employment_type_code
+                    , work_tm_code
+                    , official_title_code
+                    , official_title_date
+                    , mgr_ind
+                    , recruiter_ind
+                    , pensioner_indicator
+                    , payroll_company_code
+                    , pmt_ctrl_code
+                    , us_federal_tax_meth_code
+                    , us_federal_tax_amt
+                    , us_federal_tax_pct
+                    , us_federal_marital_status_code
+                    , us_federal_exemp_nbr
+                    , us_work_st_code
+                    , canadian_work_province_code
+                    , ipp_payroll_id
+                    , ipp_max_pay_level_amt
+                    , pay_through_date
+                    , empl_id
+                    , tax_entity_id
+                    , pay_status_code
+                    , clock_nbr
+                    , provided_i_9_ind
+                    , time_reporting_meth_code
+                    , regular_hrs_tracked_code
+                    , pay_element_ctrl_grp_id
+                    , @pay_group_id        -- pay_group_id
+                    , us_pension_ind
+                    , professional_cat_code
+                    , corporate_officer_ind
+                    , prim_disbursal_loc_code
+                    , alternate_disbursal_loc_code
+                    , labor_grp_code
+                    , employment_info_chg_reason_cd
+                    , highly_compensated_emp_ind
+                    , nbr_of_dependent_children
+                    , canadian_federal_tax_meth_cd
+                    , canadian_federal_tax_amt
+                    , canadian_federal_tax_pct
+                    , canadian_federal_claim_amt
+                    , canadian_province_claim_amt
+                    , tax_unit_code
+                    , requires_tm_card_ind
+                    , xfer_type_code
+                    , tax_clear_code
+                    , pay_type_code
+                    , labor_distn_code
+                    , labor_distn_ext_code
+                    , us_fui_status_code
+                    , us_fica_status_code
+                    , payable_through_bank_id
+                    , disbursal_seq_nbr_1
+                    , disbursal_seq_nbr_2
+                    , non_employee_indicator
+                    , excluded_from_payroll_ind
+                    , emp_info_source_code
+                    , user_amt_1
+                    , user_amt_2
+                    , user_monetary_amt_1
+                    , user_monetary_amt_2
+                    , user_monetary_curr_code
+                    , user_code_1
+                    , user_code_2
+                    , user_date_1
+                    , user_date_2
+                    , user_ind_1
+                    , user_ind_2
+                    , user_text_1
+                    , user_text_2
+                    , t4_employ_code
+                    , chgstamp
+                FROM DBShrpn.dbo.emp_employment
+                WHERE (emp_id   = @emp_id)
+                AND (eff_date = @cur_eempl_eff_date)
 
-                -- Historical Message for reporting purpose
+
+                INSERT INTO emp_employment
+                SELECT emp_id
+                    , eff_date
+                    , next_eff_date
+                    , prior_eff_date
+                    , employment_type_code
+                    , work_tm_code
+                    , official_title_code
+                    , official_title_date
+                    , mgr_ind
+                    , recruiter_ind
+                    , pensioner_indicator
+                    , payroll_company_code
+                    , pmt_ctrl_code
+                    , us_federal_tax_meth_code
+                    , us_federal_tax_amt
+                    , us_federal_tax_pct
+                    , us_federal_marital_status_code
+                    , us_federal_exemp_nbr
+                    , us_work_st_code
+                    , canadian_work_province_code
+                    , ipp_payroll_id
+                    , ipp_max_pay_level_amt
+                    , pay_through_date
+                    , empl_id
+                    , tax_entity_id
+                    , pay_status_code
+                    , clock_nbr
+                    , provided_i_9_ind
+                    , time_reporting_meth_code
+                    , regular_hrs_tracked_code
+                    , pay_element_ctrl_grp_id
+                    , pay_group_id
+                    , us_pension_ind
+                    , professional_cat_code
+                    , corporate_officer_ind
+                    , prim_disbursal_loc_code
+                    , alternate_disbursal_loc_code
+                    , labor_grp_code
+                    , employment_info_chg_reason_cd
+                    , highly_compensated_emp_ind
+                    , nbr_of_dependent_children
+                    , canadian_federal_tax_meth_cd
+                    , canadian_federal_tax_amt
+                    , canadian_federal_tax_pct
+                    , canadian_federal_claim_amt
+                    , canadian_province_claim_amt
+                    , tax_unit_code
+                    , requires_tm_card_ind
+                    , xfer_type_code
+                    , tax_clear_code
+                    , pay_type_code
+                    , labor_distn_code
+                    , labor_distn_ext_code
+                    , us_fui_status_code
+                    , us_fica_status_code
+                    , payable_through_bank_id
+                    , disbursal_seq_nbr_1
+                    , disbursal_seq_nbr_2
+                    , non_employee_indicator
+                    , excluded_from_payroll_ind
+                    , emp_info_source_code
+                    , user_amt_1
+                    , user_amt_2
+                    , user_monetary_amt_1
+                    , user_monetary_amt_2
+                    , user_monetary_curr_code
+                    , user_code_1
+                    , user_code_2
+                    , user_date_1
+                    , user_date_2
+                    , user_ind_1
+                    , user_ind_2
+                    , user_text_1
+                    , user_text_2
+                    , t4_employ_code
+                    , chgstamp
+                FROM #temp14 t14
+                WHERE NOT EXISTS (
+                                SELECT 1
+                                FROM DBShrpn.dbo.emp_employment t2
+                                WHERE (t2.emp_id = t14.emp_id)
+                                    AND (t2.eff_date = @w_eff_date)
+                                )
+
+
+
+                    /*  DO WE NEED TO CREATE AN AUDIT RECORD?????
+                        -- WE'LL NEED AN ACTIVITY ACTION CODE
+
+                            INSERT INTO work_emp_employment_aud
+                                (user_id, activity_action_code, action_date, emp_id, eff_date,
+                                next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
+                                new_tax_entity_id, xfer_date, pay_through_date)
+                            VALUES
+                                (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
+                                @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
+
+                            DELETE work_emp_employment_aud
+                            WHERE user_id = @W_ACTION_USER
+                            AND activity_action_code = 'ERTRANSFER'
+                            AND emp_id = @emp_id
+                    */
+
+            END TRY
+            BEGIN CATCH
+
+                SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
+                    , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+                    , @ErrorSeverity = ERROR_SEVERITY()
+                    , @ErrorState    = ERROR_STATE()
+
+                IF (@@TRANCOUNT > 0)
+                    ROLLBACK TRAN
+
+                BEGIN TRAN
+
+                -- Log error
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                      @p_msg_id             = @msg_id
+                      @p_msg_id             = @ErrorNumber
                     , @p_event_id           = @v_EVENT_ID_PAY_GROUP
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'Bypassing pay group record since employee has either a new hire, transfer, or status change event in this extract.'
+                    , @p_msg_desc           = @ErrorMessage
                     , @p_activity_date      = @p_activity_date
 
-                -- Skip record and al other validations
-                -- since pay group will be processed in the other events
-                GOTO BYPASS_EMPLOYEE
 
-            END
-
-
-            ---------------------------------------------------------------------------
-            -- Validate Effective Date
-            ---------------------------------------------------------------------------
-            -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
-
-            -- Effective Date
-            IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
-                BEGIN
-
-                    SET @msg_id = 'U00102'  -- New code
-                    SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
-                    AND emp_id = @emp_id
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      AS msg_id
-                         , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_PAY_GROUP) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Invalid Effective Date'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET @w_fatal_error = 1
-
-                END
-            ELSE
-                -- Convert amount to money data type
-                SELECT @w_eff_date = CONVERT(datetime, @eff_date)
-
-
-
-
-            ---------------------------------------------------------------------------
-            -- Check to see if the employee exists
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00012'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-            SELECT @cur_empl_id                             = eempl.empl_id
-                 , @cur_tax_entity_id                       = eempl.tax_entity_id
-                 , @cur_eempl_eff_date                      = eempl.eff_date
-                 , @cur_pay_group_id                        = eempl.pay_group_id
-            FROM DBShrpn.dbo.employee emp
-            JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
-                 (emp.emp_id = eempl.emp_id)
-            WHERE (emp.emp_id = @emp_id)
-
-            IF (@@ROWCOUNT = 0)
-                BEGIN
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
-
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id As msg_id
-                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Invalid employee id.'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET @w_fatal_error = 1
-
-                END
-
-
-            ---------------------------------------------------------------------------
-            -- Is new pay group same as old pay group?
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00106'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-            IF (@pay_group_id = @cur_pay_group_id)
-                BEGIN
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_PAY_GROUP
-
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @pay_group_id
-                        , @p_msg_p2             = @cur_pay_group_id
-                        , @p_msg_desc           = 'New pay group is same as current pay group - bypassing record.'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET @w_fatal_error = 1
-
-                END
-
-
-
-            ---------------------------------------------------------------------------
-            -- Check to see if new pay group id exists
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00020'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-            IF NOT EXISTS(
-                        SELECT 1
-                        FROM DBShrpn.dbo.pay_group
-                        WHERE (pay_group_id = @pay_group_id)
-                        )
-                BEGIN
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                    AND emp_id = @emp_id
-                    AND event_id = @v_EVENT_ID_PAY_GROUP
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_PAY_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @emp_id
-                        , @p_msg_p2             = @pay_group_id
-                        , @p_msg_desc           = 'Invalid pay group id.'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET  @w_fatal_error = 1
-
-                END
-
-
-            ---------------------------------------------------------------------------
-            -- Effective date must be greater than current effective date
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00027'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
-
-            IF (@w_fatal_error = 0) AND
-               (@w_eff_date <= @cur_eempl_eff_date)
-                BEGIN
-
-                    -- Convert date to string for log table
-                    SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_eff_date, 112)
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date   =   @p_activity_date
-                    AND emp_id      =   @emp_id
-                    AND event_id      =   @v_EVENT_ID_PAY_GROUP
-
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id As msg_id
-                         , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
-
-
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = @w_msg_text_2
-                        , @p_msg_p2             = @pay_group_id
-                        , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET  @w_fatal_error = 1
-
-                END
-
-
-            IF (@w_fatal_error = 1)
-                GOTO BYPASS_EMPLOYEE
-
-
-
-            ---------------------------------------------------------------------------
-            -- Update Employee Employment with new Pay Group
-            ---------------------------------------------------------------------------
-
-            -- Update current record date pointers
-            UPDATE DBShrpn.dbo.emp_employment
-            SET next_eff_date = @w_eff_date
-            WHERE (emp_id = @emp_id)
-              AND (eff_date = @w_eff_date)
-
-
-            -- Create new record
-            INSERT INTO #temp14
-            SELECT emp_id
-                 , @w_eff_date      -- eff_date
-                 , @v_END_OF_TIME_DATE      -- next_eff_date
-                 , @cur_eempl_eff_date      -- prior_eff_date
-                 , employment_type_code
-                 , work_tm_code
-                 , official_title_code
-                 , official_title_date
-                 , mgr_ind
-                 , recruiter_ind
-                 , pensioner_indicator
-                 , payroll_company_code
-                 , pmt_ctrl_code
-                 , us_federal_tax_meth_code
-                 , us_federal_tax_amt
-                 , us_federal_tax_pct
-                 , us_federal_marital_status_code
-                 , us_federal_exemp_nbr
-                 , us_work_st_code
-                 , canadian_work_province_code
-                 , ipp_payroll_id
-                 , ipp_max_pay_level_amt
-                 , pay_through_date
-                 , empl_id
-                 , tax_entity_id
-                 , pay_status_code
-                 , clock_nbr
-                 , provided_i_9_ind
-                 , time_reporting_meth_code
-                 , regular_hrs_tracked_code
-                 , pay_element_ctrl_grp_id
-                 , @pay_group_id        -- pay_group_id
-                 , us_pension_ind
-                 , professional_cat_code
-                 , corporate_officer_ind
-                 , prim_disbursal_loc_code
-                 , alternate_disbursal_loc_code
-                 , labor_grp_code
-                 , employment_info_chg_reason_cd
-                 , highly_compensated_emp_ind
-                 , nbr_of_dependent_children
-                 , canadian_federal_tax_meth_cd
-                 , canadian_federal_tax_amt
-                 , canadian_federal_tax_pct
-                 , canadian_federal_claim_amt
-                 , canadian_province_claim_amt
-                 , tax_unit_code
-                 , requires_tm_card_ind
-                 , xfer_type_code
-                 , tax_clear_code
-                 , pay_type_code
-                 , labor_distn_code
-                 , labor_distn_ext_code
-                 , us_fui_status_code
-                 , us_fica_status_code
-                 , payable_through_bank_id
-                 , disbursal_seq_nbr_1
-                 , disbursal_seq_nbr_2
-                 , non_employee_indicator
-                 , excluded_from_payroll_ind
-                 , emp_info_source_code
-                 , user_amt_1
-                 , user_amt_2
-                 , user_monetary_amt_1
-                 , user_monetary_amt_2
-                 , user_monetary_curr_code
-                 , user_code_1
-                 , user_code_2
-                 , user_date_1
-                 , user_date_2
-                 , user_ind_1
-                 , user_ind_2
-                 , user_text_1
-                 , user_text_2
-                 , t4_employ_code
-                 , chgstamp
-            FROM DBShrpn.dbo.emp_employment
-            WHERE (emp_id   = @emp_id)
-              AND (eff_date = @cur_eempl_eff_date)
-
-
-            INSERT INTO emp_employment
-            SELECT emp_id
-                , eff_date
-                , next_eff_date
-                , prior_eff_date
-                , employment_type_code
-                , work_tm_code
-                , official_title_code
-                , official_title_date
-                , mgr_ind
-                , recruiter_ind
-                , pensioner_indicator
-                , payroll_company_code
-                , pmt_ctrl_code
-                , us_federal_tax_meth_code
-                , us_federal_tax_amt
-                , us_federal_tax_pct
-                , us_federal_marital_status_code
-                , us_federal_exemp_nbr
-                , us_work_st_code
-                , canadian_work_province_code
-                , ipp_payroll_id
-                , ipp_max_pay_level_amt
-                , pay_through_date
-                , empl_id
-                , tax_entity_id
-                , pay_status_code
-                , clock_nbr
-                , provided_i_9_ind
-                , time_reporting_meth_code
-                , regular_hrs_tracked_code
-                , pay_element_ctrl_grp_id
-                , pay_group_id
-                , us_pension_ind
-                , professional_cat_code
-                , corporate_officer_ind
-                , prim_disbursal_loc_code
-                , alternate_disbursal_loc_code
-                , labor_grp_code
-                , employment_info_chg_reason_cd
-                , highly_compensated_emp_ind
-                , nbr_of_dependent_children
-                , canadian_federal_tax_meth_cd
-                , canadian_federal_tax_amt
-                , canadian_federal_tax_pct
-                , canadian_federal_claim_amt
-                , canadian_province_claim_amt
-                , tax_unit_code
-                , requires_tm_card_ind
-                , xfer_type_code
-                , tax_clear_code
-                , pay_type_code
-                , labor_distn_code
-                , labor_distn_ext_code
-                , us_fui_status_code
-                , us_fica_status_code
-                , payable_through_bank_id
-                , disbursal_seq_nbr_1
-                , disbursal_seq_nbr_2
-                , non_employee_indicator
-                , excluded_from_payroll_ind
-                , emp_info_source_code
-                , user_amt_1
-                , user_amt_2
-                , user_monetary_amt_1
-                , user_monetary_amt_2
-                , user_monetary_curr_code
-                , user_code_1
-                , user_code_2
-                , user_date_1
-                , user_date_2
-                , user_ind_1
-                , user_ind_2
-                , user_text_1
-                , user_text_2
-                , t4_employ_code
-                , chgstamp
-            FROM #temp14 t14
-            WHERE NOT EXISTS (
-                              SELECT 1
-                              FROM DBShrpn.dbo.emp_employment t2
-                              WHERE (t2.emp_id = t14.emp_id)
-                                AND (t2.eff_date = @w_eff_date)
-                             )
-
-
-
-/*  DO WE NEED TO CREATE AN AUDIT RECORD?????
-    -- WE'LL NEED AN ACTIVITY ACTION CODE
-
-        INSERT INTO work_emp_employment_aud
-            (user_id, activity_action_code, action_date, emp_id, eff_date,
-            next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
-            new_tax_entity_id, xfer_date, pay_through_date)
-        VALUES
-            (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
-            @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
-
-        DELETE work_emp_employment_aud
-        WHERE user_id = @W_ACTION_USER
-        AND activity_action_code = 'ERTRANSFER'
-        AND emp_id = @emp_id
-*/
-
+            END CATCH
 
 
 BYPASS_EMPLOYEE:
@@ -748,7 +779,10 @@ BYPASS_EMPLOYEE:
         CLOSE crsrHR
         DEALLOCATE crsrHR
 
-
+        -- commit after every record
+        IF (@@TRANCOUNT > 0)
+            COMMIT TRAN
+            
 
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00013  -- < PAY GROUP SECTION (8) >
@@ -988,12 +1022,11 @@ BYPASS_EMPLOYEE:
     END TRY
     BEGIN CATCH
 
-        SELECT @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
-             , @ErrorSeverity = ERROR_SEVERITY()
-             , @ErrorState    = ERROR_STATE()
-             , @p_status      = -1
-
-        SET @p_status = @v_ret_val
+        SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
+            , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+            , @ErrorSeverity = ERROR_SEVERITY()
+            , @ErrorState    = ERROR_STATE()
+            , @p_status      = -1
 
         -- Handle cursors
         IF (CURSOR_STATUS('local', 'crsrHR') > 0)
@@ -1007,6 +1040,18 @@ BYPASS_EMPLOYEE:
             CLOSE crsrLog
             DEALLOCATE crsrLog
         END
+
+        -- Historical Message for reporting purpose
+        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+              @p_msg_id             = @ErrorNumber
+            , @p_event_id           = @v_EVENT_ID_PAY_GROUP
+            , @p_emp_id             = @emp_id
+            , @p_eff_date           = @eff_date
+            , @p_pay_element_id     = ''
+            , @p_msg_p1             = ''
+            , @p_msg_p2             = ''
+            , @p_msg_desc           = @ErrorMessage
+            , @p_activity_date      = @p_activity_date
 
         -- send error back to calling procedure
         RAISERROR(

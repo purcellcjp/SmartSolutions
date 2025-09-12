@@ -51,7 +51,7 @@ BEGIN
     DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
 
-
+    DECLARE @ErrorNumber                    varchar(10)
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
@@ -148,7 +148,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.file_source
         FROM #ghr_employee_events_temp t
-  WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
+        WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -170,107 +170,136 @@ BEGIN
         WHILE (@@FETCH_STATUS = 0)
         BEGIN
 
-            SET @v_step_position = 'Begin crsrHR While Loop'
+            BEGIN TRY
 
-            SET @w_fatal_error = 0
+                SET @v_step_position = 'Begin crsrHR While Loop'
 
-            ---------------------------------------------------------------------------
-            ---------------------------------------------------------------------------
-            -- This section will validate the interface data
-            ---------------------------------------------------------------------------
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Begin Validation'
+                SET @w_fatal_error = 0
 
-            ---------------------------------------------------------------------------
-            -- Check to see if the employee exists
-            ---------------------------------------------------------------------------
-            SET @msg_id = 'U00012'
-            SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+                BEGIN TRAN
 
+                ---------------------------------------------------------------------------
+                ---------------------------------------------------------------------------
+                -- This section will validate the interface data
+                ---------------------------------------------------------------------------
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Begin Validation'
 
-            -- Lookup individual_id and Prior Last Name
-            SELECT @individual_id = emp.individual_id
-                 , @prior_last_name = ind.last_name
-            FROM DBShrpn.dbo.employee emp
-            JOIN DBShrpn.dbo.individual ind ON
-                 (emp.individual_id = ind.individual_id)
-            WHERE (emp_id = @emp_id)
-
-            IF (@@ROWCOUNT = 0)
-                BEGIN
-
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_NAME_CHANGE
+                ---------------------------------------------------------------------------
+                -- Check to see if the employee exists
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00012'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
 
-                    INSERT INTO #tbl_ghr_msg
-                    SELECT @msg_id      As msg_id
-                         , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                    FROM #tbl_msg_master t
-                    WHERE (msg_id = @msg_id)
+                -- Lookup individual_id and Prior Last Name
+                SELECT @individual_id = emp.individual_id
+                    , @prior_last_name = ind.last_name
+                FROM DBShrpn.dbo.employee emp
+                JOIN DBShrpn.dbo.individual ind ON
+                    (emp.individual_id = ind.individual_id)
+                WHERE (emp_id = @emp_id)
+
+                IF (@@ROWCOUNT = 0)
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_NAME_CHANGE
 
 
-                    -- Historical Message for reporting purpose
-                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                          @p_msg_id             = @msg_id
-                        , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
-                        , @p_emp_id             = @emp_id
-                        , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Employee does not exist'
-                        , @p_activity_date      = @p_activity_date
-
-                    SET @w_fatal_error = 1
-
-                END
-
-            IF (@w_fatal_error = 1)
-                GOTO BYPASS_EMPLOYEE
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id      As msg_id
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
 
 
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = ''
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Employee does not exist'
+                            , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+                IF (@w_fatal_error = 1)
+                    GOTO BYPASS_EMPLOYEE
 
 
+                ---------------------------------------------------------------------------
+                -- Update name fields
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Update Name Fields'
 
-            ---------------------------------------------------------------------------
-            -- Update name fields
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Update Name Fields'
-
-            UPDATE DBShrpn.dbo.individual
-            SET first_name        = RTRIM(@first_name)
-              , first_middle_name = RTRIM(@first_middle_name)
-              , last_name         = RTRIM(@last_name)
-              , prior_last_name   = RTRIM(@prior_last_name)
-              , pay_to_name       = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
-            WHERE (individual_id = @individual_id)
-
-
-            ---------------------------------------------------------------------------
-            -- Update Employee Display Name and Tax Ceiling
-            ---------------------------------------------------------------------------
-            SET @v_step_position = 'Update Emp Display Name Tax Ceiling'
-
-            UPDATE DBShrpn.dbo.employee
-            SET emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
-              , user_monetary_amt_1 = @tax_ceiling_amt
-            WHERE (emp_id = @emp_id)
+                UPDATE DBShrpn.dbo.individual
+                SET first_name        = RTRIM(@first_name)
+                , first_middle_name = RTRIM(@first_middle_name)
+                , last_name         = RTRIM(@last_name)
+                , prior_last_name   = RTRIM(@prior_last_name)
+                , pay_to_name       = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
+                WHERE (individual_id = @individual_id)
 
 
-            ---------------------------------------------------------------------------
-            -- GOSL update NIC and Tax Code
-            ---------------------------------------------------------------------------
-            -- CJP 7/7/2025
-            SET @v_step_position = 'Update NIC/Tax Code'
+                ---------------------------------------------------------------------------
+                -- Update Employee Display Name and Tax Ceiling
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Update Emp Display Name Tax Ceiling'
 
-            UPDATE DBShrpn.dbo.individual_personal
-            SET user_ind_1 = @nic_flag
-              , user_ind_2 = @tax_flag
-            WHERE (individual_id = @individual_id)
+                UPDATE DBShrpn.dbo.employee
+                SET emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
+                , user_monetary_amt_1 = @tax_ceiling_amt
+                WHERE (emp_id = @emp_id)
+
+
+                ---------------------------------------------------------------------------
+                -- GOSL update NIC and Tax Code
+                ---------------------------------------------------------------------------
+                -- CJP 7/7/2025
+                SET @v_step_position = 'Update NIC/Tax Code'
+
+                UPDATE DBShrpn.dbo.individual_personal
+                SET user_ind_1 = @nic_flag
+                , user_ind_2 = @tax_flag
+                WHERE (individual_id = @individual_id)
+
+            END TRY
+            BEGIN CATCH
+
+                SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
+                    , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+                    , @ErrorSeverity = ERROR_SEVERITY()
+                    , @ErrorState    = ERROR_STATE()
+
+                IF (@@TRANCOUNT > 0)
+                    ROLLBACK TRAN
+
+                BEGIN TRAN
+
+                -- Log error
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @ErrorNumber
+                    , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
+                    , @p_emp_id             = @emp_id
+                    , @p_eff_date           = @eff_date
+                    , @p_pay_element_id     = ''
+                    , @p_msg_p1             = ''
+                    , @p_msg_p2             = ''
+                    , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_date      = @p_activity_date
+
+
+            END CATCH
 
 
 BYPASS_EMPLOYEE:
@@ -294,6 +323,9 @@ BYPASS_EMPLOYEE:
         CLOSE crsrHR
         DEALLOCATE crsrHR
 
+        -- commit after every record
+        IF (@@TRANCOUNT > 0)
+            COMMIT TRAN
 
 
         ---------------------------------------------------------------------------
@@ -455,7 +487,9 @@ BYPASS_EMPLOYEE:
         CLOSE crsrLog
         DEALLOCATE crsrLog
 
-
+        -- commit after every record
+        IF (@@TRANCOUNT > 0)
+            COMMIT TRAN
 
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00011 -- Blank Line
@@ -534,12 +568,11 @@ BYPASS_EMPLOYEE:
     END TRY
     BEGIN CATCH
 
-        SELECT @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+        SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
+            , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
              , @ErrorSeverity = ERROR_SEVERITY()
              , @ErrorState    = ERROR_STATE()
              , @p_status      = -1
-
-        SET @p_status = @v_ret_val
 
         -- Handle cursors
         IF (CURSOR_STATUS('local', 'crsrHR') > 0)
@@ -553,6 +586,18 @@ BYPASS_EMPLOYEE:
             CLOSE crsrLog
             DEALLOCATE crsrLog
         END
+
+        -- Historical Message for reporting purpose
+        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+              @p_msg_id             = @ErrorNumber
+            , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
+            , @p_emp_id             = @emp_id
+            , @p_eff_date           = @eff_date
+            , @p_pay_element_id     = ''
+            , @p_msg_p1             = ''
+            , @p_msg_p2             = ''
+            , @p_msg_desc           = @ErrorMessage
+            , @p_activity_date      = @p_activity_date
 
         -- send error back to calling procedure
         RAISERROR(

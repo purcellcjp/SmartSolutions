@@ -12,7 +12,7 @@ VALUES
 , (N'U00001', 1, 0, N'Total Global HR New Hire: @1', N' ', N' ', 0, N'0', 0, 0)
 , (N'U00002', 1, 0, N'< ENCOUNTERED THE FOLLOWING ERRORS: >', N' ', N' ', 0, N'0', 0, 0)
 , (N'U00003', 1, 0, N'Total number of employees that already exist: @1', N' ', N' ', 0, N'0', 0, 0)
-, (N'U00005', 1, 0, N'Employer (@1) does not exist for employee: @2 - defaulting to 99999.', N' ', N' ', 0, N'0', 0, 0)
+, (N'U00005', 1, 0, N'Employer (@1) does not exist for employee: @2 - bypassing record.', N' ', N' ', 0, N'0', 0, 0)
 , (N'U00006', 1, 0, N'This employee, @1, NIS ID already exists - defaulting to 99999. NIS ID is: @2.', N' ', N' ', 0, N'0', 0, 0)
 , (N'U00007', 1, 0, N'NIS ID was blank for employee, @1 - defaulting to 99999.', N' ', N' ', 0, N'0', 0, 0)
 , (N'U00008', 1, 0, N'Unit name (@1) was missing for employee, @2 - defaulting to 999999.', N' ', N' ', 0, N'0', 0, 0)
