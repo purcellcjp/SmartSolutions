@@ -65,10 +65,11 @@ BEGIN
 
     DECLARE @maxx                           char(06)
     DECLARE @msg_id                         char(10)
-    DECLARE @cur_ea_assigned_to_code        char(1)
+    DECLARE @cur_ea_assigned_to_code        char(01)
     DECLARE @cur_ea_job_or_pos_id           char(10)
     DECLARE @cur_ea_eff_date                datetime
     DECLARE @cur_ea_user_text_2             char(50)
+    DECLARE @cur_stat_emp_status_code       char(01)
 
     DECLARE @w_eff_date                     datetime
 
@@ -314,9 +315,12 @@ BEGIN
                     , @cur_ea_job_or_pos_id        = ea.job_or_pos_id
                     , @cur_ea_eff_date             = ea.eff_date
                     , @cur_ea_user_text_2          = ea.user_text_2
+                    , @cur_stat_emp_status_code     = stat.emp_status_code
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_assignment_most_rec ea ON
                     (emp.emp_id = ea.emp_id)
+                JOIN DBShrpn.dbo.emp_status_most_rec stat ON
+                    (emp.emp_id = stat.emp_id)
                 WHERE (emp.emp_id = @emp_id)
 
                 IF (@@ROWCOUNT = 0)
@@ -768,7 +772,7 @@ BYPASS_EMPLOYEE:
         -- commit after every record
         IF (@@TRANCOUNT > 0)
             COMMIT TRAN
-            
+
 
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00011 -- Blank Line
