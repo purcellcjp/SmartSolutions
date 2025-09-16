@@ -125,6 +125,7 @@ BEGIN
                         ,'U00117'
                         ,'U00118'
                         ,'U00119'
+                        ,'U00120'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -137,6 +138,7 @@ BEGIN
                          ,'U00117'
                          ,'U00118'
                          ,'U00119'
+                         ,'U00120'
                         ))
 
 
@@ -238,6 +240,12 @@ BEGIN
                     WHERE activity_date   = @p_activity_date
                     AND emp_id =   @emp_id
                     AND event_id = @v_EVENT_ID_POSITION_TITLE
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id      AS msg_id
+                        , REPLACE(REPLACE(t.msg_text, '@1', 'position title'), '@2', @emp_id) AS msg_desc
+                    FROM #tbl_msg_master t
+                    WHERE (msg_id = @msg_id)
 
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -351,6 +359,47 @@ BEGIN
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Employee does not exist'
                             , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+                ---------------------------------------------------------------------------
+                -- Is Associate Terminated in SmartStream
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00120'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                IF (@cur_stat_emp_status_code = 'T')
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_POSITION_TITLE
+
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id      As msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', 'position title'), '@2', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @position_title
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Employee is terminated in SmartStream - bypassing record.'
+                            , @p_activity_date      = @p_activity_date
+
 
                         SET @w_fatal_error = 1
 

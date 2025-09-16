@@ -31,6 +31,7 @@ BEGIN
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
     DECLARE @v_ret_val                      int                 = 0
+    DECLARE @v_msg                          varchar(255)        = ''
 
     DECLARE @v_event_id                     char(2)
 
@@ -97,6 +98,8 @@ BEGIN
     , tax_ceiling_amt                       char(15)            NULL    -- employee.user_monetary_amt_1
     , labor_grp_code                        char(50)            NULL    -- DBShrpn..emp_employment.labor_grp_code   char(5)
     , file_source                           char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
+
+    , job_or_pos_id                        char(10)             NULL    -- derived value based on file_source
     )
 
 
@@ -133,46 +136,47 @@ BEGIN
         SET @v_step_position = 'Insert INTO #ghr_employee_events_temp'
 
         INSERT INTO #ghr_employee_events_temp
-        SELECT event_id
-            , emp_id
-            , eff_date
-            , first_name
-            , first_middle_name
-            , last_name
-            , UPPER(empl_id)
-            , national_id_type_code
-            , national_id
-            , organization_group_id
+        SELECT t.event_id
+            , t.emp_id
+            , t.eff_date
+            , t.first_name
+            , t.first_middle_name
+            , t.last_name
+            , t.UPPER(empl_id)
+            , t.national_id_type_code
+            , t.national_id
+            , t.organization_group_id
             , ''    -- organization_chart_name
             , ''    -- organization_unit_name
-            , emp_status_classn_code
-            , LEFT(position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
-            , UPPER(employment_type_code)
-            , annual_salary_amt
-            , begin_date
-            , end_date
-            , pay_status_code
-            , UPPER(pay_group_id)
-            , pay_element_ctrl_grp_id
-            , time_reporting_meth_code
-            , employment_info_chg_reason_cd
-            , emp_location_code
-            , emp_status_code
-            , reason_code
-            , emp_expected_return_date
-            , pay_through_date
-            , emp_death_date
-            , consider_for_rehire_ind
-            , UPPER(pay_element_id)
-            , emp_calculation
-            , CASE tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
-            , CASE nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
-            , tax_ceiling_amt
-            , labor_grp_code
-            , file_source
-        FROM DBShrpn.dbo.ghr_employee_events
-        ORDER BY event_id
-               , emp_id
+            , t.emp_status_classn_code
+            , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
+            , UPPER(t.employment_type_code)
+            , t.annual_salary_amt
+            , t.begin_date
+            , t.end_date
+            , t.pay_status_code
+            , UPPER(t.pay_group_id)
+            , t.pay_element_ctrl_grp_id
+            , t.time_reporting_meth_code
+            , t.employment_info_chg_reason_cd
+            , t.emp_location_code
+            , t.emp_status_code
+            , t.reason_code
+            , t.emp_expected_return_date
+            , t.pay_through_date
+            , t.emp_death_date
+            , t.consider_for_rehire_ind
+            , UPPER(t.pay_element_id)
+            , t.emp_calculation
+            , CASE t.tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
+            , CASE t.nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
+            , t.tax_ceiling_amt
+            , t.labor_grp_code
+            , t.file_source
+            , dbo.ufn_ret_job_or_pos_id (t.file_source, t.empl_id) AS job_or_pos_id
+        FROM DBShrpn.dbo.ghr_employee_events t
+        ORDER BY t.event_id
+               , t.emp_id
 
 
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
@@ -222,9 +226,9 @@ BEGIN
         WHERE NOT EXISTS (
                             SELECT 1
                             FROM DBShrpn.dbo.ghr_employee_events_aud t
-                            WHERE t.event_id = ee.event_id
-                                AND t.emp_id = ee.emp_id
-                                AND t.activity_date	= @w_activity_date
+                            WHERE (t.event_id = ee.event_id)
+                                AND (t.emp_id = ee.emp_id)
+                                AND (t.activity_date	= @w_activity_date)
                         )
 
 
@@ -237,8 +241,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_NEW_HIRE
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
                    )
         BEGIN
 
@@ -252,6 +256,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_new_hire returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -261,8 +268,9 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_new_hire. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
 
         END
 
@@ -276,7 +284,7 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
+                    FROM #ghr_employee_events_temp
                     WHERE (event_id = @v_EVENT_ID_SALARY_CHANGE)
                    )
         BEGIN
@@ -301,8 +309,8 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id
-                   FROM DBShrpn.dbo.ghr_employee_events
-                   WHERE event_id = @v_EVENT_ID_TRANSFER
+                   FROM #ghr_employee_events_temp
+                   WHERE (event_id = @v_EVENT_ID_TRANSFER)
                   )
         BEGIN
             EXEC DBShrpn.dbo.usp_perform_transfer
@@ -315,6 +323,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_perform_transfer returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -324,8 +335,9 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_perform_transfer. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
 
         END
 
@@ -339,11 +351,11 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id
-                   FROM DBShrpn.dbo.ghr_employee_events
-                   WHERE event_id = @v_EVENT_ID_NAME_CHANGE
+                   FROM #ghr_employee_events
+                   WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
                   )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_name_change
+            EXEC #ghr_employee_events_temp
                         @p_userid          = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
@@ -353,6 +365,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_name_change returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -362,8 +377,9 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_name_change. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
 
         END
 
@@ -377,8 +393,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_STATUS_CHANGE
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
                    )
         BEGIN
 
@@ -392,6 +408,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_status_change returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -401,8 +420,9 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_status_change. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
 
         END
 
@@ -416,8 +436,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_PAY_ELE
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_PAY_ELE)
                    )
         BEGIN
             EXEC DBShrpn.dbo.usp_ins_pay_element
@@ -430,6 +450,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_pay_element returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -439,8 +462,10 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_pay_element. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
+
 
         END
 
@@ -454,8 +479,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_PAY_GROUP
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_PAY_GROUP)
                    )
         BEGIN
             EXEC DBShrpn.dbo.usp_ins_pay_group
@@ -468,6 +493,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_pay_group returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -477,8 +505,10 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_pay_group. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
+
 
         END
 
@@ -492,8 +522,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_LABOR_GROUP
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_LABOR_GROUP)
                    )
         BEGIN
             EXEC DBShrpn.dbo.usp_ins_labor_group
@@ -506,6 +536,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_labor_group returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -515,8 +548,10 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_labor_group. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
+
 
         END
 
@@ -530,8 +565,8 @@ BEGIN
 
         IF  EXISTS (
                     SELECT event_id
-                    FROM DBShrpn.dbo.ghr_employee_events
-                    WHERE event_id = @v_EVENT_ID_POSITION_TITLE
+                    FROM #ghr_employee_events_temp
+                    WHERE (event_id = @v_EVENT_ID_POSITION_TITLE)
                    )
         BEGIN
             EXEC DBShrpn.dbo.usp_ins_position_title
@@ -544,6 +579,9 @@ BEGIN
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
+            BEGIN
+                SET @v_msg = 'Stored procedure DBShrpn.dbo.usp_ins_position_title returned code: ' + CONVERT(varchar(10), @w_status)
+
                 -- Historical Message for reporting purpose
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
@@ -553,12 +591,11 @@ BEGIN
                     , @p_pay_element_id     = ''
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
-                    , @p_msg_desc           = 'An unreported error was encountered in procedure DBShrpn.dbo.usp_ins_position_title. Contact your system administrator.'
+                    , @p_msg_desc           = @v_msg
                     , @p_activity_date      = @w_activity_date
+            END
 
         END
-
-
 
     END TRY
     BEGIN CATCH

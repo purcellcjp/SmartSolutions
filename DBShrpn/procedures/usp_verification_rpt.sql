@@ -144,29 +144,6 @@ BEGIN
     SELECT @v_SPACES_50
 
 
-    ---------------------------------------------------------------------------
-    -- System Error Section
-    ---------------------------------------------------------------------------
-    SELECT @v_SPACES_30
-    SELECT 'System Errors:'
-    SELECT @v_SPACES_30
-
-    -- headers
-    SELECT LEFT('Message ID' + @v_SPACES_30, 15) +
-           LEFT('Event ID' + @v_SPACES_30, 15) +
-           'Error Message ID'
-
-    SELECT LEFT(m.msg_id + @v_SPACES_30, 15) +
-           LEFT(m.event_id + @v_SPACES_30, 20) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_historical_message m
-    WHERE (CHARINDEX('U', m.msg_id) = 0)    -- exclude message master message ids
-      AND (m.activity_date	= @w_activity_date)
-
-    -- No records then not applicable
-    IF (@@ROWCOUNT = 0)
-        SELECT 'N/A'
-
 
     ---------------------------------------------------------------------------
     -- New Hire Section

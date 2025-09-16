@@ -17,14 +17,14 @@ END
 GO
 
 CREATE PROCEDURE dbo.usp_ins_new_hire
-(
- @p_userid      varchar(30),
- @p_batchname     varchar(08),
- @p_qualifier     varchar(30),
-    @p_activity_date    datetime,
-    @p_user_id      varchar(30),
- @p_status      int         = 0 OUTPUT
-)
+    (
+    @p_userid               varchar(30),
+    @p_batchname            varchar(08),
+    @p_qualifier            varchar(30),
+    @p_activity_date        datetime,
+    @p_user_id              varchar(30),
+    @p_status               int         = 0 OUTPUT
+    )
 AS
 
 
@@ -74,9 +74,6 @@ BEGIN
     DECLARE @ee_next_eff_date datetime
     DECLARE @ee_prior_eff_date datetime
 
-
-
-
     DECLARE @maxx   VARCHAR(06)
     DECLARE @ind_idx  CHAR(10)
     DECLARE @annual_salary MONEY
@@ -85,8 +82,6 @@ BEGIN
     DECLARE @individual_id CHAR(10)
     DECLARE @pay_frequency_code  char(05)
     DECLARE @annualizing_factor float
-
-
 
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
@@ -364,8 +359,9 @@ BEGIN
              , t.tax_ceiling_amt
              , LEFT(t.labor_grp_code, 5) AS labor_grp_code
              , t.file_source
+             , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
-  WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
+        WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -409,6 +405,7 @@ BEGIN
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
+            , @w_job_or_pos_id
 
 
         WHILE (@@FETCH_STATUS = 0)
@@ -421,31 +418,6 @@ BEGIN
                 SET @w_fatal_error = 0
 
                 BEGIN TRAN
-
-
-                ---------------------------------------------------------------------------
-                -- Determine Emp Assignment Position - Not provided by HCM
-                ---------------------------------------------------------------------------
-                -- Added here to allow validate of value in case not setup in SS
-
-                SET @v_step_position = 'Begin Emp Assignment Position'
-
-                -- Based on server and employer
-                -- source field has been added to input file
-                IF (CHARINDEX('VENUS', @@SERVERNAME) > 0)
-                    IF EXISTS(
-                            SELECT 1
-                            FROM DBShrpn.dbo.employer
-                            WHERE empl_id = @empl_id
-                                AND (name LIKE 'Pen%')
-                            )
-                        SET @w_job_or_pos_id = 'PEN-0001'
-
-                    ELSE
-                        SET @w_job_or_pos_id = 'GEN-0001'
-                ELSE   -- Ganymede FORTHCM
-                    SET @w_job_or_pos_id = 'FORT-0001'
-
 
 
                 ---------------------------------------------------------------------------
@@ -1149,6 +1121,7 @@ BYPASS_EMPLOYEE:
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
+                , @w_job_or_pos_id
 
         END  -- Error Loop
 

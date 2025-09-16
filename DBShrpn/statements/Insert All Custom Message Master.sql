@@ -82,8 +82,10 @@ VALUES
 , (N'U00116', 1, 0, N'Total Position Title Changes: @1', N'', N'', 0, N'0', 0, 0)
 , (N'U00117', 1, 0, N'New position title, (@1) is same as current position title, for employee @2 - bypassing record.', N'', N'', 0, N'0', 0, 0)
 , (N'U00118', 1, 0, N'New position title is blank, for employee @2 - bypassing record.', N'', N'', 0, N'0', 0, 0)
-
+-- U00119 @1 = 'position title' or 'pay group' or 'labor group'
 , (N'U00119', 1, 0, N'Bypassing @1 record since employee (@2) has either a new hire, transfer, or status change event in this extract.', N'', N'', 0, N'0', 0, 0)
+
+, (N'U00120', 1, 0, N'Bypassing @1 record since employee (@2) is terminated in SmartStream.', N'', N'', 0, N'0', 0, 0)
 
 GO
 

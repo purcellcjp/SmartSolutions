@@ -73,6 +73,7 @@ BEGIN
     DECLARE @cur_eempl_eff_date             datetime
     DECLARE @cur_tax_entity_id              char(10)
     DECLARE @cur_pay_group_id               char(10)
+    DECLARE @cur_stat_emp_status_code       char(01)
     DECLARE @w_eff_date                     datetime
 
     -- This section declares the interface values from Global HR
@@ -208,7 +209,9 @@ BEGIN
                         ,'U00102'
                         ,'U00105'
                         ,'U00106'
+                        ,'U00117'
                         ,'U00119'
+                        ,'U00120'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -220,7 +223,9 @@ BEGIN
                          ,'U00027'
                          ,'U00102'
                          ,'U00106'
+                         ,'U00117'
                          ,'U00119'
+                         ,'U00120'
                         ))
 
 
@@ -290,6 +295,12 @@ BEGIN
                     AND emp_id =   @emp_id
                     AND event_id = @v_EVENT_ID_PAY_GROUP
 
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id      AS msg_id
+                        , REPLACE(REPLACE(t.msg_text, '@1', 'pay group'), '@2', @emp_id) AS msg_desc
+                    FROM #tbl_msg_master t
+                    WHERE (msg_id = @msg_id)
+
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                         @p_msg_id             = @msg_id
@@ -328,7 +339,7 @@ BEGIN
                         AND emp_id = @emp_id
 
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id      AS msg_id
+                        SELECT @msg_id AS msg_id
                             , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_PAY_GROUP) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -361,13 +372,16 @@ BEGIN
                 SET @msg_id = 'U00012'
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-                SELECT @cur_empl_id                             = eempl.empl_id
-                    , @cur_tax_entity_id                       = eempl.tax_entity_id
-                    , @cur_eempl_eff_date                      = eempl.eff_date
-                    , @cur_pay_group_id                        = eempl.pay_group_id
+                SELECT @cur_empl_id                 = eempl.empl_id
+                    , @cur_tax_entity_id            = eempl.tax_entity_id
+                    , @cur_eempl_eff_date           = eempl.eff_date
+                    , @cur_pay_group_id             = eempl.pay_group_id
+                    , @cur_stat_emp_status_code     = stat.emp_status_code
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
                     (emp.emp_id = eempl.emp_id)
+                JOIN DBShrpn.dbo.emp_status_most_rec stat ON
+                    (emp.emp_id = stat.emp_id)
                 WHERE (emp.emp_id = @emp_id)
 
                 IF (@@ROWCOUNT = 0)
@@ -398,6 +412,47 @@ BEGIN
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Invalid employee id.'
                             , @p_activity_date      = @p_activity_date
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+                ---------------------------------------------------------------------------
+                -- Is Associate Terminated in SmartStream
+                ---------------------------------------------------------------------------
+                SET @msg_id = 'U00120'
+                SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
+
+                IF (@cur_stat_emp_status_code = 'T')
+                    BEGIN
+
+                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                            SET activity_status = @v_ACTIVITY_STATUS_BAD
+                        WHERE activity_date = @p_activity_date
+                            AND emp_id = @emp_id
+                            AND event_id = @v_EVENT_ID_POSITION_TITLE
+
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id As msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', 'pay group'), '@2', @emp_id) AS msg_desc
+                        FROM #tbl_msg_master t
+                        WHERE (msg_id = @msg_id)
+
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = ''
+                            , @p_msg_p1             = @pay_group_id
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Employee is terminated in SmartStream - bypassing record.'
+                            , @p_activity_date      = @p_activity_date
+
 
                         SET @w_fatal_error = 1
 
@@ -442,6 +497,8 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
+
+
 
 
 
@@ -782,7 +839,7 @@ BYPASS_EMPLOYEE:
         -- commit after every record
         IF (@@TRANCOUNT > 0)
             COMMIT TRAN
-            
+
 
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00013  -- < PAY GROUP SECTION (8) >

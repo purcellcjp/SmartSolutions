@@ -573,8 +573,8 @@ BEGIN
             ---------------------------------------------------------------------------
             IF NOT EXISTS (
                            SELECT 1
-                           FROM DBShrpn.dbo.emp_status
-                           WHERE emp_id = @emp_id
+                           FROM DBShrpn.dbo.employee
+                           WHERE (emp_id = @emp_id)
                           )
                 BEGIN
 
@@ -618,7 +618,7 @@ BEGIN
             IF NOT EXISTS (
                            SELECT 1
                            FROM DBShrpn.dbo.employer
-                           WHERE empl_id = @empl_id
+                           WHERE (empl_id = @empl_id)
                           )
             BEGIN
 
@@ -674,7 +674,7 @@ BEGIN
                  , @w_pe_rec_fixed_pct              = pe.pay_pd_arrears_rec_fixed_pct
                  , @w_pe_min_pay_pd_rec_amt         = pe.min_pay_pd_recovery_amt
             FROM DBShrpn.dbo.pay_element pe
-            WHERE (pe.pay_element_id = @pay_element_id   )
+            WHERE (pe.pay_element_id = @pay_element_id)
               AND (pe.next_eff_date  = @v_END_OF_TIME_DATE)
               AND (pe.stop_date      > @w_eff_date)
 
@@ -716,7 +716,7 @@ BEGIN
 
 
             ---------------------------------------------------------------------------
-            --   Obtain the current record for this employee pay element
+            --   Obtain the current pay element record for this employee pay element
             ---------------------------------------------------------------------------
             SELECT   @i_pay_element_exists   =   'N'
 

@@ -292,6 +292,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
+             , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
       WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
 
@@ -337,6 +338,7 @@ BEGIN
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
+            , @w_job_or_pos_id
 
 
         WHILE (@@FETCH_STATUS = 0)
@@ -782,7 +784,7 @@ BEGIN
                 --   Obtain the setup variables
                 ---------------------------------------------------------------------------
                 ---------------------------------------------------------------------------
-
+/*
                 ---------------------------------------------------------------------------
                 -- Determine Emp Assignment Position - Not provided by HCM
                 ---------------------------------------------------------------------------
@@ -804,7 +806,7 @@ BEGIN
                         SET @w_job_or_pos_id = 'GEN-0001'
                 ELSE   -- Ganymede FORTHCM
                     SET @w_job_or_pos_id = 'FORT-0001'
-
+*/
 
                 ---------------------------------------------------------------------------
                 -- Find the tax entity
@@ -1372,6 +1374,7 @@ BYPASS_EMPLOYEE:
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
+                , @w_job_or_pos_id
 
         END  -- While Loop
 
