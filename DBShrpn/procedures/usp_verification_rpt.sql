@@ -127,7 +127,7 @@ BEGIN
                                   + 'Error Message'
 
     SET @v_header_position_title = @v_header_base
-                              + LEFT('Position Title' + @v_SPACES_30, 15)
+                              + LEFT('Position Title' + @v_SPACES_50, 50)
 
     SET @v_header_position_title_err = @v_header_position_title
                               + LEFT('Message ID' + @v_SPACES_30, 15)
@@ -142,6 +142,30 @@ BEGIN
     SELECT @v_SPACES_50 + 'All Entities'
     SELECT 'Run Date: ' + CONVERT(char,GETDATE(),120)	+ SPACE(10)
     SELECT @v_SPACES_50
+
+
+    ---------------------------------------------------------------------------
+    -- System Error Section
+    ---------------------------------------------------------------------------
+    SELECT @v_SPACES_30
+    SELECT 'System Errors:'
+    SELECT @v_SPACES_30
+
+    -- headers
+    SELECT LEFT('Message ID' + @v_SPACES_30, 15) +
+           LEFT('Event ID' + @v_SPACES_30, 15) +
+           'Error Message ID'
+
+    SELECT LEFT(m.msg_id + @v_SPACES_30, 15) +
+           LEFT(m.event_id + @v_SPACES_30, 15) +
+           RTRIM(m.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message m
+    WHERE (CHARINDEX('U', m.msg_id) = 0)    -- exclude message master message ids
+      AND (m.activity_date	= @w_activity_date)
+
+    -- No records then not applicable
+    IF (@@ROWCOUNT = 0)
+        SELECT 'N/A'
 
 
 

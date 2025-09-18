@@ -142,7 +142,7 @@ BEGIN
             , t.first_name
             , t.first_middle_name
             , t.last_name
-            , t.UPPER(empl_id)
+            , UPPER(t.empl_id)
             , t.national_id_type_code
             , t.national_id
             , t.organization_group_id
@@ -173,7 +173,7 @@ BEGIN
             , t.tax_ceiling_amt
             , t.labor_grp_code
             , t.file_source
-            , dbo.ufn_ret_job_or_pos_id (t.file_source, t.empl_id) AS job_or_pos_id
+            , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
         FROM DBShrpn.dbo.ghr_employee_events t
         ORDER BY t.event_id
                , t.emp_id
@@ -182,43 +182,44 @@ BEGIN
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
 
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
-        SELECT event_id
-            , emp_id
-            , eff_date
-            , first_name
-            , first_middle_name
-            , last_name
-            , empl_id
-            , national_id_type_code
-            , national_id
-            , organization_group_id
-            , organization_chart_name
-            , organization_unit_name
-            , emp_status_classn_code
-            , LEFT(position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
-            , employment_type_code
-            , annual_salary_amt
-            , begin_date
-            , end_date
-            , pay_status_code
-            , pay_group_id
-            , pay_element_ctrl_grp_id
-            , time_reporting_meth_code
-            , employment_info_chg_reason_cd
-            , emp_location_code
-            , emp_status_code
-            , reason_code
-            , emp_expected_return_date
-            , pay_through_date
-            , emp_death_date
-            , consider_for_rehire_ind
-            , pay_element_id
-            , emp_calculation
-            , tax_flag
-            , nic_flag
-            , tax_ceiling_amt
-            , labor_grp_code
-            , file_source
+        SELECT ee.event_id
+            , ee.emp_id
+            , ee.eff_date
+            , ee.first_name
+            , ee.first_middle_name
+            , ee.last_name
+            , ee.empl_id
+            , ee.national_id_type_code
+            , ee.national_id
+            , ee.organization_group_id
+            , ee.organization_chart_name
+            , ee.organization_unit_name
+            , ee.emp_status_classn_code
+            , LEFT(ee.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
+            , ee.employment_type_code
+            , ee.annual_salary_amt
+            , ee.begin_date
+            , ee.end_date
+            , ee.pay_status_code
+            , ee.pay_group_id
+            , ee.pay_element_ctrl_grp_id
+            , ee.time_reporting_meth_code
+            , ee.employment_info_chg_reason_cd
+            , ee.emp_location_code
+            , ee.emp_status_code
+            , ee.reason_code
+            , ee.emp_expected_return_date
+            , ee.pay_through_date
+            , ee.emp_death_date
+            , ee.consider_for_rehire_ind
+            , ee.pay_element_id
+            , ee.emp_calculation
+            , ee.tax_flag
+            , ee.nic_flag
+            , ee.tax_ceiling_amt
+            , ee.labor_grp_code
+            , ee.file_source
+            , DBShrpn.dbo.ufn_ret_job_or_pos_id(ee.file_source, ee.empl_id) AS job_or_pos_id
             , @w_activity_date          AS activity_date
             , @w_userid                 AS activity_user
             , @v_ACTIVITY_STATUS_GOOD   AS activity_status
@@ -351,7 +352,7 @@ BEGIN
 
         IF EXISTS (
                    SELECT event_id
-                   FROM #ghr_employee_events
+                   FROM #ghr_employee_events_temp
                    WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
                   )
         BEGIN
