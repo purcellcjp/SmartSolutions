@@ -52,7 +52,7 @@ CREATE PROCEDURE dbo.usp_ins_ghr_historical_message
     , @p_pay_element_id     char(10)
     , @p_msg_p1             varchar(255)
     , @p_msg_p2             varchar(255)
-    , @p_msg_desc           varchar(255)
+    , @p_msg_desc           varchar(4000)
     , @p_activity_date      datetime
     )
 AS

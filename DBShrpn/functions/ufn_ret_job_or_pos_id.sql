@@ -48,9 +48,9 @@ BEGIN
 
     IF (@p_file_source = 'SS VENUS')
         IF (CHARINDEX('PEN', UPPER(@p_empl_id), 1) = 1)
-            SET @v_job_or_pos_id = 'PEN-0001'
+            SET @v_job_or_pos_id = '99PEN-001'--'PEN-0001'
         ELSE
-            SET @v_job_or_pos_id = 'GEN-0001'
+            SET @v_job_or_pos_id = '99GEN-001'--'GEN-0001'
     ELSE   -- Ganymede FORTHCM
         IF (@p_file_source = 'SS GANYMEDE')
             SET @v_job_or_pos_id = 'FORT-0001'

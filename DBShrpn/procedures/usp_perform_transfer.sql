@@ -927,7 +927,7 @@ BEGIN
             BEGIN CATCH
 
                 SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-                    , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+                    , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
                     , @ErrorSeverity = ERROR_SEVERITY()
                     , @ErrorState    = ERROR_STATE()
 
@@ -1004,7 +1004,7 @@ BYPASS_EMPLOYEE:
         -- commit after every record
         IF (@@TRANCOUNT > 0)
             COMMIT TRAN
-            
+
 
         ---------------------------------------------------------------------------
         -- Log warning message U00000 -- < EMPLOYEE TRANSFER SECTION (3) >
@@ -1242,7 +1242,7 @@ BYPASS_EMPLOYEE:
     BEGIN CATCH
 
         SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-            , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+             , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
              , @ErrorSeverity = ERROR_SEVERITY()
              , @ErrorState    = ERROR_STATE()
              , @p_status      = -1

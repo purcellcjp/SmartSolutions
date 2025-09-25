@@ -244,7 +244,7 @@ BEGIN
 
     -- Detail
     SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 15) +
+        LEFT(ev.eff_date + @v_SPACES_30, 20) +
         LEFT(ev.first_name + @v_SPACES_30, 20) +
         LEFT(ev.last_name + @v_SPACES_30, 20) +
         LEFT(ev.empl_id + @v_SPACES_30, 15) +

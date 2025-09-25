@@ -277,7 +277,7 @@ BEGIN
             BEGIN CATCH
 
                 SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-                    , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+                    , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
                     , @ErrorSeverity = ERROR_SEVERITY()
                     , @ErrorState    = ERROR_STATE()
 
@@ -477,10 +477,10 @@ BYPASS_EMPLOYEE:
 
         FETCH crsrLog
         INTO @msg_id
-        , @w_severity_cd
-        , @w_msg_text
-        , @w_msg_text_2
-        , @w_msg_text_3
+            , @w_severity_cd
+            , @w_msg_text
+            , @w_msg_text_2
+            , @w_msg_text_3
 
         END
 
@@ -569,7 +569,7 @@ BYPASS_EMPLOYEE:
     BEGIN CATCH
 
         SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-            , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+             , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
              , @ErrorSeverity = ERROR_SEVERITY()
              , @ErrorState    = ERROR_STATE()
              , @p_status      = -1
@@ -598,6 +598,7 @@ BYPASS_EMPLOYEE:
             , @p_msg_p2             = ''
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_date      = @p_activity_date
+
 
         -- send error back to calling procedure
         RAISERROR(

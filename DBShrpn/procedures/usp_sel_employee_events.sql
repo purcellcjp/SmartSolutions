@@ -356,7 +356,7 @@ BEGIN
                    WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
                   )
         BEGIN
-            EXEC #ghr_employee_events_temp
+            EXEC DBShrpn.dbo.usp_ins_name_change
                         @p_userid          = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER

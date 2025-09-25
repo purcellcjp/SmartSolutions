@@ -831,7 +831,7 @@ BEGIN
             BEGIN CATCH
 
                 SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-                    , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+                    , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
                     , @ErrorSeverity = ERROR_SEVERITY()
                     , @ErrorState    = ERROR_STATE()
 
@@ -1119,7 +1119,7 @@ BYPASS_EMPLOYEE:
     BEGIN CATCH
 
         SELECT @ErrorNumber   = CAST(ERROR_NUMBER() AS varchar(10))
-            , @ErrorMessage  = @v_step_position + ' - ' + LEFT(ERROR_MESSAGE(), 1024)
+            , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
             , @ErrorSeverity = ERROR_SEVERITY()
             , @ErrorState    = ERROR_STATE()
             , @p_status      = -1
