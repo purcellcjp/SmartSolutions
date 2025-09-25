@@ -18,12 +18,10 @@ GO
 
 CREATE PROCEDURE dbo.usp_ins_position_title
     (
-      @p_userid             varchar(30)
+      @p_user_id            varchar(30)
     , @p_batchname          varchar(08)
     , @p_qualifier          varchar(30)
     , @p_activity_date      datetime
-    , @p_user_id            varchar(30)
-    , @p_status             int             = 0 OUTPUT
     )
 AS
 
@@ -904,6 +902,7 @@ BYPASS_EMPLOYEE:
             , @ErrorMessage  = @v_step_position + ' - ' + ERROR_MESSAGE()
             , @ErrorSeverity = ERROR_SEVERITY()
             , @ErrorState    = ERROR_STATE()
+            , @v_ret_val      = -1
 
         -- Handle cursors
         IF (CURSOR_STATUS('local', 'crsrHR') > 0)
@@ -944,6 +943,7 @@ BYPASS_EMPLOYEE:
     DROP TABLE #tbl_ghr_msg
     DROP TABLE #tbl_msg_master
 
+    RETURN @v_ret_val
 
 END
 GO

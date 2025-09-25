@@ -16,6 +16,49 @@ BEGIN
 END
 GO
 
+/*************************************************************************************
+    SP Name:       usp_sel_employee_events
+
+    Description:   Parent procedure that executes the following procedures
+                   organized by event code in the interface file.
+
+    Event                       ID      Stored Procedure
+    -----------------------     --      ---------------------
+    Update New Hires            01      dbo.usp_ins_new_hires
+    Employee Salary Changes     02      NOT APPLICABLE FOR GOSL
+    Employee Transfers          03      dbo.usp_perform_transfer
+    Employee Name Change        04      dbo.usp_ins_name_change
+    Employee Status Change      05      dbo.usp_ins_status_change
+    Employee Pay Allowances     06      dbo.usp_ins_pay_element
+    Employee Pay Group          08      dbo.usp_ins_pay_group
+    Employee Labor Group        09      dbo.usp_ins_labor_group
+    Employee Position Title     10      dbo.usp_ins_position_title
+
+    Interface records are imported into table DBShrpn..ghr_employee_events. This procedure
+    will copy teh records to temp table #ghr_employee_events_temp that all the child procedures
+    interact with.
+
+    The records are then copied to the audit table DBShrpn.dbo.ghr_employee_events_aud. This table
+    is used to track the extracts and whether or not the record was processed.
+
+
+    Parameters:
+        None
+
+
+    Example:
+        exec dbo.usp_sel_employee_events
+
+
+
+   Revision history:
+   version  date        developer   SCR         description
+   -------  ----------  ---------   -----       ------------------------------------
+   1.0.00   08/27/2025  CJP                     - Cloned from GOG version
+
+
+************************************************************************************/
+
 CREATE PROCEDURE dbo.usp_sel_employee_events
 
 AS
@@ -247,13 +290,11 @@ BEGIN
                    )
         BEGIN
 
-			EXEC DBShrpn.dbo.usp_ins_new_hire
-                  @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_new_hire
+                  @p_user_id         = @w_userid
                 , @p_batchname       = @v_PSC_BATCHNAME
                 , @p_qualifier       = @w_PSC_QUALIFIER
                 , @p_activity_date   = @w_activity_date
-                , @p_user_id         = @w_userid
-                , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -314,13 +355,11 @@ BEGIN
                    WHERE (event_id = @v_EVENT_ID_TRANSFER)
                   )
         BEGIN
-            EXEC DBShrpn.dbo.usp_perform_transfer
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_perform_transfer
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -356,13 +395,11 @@ BEGIN
                    WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
                   )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_name_change
-                        @p_userid          = @w_userid
-                      , @p_batchname       = @v_PSC_BATCHNAME
-                      , @p_qualifier       = @w_PSC_QUALIFIER
-                      , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
+            EXEC @w_status = DBShrpn.dbo.usp_ins_name_change
+                              @p_user_id         = @w_userid
+                            , @p_batchname       = @v_PSC_BATCHNAME
+                            , @p_qualifier       = @w_PSC_QUALIFIER
+                            , @p_activity_date   = @w_activity_date
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -399,13 +436,11 @@ BEGIN
                    )
         BEGIN
 
-            EXEC DBShrpn.dbo.usp_ins_status_change
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_status_change
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -441,13 +476,11 @@ BEGIN
                     WHERE (event_id = @v_EVENT_ID_PAY_ELE)
                    )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_pay_element
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_pay_element
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -484,13 +517,11 @@ BEGIN
                     WHERE (event_id = @v_EVENT_ID_PAY_GROUP)
                    )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_pay_group
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_pay_group
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -527,13 +558,11 @@ BEGIN
                     WHERE (event_id = @v_EVENT_ID_LABOR_GROUP)
                    )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_labor_group
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_labor_group
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
@@ -570,13 +599,11 @@ BEGIN
                     WHERE (event_id = @v_EVENT_ID_POSITION_TITLE)
                    )
         BEGIN
-            EXEC DBShrpn.dbo.usp_ins_position_title
-                        @p_userid          = @w_userid
+            EXEC @w_status = DBShrpn.dbo.usp_ins_position_title
+                        @p_user_id         = @w_userid
                       , @p_batchname       = @v_PSC_BATCHNAME
                       , @p_qualifier       = @w_PSC_QUALIFIER
                       , @p_activity_date   = @w_activity_date
-                      , @p_user_id         = @w_userid
-                      , @p_status          = @w_status
 
             -- Log error if return code is not zero
             IF (@w_status <> 0)
