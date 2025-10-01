@@ -16,6 +16,34 @@ BEGIN
 END
 GO
 
+/*************************************************************************************
+    SP Name:       usp_ins_position_title
+
+    Description:
+
+
+    Parameters:
+        @p_user_id       =  User ID (i.e. 'DBS')
+        @p_batchname     = Job Scheduler Batch Name (i.e. 'GHR')
+        @p_qualifier     = Job Scheduler Qualifier (i.e. 'INTERFACES')
+        @p_activity_date = Current System Date
+
+
+    Example:
+        EXEC DBShrpn.dbo.usp_ins_position_title
+              @p_user_id          = @w_userid
+            , @p_batchname       = @v_PSC_BATCHNAME
+            , @p_qualifier       = @w_PSC_QUALIFIER
+            , @p_activity_date   = @w_activity_date
+
+
+   Revision history:
+   version  date        developer   SCR         description
+   -------  ----------  ---------   -----       ------------------------------------
+   1.0.00   08/27/2025  CJP                     - Cloned from GOG version
+
+************************************************************************************/
+
 CREATE PROCEDURE dbo.usp_ins_position_title
     (
       @p_user_id            varchar(30)
@@ -24,7 +52,6 @@ CREATE PROCEDURE dbo.usp_ins_position_title
     , @p_activity_date      datetime
     )
 AS
-
 
 BEGIN
 
@@ -73,8 +100,9 @@ BEGIN
 
 
     -- This section declares the interface values from Global HR
-    DECLARE @emp_id                         char(15)
-    DECLARE @eff_date                       char(10)
+    DECLARE @aud_id                         int             = 0
+    DECLARE @emp_id                         char(15)        = ''
+    DECLARE @eff_date                       char(10)        = '29991231'
     DECLARE @empl_id                        char(10)
     DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
     DECLARE @position_title				    char(50)        -- DBShrpn..emp_assignment.user_text_2
@@ -144,7 +172,8 @@ BEGIN
 
         -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT t.emp_id
+        SELECT t.aud_id
+             , t.emp_id
              , t.eff_date
              , t.empl_id
              , t.position_title
@@ -157,7 +186,8 @@ BEGIN
 
         SET @v_step_position = 'Fetching cursor crsrHR'
         FETCH crsrHR
-        INTO  @emp_id
+        INTO  @aud_id
+            , @emp_id
             , @eff_date
             , @empl_id
             , @position_title
@@ -192,12 +222,6 @@ BEGIN
                     SET @msg_id = 'U00118'
                     SET @v_step_position = 'Position title is blank'
 
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date   = @p_activity_date
-                    AND emp_id =   @emp_id
-                    AND event_id = @v_EVENT_ID_POSITION_TITLE
-
                     -- Historical Message for reporting purpose
                     EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                         @p_msg_id             = @msg_id
@@ -208,7 +232,9 @@ BEGIN
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Position title is blank - bypassing record'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
 
                     -- Skip record and all other validations
                     GOTO BYPASS_EMPLOYEE
@@ -233,12 +259,6 @@ BEGIN
                     SET @msg_id = 'U00119'  -- New code
                     SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
 
-                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_WARNING
-                    WHERE activity_date   = @p_activity_date
-                    AND emp_id =   @emp_id
-                    AND event_id = @v_EVENT_ID_POSITION_TITLE
-
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      AS msg_id
                         , REPLACE(REPLACE(t.msg_text, '@1', 'position title'), '@2', @emp_id) AS msg_desc
@@ -255,7 +275,9 @@ BEGIN
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Bypassing position title record since employee has either a new hire, transfer, or status change event in this extract.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
 
                     -- Skip record and all other validations
                     -- since labor group will be processed in the other events
@@ -276,12 +298,6 @@ BEGIN
                         SET @msg_id = 'U00102'  -- New code
                         SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND event_id = @v_EVENT_ID_POSITION_TITLE
-                        AND emp_id = @emp_id
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      AS msg_id
                             , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_POSITION_TITLE) AS msg_desc
@@ -298,7 +314,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Invalid Effective Date'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
 
                         SET @w_fatal_error = 1
@@ -332,13 +350,6 @@ BEGIN
                 IF (@@ROWCOUNT = 0)
                     BEGIN
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                            AND emp_id = @emp_id
-                            AND event_id = @v_EVENT_ID_POSITION_TITLE
-
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
@@ -356,7 +367,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Employee does not exist'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET @w_fatal_error = 1
 
@@ -371,13 +384,6 @@ BEGIN
 
                 IF (@cur_stat_emp_status_code = 'T')
                     BEGIN
-
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                            AND emp_id = @emp_id
-                            AND event_id = @v_EVENT_ID_POSITION_TITLE
-
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      As msg_id
@@ -396,7 +402,9 @@ BEGIN
                             , @p_msg_p1             = @position_title
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Employee is terminated in SmartStream - bypassing record.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
 
                         SET @w_fatal_error = 1
@@ -412,13 +420,6 @@ BEGIN
 
                 IF (@position_title = @cur_ea_user_text_2)
                     BEGIN
-
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                            AND emp_id = @emp_id
-                            AND event_id = @v_EVENT_ID_POSITION_TITLE
-
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      As msg_id
@@ -437,7 +438,9 @@ BEGIN
                             , @p_msg_p1             = @position_title
                             , @p_msg_p2             = @cur_ea_user_text_2
                             , @p_msg_desc           = 'New position title is same as current position title - bypassing record.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
 
                         SET @w_fatal_error = 1
@@ -458,12 +461,6 @@ BEGIN
                         -- Convert date to string for log table
                         SET @w_msg_text_2 = CONVERT(char(8), @cur_ea_eff_date, 112)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_POSITION_TITLE
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
@@ -481,7 +478,9 @@ BEGIN
                             , @p_msg_p1             = @w_msg_text_2
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
 
                         SET  @w_fatal_error = 1
@@ -606,6 +605,16 @@ BEGIN
                     AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
                     AND (eff_date         = @cur_ea_eff_date)
 
+
+                ---------------------------------------------------------------------------
+                -- Update Processed Flag after successful update
+                ---------------------------------------------------------------------------
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET proc_flag = 'Y'
+                WHERE (activity_date = @p_activity_date)
+                  AND (aud_id        = @aud_id)
+
+
             END TRY
             BEGIN CATCH
 
@@ -629,7 +638,9 @@ BEGIN
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
                     , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
+                    , @p_audit_id           = @aud_id
 
 
             END CATCH
@@ -642,7 +653,8 @@ BYPASS_EMPLOYEE:
 
 
             FETCH crsrHR
-            INTO  @emp_id
+            INTO  @aud_id
+                , @emp_id
                 , @eff_date
                 , @empl_id
                 , @position_title
@@ -671,7 +683,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -695,7 +707,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -719,7 +731,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -752,7 +764,7 @@ BYPASS_EMPLOYEE:
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -795,7 +807,7 @@ BYPASS_EMPLOYEE:
         BEGIN
             -- Add entries to DBSpscb..ssw_psc_messages_work
             EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-                @userid   = @p_userid
+                @userid   = @p_user_id
                 , @batch    = @p_batchname
                 , @qual     = @p_qualifier
                 , @msgno    = @msg_id
@@ -835,7 +847,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -860,7 +872,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -884,7 +896,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -927,7 +939,9 @@ BYPASS_EMPLOYEE:
             , @p_msg_p1             = ''
             , @p_msg_p2             = ''
             , @p_msg_desc           = @ErrorMessage
+            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date
+            , @p_audit_id           = @aud_id
 
         -- send error back to calling procedure
         RAISERROR(

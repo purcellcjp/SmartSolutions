@@ -23,25 +23,24 @@ GO
 
 
     Parameters:
-        None
+        @p_user_id       =  User ID (i.e. 'DBS')
+        @p_batchname     = Job Scheduler Batch Name (i.e. 'GHR')
+        @p_qualifier     = Job Scheduler Qualifier (i.e. 'INTERFACES')
+        @p_activity_date = Current System Date
 
 
     Example:
-            EXEC DBShrpn.dbo.usp_ins_new_hire
-                  @p_userid          = @w_userid
-                , @p_batchname       = @v_PSC_BATCHNAME
-                , @p_qualifier       = @w_PSC_QUALIFIER
-                , @p_activity_date   = @w_activity_date
-                , @p_user_id         = @w_userid
-                , @p_status          = @w_status
-
+        EXEC DBShrpn.dbo.usp_ins_new_hire
+              @p_user_id          = @w_userid
+            , @p_batchname       = @v_PSC_BATCHNAME
+            , @p_qualifier       = @w_PSC_QUALIFIER
+            , @p_activity_date   = @w_activity_date
 
 
    Revision history:
    version  date        developer   SCR         description
    -------  ----------  ---------   -----       ------------------------------------
    1.0.00   08/27/2025  CJP                     - Cloned from GOG version
-
 
 ************************************************************************************/
 
@@ -54,61 +53,60 @@ CREATE PROCEDURE dbo.usp_ins_new_hire
     )
 AS
 
-
 BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @v_step_position                varchar(255)        = 'Begin usp_ins_new_hire'
-    DECLARE @v_DISPLAY_NAME_FORMAT          char(33)            = 'LNMCOMSFXFNMFMNSMI'  -- Unique to client
-    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_step_position                        varchar(255)        = 'Begin usp_ins_new_hire'
+    DECLARE @v_DISPLAY_NAME_FORMAT                  char(33)            = 'LNMCOMSFXFNMFMNSMI'  -- Unique to client
+    DECLARE @v_END_OF_TIME_DATE                     datetime            = '29991231'
 
-    DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
+    DECLARE @v_EVENT_ID_NEW_HIRE                    char(2)             = '01'
 
 
-    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
-    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
-    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+    DECLARE @v_ACTIVITY_STATUS_GOOD                 char(2)             = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING              char(2)             = '01'
+    DECLARE @v_ACTIVITY_STATUS_BAD                  char(2)             = '02'
 
-    DECLARE @ErrorNumber                    varchar(10)
-    DECLARE @ErrorMessage                   nvarchar(4000)
-    DECLARE @ErrorSeverity                  int
-    DECLARE @ErrorState                     int
+    DECLARE @ErrorNumber                            varchar(10)
+    DECLARE @ErrorMessage                           nvarchar(4000)
+    DECLARE @ErrorSeverity                          int
+    DECLARE @ErrorState                             int
 
-    DECLARE @v_ret_val                      int = 0
-    DECLARE @w_msg_text      varchar(255)
-    DECLARE @w_msg_text_2     varchar(255)
-    DECLARE @w_msg_text_3     varchar(255)
-    DECLARE @w_severity_cd     tinyint
-    DECLARE @w_fatal_error     bit     = 0         --char(01)
-    DECLARE @w_trace_sw      char(01)
+    DECLARE @v_ret_val                              int = 0
+    DECLARE @w_msg_text                             varchar(255)
+    DECLARE @w_msg_text_2                           varchar(255)
+    DECLARE @w_msg_text_3                           varchar(255)
+    DECLARE @w_severity_cd                          tinyint
+    DECLARE @w_fatal_error                          bit     = 0         --char(01)
+    DECLARE @w_trace_sw                             char(01)
 
-    DECLARE @special_value_exists   int
-    DECLARE @i_emp_id      char(15)
-    DECLARE @i_assigned_to_code    char(01)
-    DECLARE @i_job_or_pos_id    char(10)
-    DECLARE @i_eff_date      datetime
-    DECLARE @i_next_eff_date    datetime
-    DECLARE @i_prior_eff_date    datetime
-    DECLARE @i_standard_work_pd_id   char(5)
-    DECLARE @i_standard_work_hrs   float
-    DECLARE @i_yearly_std_work_hrs   float
-    DECLARE @i_hourly_rate_amt    money
-    DECLARE @i_period_amt     money
+    DECLARE @special_value_exists                   int
+    DECLARE @i_emp_id                               char(15)
+    DECLARE @i_assigned_to_code                     char(01)
+    DECLARE @i_job_or_pos_id                        char(10)
+    DECLARE @i_eff_date                             datetime
+    DECLARE @i_next_eff_date                        datetime
+    DECLARE @i_prior_eff_date                       datetime
+    DECLARE @i_standard_work_pd_id                  char(5)
+    DECLARE @i_standard_work_hrs                    float
+    DECLARE @i_yearly_std_work_hrs                  float
+    DECLARE @i_hourly_rate_amt                      money
+    DECLARE @i_period_amt                           money
 
-    DECLARE @ee_emp_id char(15)
-    DECLARE @ee_eff_date datetime
-    DECLARE @ee_next_eff_date datetime
-    DECLARE @ee_prior_eff_date datetime
+    DECLARE @ee_emp_id                              char(15)
+    DECLARE @ee_eff_date                            datetime
+    DECLARE @ee_next_eff_date                       datetime
+    DECLARE @ee_prior_eff_date                      datetime
 
-    DECLARE @maxx   VARCHAR(06)
-    DECLARE @ind_idx  CHAR(10)
-    DECLARE @annual_salary MONEY
-    DECLARE @tax_entity_id CHAR(10)
-    DECLARE @msg_id   CHAR(10)
-    DECLARE @individual_id CHAR(10)
-    DECLARE @pay_frequency_code  char(05)
-    DECLARE @annualizing_factor float
+    DECLARE @maxx                                   varchar(06)
+    DECLARE @ind_idx                                char(10)
+    DECLARE @annual_salary                          money
+    DECLARE @tax_entity_id                          char(10)
+    DECLARE @msg_id                                 char(10)
+    DECLARE @individual_id                          char(10)
+    DECLARE @pay_frequency_code                     char(05)
+    DECLARE @annualizing_factor                     float
 
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
@@ -240,9 +238,9 @@ BEGIN
     DECLARE @w_end_date                             datetime
 
     -- This section declares the interface values from Global HR
-    DECLARE @event_id                               char(02)
-    DECLARE @emp_id                                 char(15)
-    DECLARE @eff_date                               char(10)
+    DECLARE @aud_id                                 int             = 0
+    DECLARE @emp_id                                 char(15)        = ''
+    DECLARE @eff_date                               char(10)        = '29991231'
     DECLARE @first_name                             char(25)
     DECLARE @first_middle_name                      char(25)
     DECLARE @last_name                              char(30)
@@ -349,7 +347,7 @@ BEGIN
 
         -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT t.event_id
+        SELECT t.aud_id
              , t.emp_id
              , t.eff_date
              , t.first_name
@@ -395,7 +393,7 @@ BEGIN
 
         SET @v_step_position = 'Fetching cursor crsrHR'
         FETCH crsrHR
-        INTO  @event_id
+        INTO  @aud_id
             , @emp_id
             , @eff_date
             , @first_name
@@ -469,12 +467,6 @@ BEGIN
                         SET @msg_id = 'U00003'
                         SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                            AND emp_id  = @emp_id
-                            AND event_id  = @v_EVENT_ID_NEW_HIRE
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
@@ -491,7 +483,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Employee id already exists'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET  @w_fatal_error = 1
 
@@ -520,17 +514,13 @@ BEGIN
                             SELECT @empl_id = '0' + @empl_id
                         ELSE
                             BEGIN
-                                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                                WHERE activity_date = @p_activity_date
-                                AND emp_id  = @emp_id
-                                AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id         As msg_id
                                     , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
                                 FROM #tbl_msg_master t
                                 WHERE (msg_id = @msg_id)
+
 
                                 -- Historical Message for reporting purpose
                                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -542,7 +532,9 @@ BEGIN
                                     , @p_msg_p1             = ''
                                     , @p_msg_p2             = ''
                                     , @p_msg_desc           = 'Invalid Employer id - defaulting to 99999'
+                                    , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                     , @p_activity_date      = @p_activity_date
+                                    , @p_audit_id           = @aud_id
 
                                 SELECT @empl_id = '99999'
 
@@ -558,12 +550,6 @@ BEGIN
 
                         SET @msg_id = 'U00046'
                         SET @v_step_position = 'Validation - ' + @msg_id
-
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id  = @emp_id
-                        AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      As msg_id
@@ -581,7 +567,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET  @national_id = '99999'
                     END
@@ -597,12 +585,6 @@ BEGIN
 
                                     SET @msg_id = 'U00006'
                                     SET @v_step_position = 'Begin ' + @msg_id
-
-                                    UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                    SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                                    WHERE activity_date = @p_activity_date
-                                    AND emp_id  = @emp_id
-                                    AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                                     INSERT INTO #tbl_ghr_msg
                                     SELECT @msg_id      As msg_id
@@ -620,7 +602,9 @@ BEGIN
                                         , @p_msg_p1             = @national_id
                                         , @p_msg_p2             = ''
                                         , @p_msg_desc           = 'NIS number already in use - defaulting to 99999'
+                                        , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                         , @p_activity_date      = @p_activity_date
+                                        , @p_audit_id           = @aud_id
 
                                     SET @national_id = '99999'
                                 END
@@ -634,12 +618,6 @@ BEGIN
 
                         SET @msg_id = 'U00007'
                         SET @v_step_position = 'Begin ' + @msg_id
-
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id  = @emp_id
-                        AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id     As msg_id
@@ -657,7 +635,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET @national_id = '99999'
                     END
@@ -676,12 +656,6 @@ BEGIN
                             )
                     BEGIN
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id  = @emp_id
-                        AND event_id  = @v_EVENT_ID_NEW_HIRE
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id     As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
@@ -699,7 +673,9 @@ BEGIN
                             , @p_msg_p1             = @pay_group_id
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Invalid pay group id'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
 
                         SET @pay_group_id = ' '
@@ -728,14 +704,8 @@ BEGIN
                         -- Use default employee type value
                         --SET @w_conv_employment_type_code = 'XXXXX'
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id  = @emp_id
-                        AND event_id  = @v_EVENT_ID_NEW_HIRE
-
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id             As msg_id
+                        SELECT @msg_id As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @employment_type_code), '@2', @emp_id) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -752,7 +722,9 @@ BEGIN
                             , @p_msg_p1             = @w_msg_text
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Invalid Employment Type Code'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                     END
                 ELSE
@@ -770,12 +742,6 @@ BEGIN
 
                             -- Use default employee type value
                             --SET @w_conv_employment_type_code = 'XXXXX'
-
-                            UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status = @v_ACTIVITY_STATUS_WARNING
-                            WHERE activity_date = @p_activity_date
-                            AND emp_id  = @emp_id
-                            AND event_id  = @v_EVENT_ID_NEW_HIRE
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id             As msg_id
@@ -795,7 +761,9 @@ BEGIN
                                 , @p_msg_p1             = @w_msg_text
                                 , @p_msg_p2             = ''
                                 , @p_msg_desc           = 'Invalid Employment Type Code'
+                                , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                 , @p_activity_date      = @p_activity_date
+                                , @p_audit_id           = @aud_id
 
                         END
 
@@ -1078,6 +1046,17 @@ BEGIN
                 SET user_monetary_amt_1 = @tax_ceiling_amt
                 WHERE (emp_id = @emp_id)
 
+
+                ---------------------------------------------------------------------------
+                -- Update Processed Flag after successful update
+                ---------------------------------------------------------------------------
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET proc_flag = 'Y'
+                WHERE (activity_date = @p_activity_date)
+                  AND (aud_id        = @aud_id)
+
+
+
             END TRY
             BEGIN CATCH
 
@@ -1101,7 +1080,9 @@ BEGIN
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
                     , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
+                    , @p_audit_id           = @aud_id
 
             END CATCH
 
@@ -1111,7 +1092,7 @@ BYPASS_EMPLOYEE:
                 COMMIT TRAN
 
             FETCH crsrHR
-            INTO  @event_id
+            INTO  @aud_id
                 , @emp_id
                 , @eff_date
                 , @first_name
@@ -1176,7 +1157,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1208,7 +1189,7 @@ BYPASS_EMPLOYEE:
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1232,7 +1213,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1256,7 +1237,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1288,7 +1269,7 @@ BYPASS_EMPLOYEE:
         SET @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1330,7 +1311,7 @@ BYPASS_EMPLOYEE:
         BEGIN
             -- Add entries to DBSpscb..ssw_psc_messages_work
             EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-                @userid   = @p_userid
+                @userid   = @p_user_id
                 , @batch    = @p_batchname
                 , @qual     = @p_qualifier
                 , @msgno    = @msg_id
@@ -1366,7 +1347,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1390,7 +1371,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1414,7 +1395,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1457,7 +1438,9 @@ BYPASS_EMPLOYEE:
             , @p_msg_p1             = ''
             , @p_msg_p2             = ''
             , @p_msg_desc           = @ErrorMessage
+            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date
+            , @p_audit_id           = @aud_id
 
 
         -- send error back to calling procedure

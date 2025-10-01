@@ -53,7 +53,7 @@ BEGIN
             SET @v_job_or_pos_id = '99GEN-001'--'GEN-0001'
     ELSE   -- Ganymede FORTHCM
         IF (@p_file_source = 'SS GANYMEDE')
-            SET @v_job_or_pos_id = 'FORT-0001'
+            SET @v_job_or_pos_id = 'FORT001'
 
 
     RETURN @v_job_or_pos_id

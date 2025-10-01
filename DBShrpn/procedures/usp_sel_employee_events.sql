@@ -39,7 +39,7 @@ GO
     interact with.
 
     The records are then copied to the audit table DBShrpn.dbo.ghr_employee_events_aud. This table
-    is used to track the extracts and whether or not the record was processed.
+    is used to track the extracts whether or not the record was processed.
 
 
     Parameters:
@@ -50,12 +50,10 @@ GO
         exec dbo.usp_sel_employee_events
 
 
-
    Revision history:
    version  date        developer   SCR         description
    -------  ----------  ---------   -----       ------------------------------------
    1.0.00   08/27/2025  CJP                     - Cloned from GOG version
-
 
 ************************************************************************************/
 
@@ -94,6 +92,7 @@ BEGIN
 
     DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+    --DECLARE @v_ACTIVITY_STATUS_UNPROCESSED  char(2)             = '99'
 
     DECLARE @w_activity_date	            datetime
     DECLARE @w_status			            int
@@ -103,7 +102,7 @@ BEGIN
 
     CREATE TABLE #ghr_employee_events_temp
     (
-      ID                                    int	IDENTITY(1,1)   NOT NULL
+      aud_id                                int	IDENTITY(1,1)   NOT NULL
     , event_id                              char(02)            NULL
     , emp_id                                char(15)            NULL
     , eff_date                              char(10)            NULL
@@ -218,8 +217,8 @@ BEGIN
             , t.file_source
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
         FROM DBShrpn.dbo.ghr_employee_events t
-        ORDER BY t.event_id
-               , t.emp_id
+        --ORDER BY t.event_id
+        --       , t.emp_id
 
 
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
@@ -263,17 +262,11 @@ BEGIN
             , ee.labor_grp_code
             , ee.file_source
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(ee.file_source, ee.empl_id) AS job_or_pos_id
-            , @w_activity_date          AS activity_date
-            , @w_userid                 AS activity_user
-            , @v_ACTIVITY_STATUS_GOOD   AS activity_status
-        FROM DBShrpn.dbo.ghr_employee_events ee
-        WHERE NOT EXISTS (
-                            SELECT 1
-                            FROM DBShrpn.dbo.ghr_employee_events_aud t
-                            WHERE (t.event_id = ee.event_id)
-                                AND (t.emp_id = ee.emp_id)
-                                AND (t.activity_date	= @w_activity_date)
-                        )
+            , @w_activity_date                                              AS activity_date
+            , ee.aud_id
+            , @w_userid                                                     AS activity_user
+            , 'N'                                                           AS proc_flag
+        FROM #ghr_employee_events_temp ee
 
 
         ---------------------------------------------------------------------------

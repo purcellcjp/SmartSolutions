@@ -16,6 +16,34 @@ BEGIN
 END
 GO
 
+/*************************************************************************************
+    SP Name:       usp_perform_transfer
+
+    Description:
+
+
+    Parameters:
+        @p_user_id       =  User ID (i.e. 'DBS')
+        @p_batchname     = Job Scheduler Batch Name (i.e. 'GHR')
+        @p_qualifier     = Job Scheduler Qualifier (i.e. 'INTERFACES')
+        @p_activity_date = Current System Date
+
+
+    Example:
+        EXEC DBShrpn.dbo.usp_perform_transfer
+              @p_user_id          = @w_userid
+            , @p_batchname       = @v_PSC_BATCHNAME
+            , @p_qualifier       = @w_PSC_QUALIFIER
+            , @p_activity_date   = @w_activity_date
+
+
+   Revision history:
+   version  date        developer   SCR         description
+   -------  ----------  ---------   -----       ------------------------------------
+   1.0.00   08/27/2025  CJP                     - Cloned from GOG version
+
+************************************************************************************/
+
 CREATE PROCEDURE dbo.usp_perform_transfer
     (
       @p_user_id              varchar(30)
@@ -73,43 +101,43 @@ BEGIN
     DECLARE @new_emp_asgn_pd_salary_tm_pd_id            char(05)
 
     -- This section declares the interface values from Global HR
-    DECLARE @event_id                                   char(02)
-          , @emp_id                                     char(15)
-          , @eff_date                                   char(10)
-          , @first_name                                 char(25)
-          , @first_middle_name                          char(25)
-          , @last_name                                  char(30)
-          , @empl_id                                    char(10)
-          , @national_id_type_code                      char(05)
-          , @national_id                                char(20)
-          , @organization_group_id                      char(05)
-          , @organization_chart_name                    char(64)
-          , @organization_unit_name                     char(240)
-          , @emp_status_classn_code                     char(02)
-          , @position_title                             char(50)        -- DBShrpn..emp_assignment.user_text
-          , @employment_type_code                       varchar(70)     -- increased size to 70 from 5
-          , @annual_salary_amt                          char(15)
-          , @begin_date                                 char(10)
-          , @end_date                                   char(10)
-          , @pay_status_code                            char(01)
-          , @pay_group_id                               char(10)
-          , @pay_element_ctrl_grp_id                    char(10)
-          , @time_reporting_meth_code                   char(01)
-          , @employment_info_chg_reason_cd              char(05)
-          , @emp_location_code                          char(10)
-          , @emp_status_code                            char(02)
-          , @reason_code                                char(02)
-          , @emp_expected_return_date                   char(10)
-          , @pay_through_date                           char(10)
-          , @emp_death_date                             char(10)
-          , @consider_for_rehire_ind                    char(01)
-          , @pay_element_id                             char(10)
-          , @emp_calculation                            char(15)
-          , @tax_flag                                   char(1)         -- individual_personal.ind_2
-          , @nic_flag                                   char(1)         -- individual_personal.ind_1
-          , @tax_ceiling_amt                            char(15)        -- employee.user_monetary_amt_1
-          , @labor_grp_code                             char(5)         -- DBShrpn..emp_employment.labor_grp_code
-          , @file_source                                char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+    DECLARE @aud_id                                     int             = 0
+    DECLARE @emp_id                                     char(15)        = ''
+    DECLARE @eff_date                                   char(10)        = '29991231'
+    DECLARE @first_name                                 char(25)
+    DECLARE @first_middle_name                          char(25)
+    DECLARE @last_name                                  char(30)
+    DECLARE @empl_id                                    char(10)
+    DECLARE @national_id_type_code                      char(05)
+    DECLARE @national_id                                char(20)
+    DECLARE @organization_group_id                      char(05)
+    DECLARE @organization_chart_name                    char(64)
+    DECLARE @organization_unit_name                     char(240)
+    DECLARE @emp_status_classn_code                     char(02)
+    DECLARE @position_title                             char(50)        -- DBShrpn..emp_assignment.user_text
+    DECLARE @employment_type_code                       varchar(70)     -- increased size to 70 from 5
+    DECLARE @annual_salary_amt                          char(15)
+    DECLARE @begin_date                                 char(10)
+    DECLARE @end_date                                   char(10)
+    DECLARE @pay_status_code                            char(01)
+    DECLARE @pay_group_id                               char(10)
+    DECLARE @pay_element_ctrl_grp_id                    char(10)
+    DECLARE @time_reporting_meth_code                   char(01)
+    DECLARE @employment_info_chg_reason_cd              char(05)
+    DECLARE @emp_location_code                          char(10)
+    DECLARE @emp_status_code                            char(02)
+    DECLARE @reason_code                                char(02)
+    DECLARE @emp_expected_return_date                   char(10)
+    DECLARE @pay_through_date                           char(10)
+    DECLARE @emp_death_date                             char(10)
+    DECLARE @consider_for_rehire_ind                    char(01)
+    DECLARE @pay_element_id                             char(10)
+    DECLARE @emp_calculation                            char(15)
+    DECLARE @tax_flag                                   char(1)         -- individual_personal.ind_2
+    DECLARE @nic_flag                                   char(1)         -- individual_personal.ind_1
+    DECLARE @tax_ceiling_amt                            char(15)        -- employee.user_monetary_amt_1
+    DECLARE @labor_grp_code                             char(5)         -- DBShrpn..emp_employment.labor_grp_code
+    DECLARE @file_source                                char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
     DECLARE @w_eff_date                                 datetime
     DECLARE @v_cal_year                                 smallint
@@ -209,7 +237,7 @@ BEGIN
 
         -- Loop through ghr_employee_events_temp to populate error message log entry
         DECLARE crsrHR CURSOR FAST_FORWARD FOR
-        SELECT t.event_id
+        SELECT t.aud_id
              , t.emp_id
              , t.eff_date
              , t.first_name
@@ -254,7 +282,7 @@ BEGIN
 
         SET @v_step_position = 'Fetching cursor crsrHR'
         FETCH crsrHR
-        INTO  @event_id
+        INTO  @aud_id
             , @emp_id
             , @eff_date
             , @first_name
@@ -338,12 +366,6 @@ BEGIN
                         SET @msg_id = 'U00102'  -- New code
                         SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND event_id = @v_EVENT_ID_TRANSFER
-                        AND emp_id = @emp_id
-
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      AS msg_id
                             , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_TRANSFER) AS msg_desc
@@ -360,7 +382,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Invalid Effective Date'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET @w_fatal_error = 1
 
@@ -399,12 +423,6 @@ BEGIN
                     SET @msg_id = 'U00012'
                     SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                    UPDATE   DBShrpn.dbo.ghr_employee_events_aud
-                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                    WHERE activity_date         = @p_activity_date
-                    AND emp_id           = @emp_id
-                    AND pay_element_id = @pay_element_id
-                    AND event_id         = @v_EVENT_ID_TRANSFER
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id AS msg_id
@@ -422,7 +440,9 @@ BEGIN
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Invalid employee id.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
 
                     SET @w_fatal_error = 1
 
@@ -455,11 +475,20 @@ BEGIN
                     IF (@rehire_override = 1)
                     BEGIN
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND event_id = @v_EVENT_ID_TRANSFER
-                        AND emp_id   = @emp_id
+                    -- Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                        @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_TRANSFER
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = ''
+                        , @p_msg_p1             = ''
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'Associate is currently terminated and has rehire record in current extract - bypassing transfer.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                        , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
+
 
                         SET @w_fatal_error = 1
 
@@ -497,11 +526,6 @@ BEGIN
                         -- Convert date to string for log table
                         SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_eff_date, 112)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_TRANSFER
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
@@ -520,13 +544,13 @@ BEGIN
                             , @p_msg_p1             = @w_msg_text_2
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'The new effective date for employee must be greater than the current employee employment effective date'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET @w_fatal_error = 1
 
                     END
-
-
 
 
                 ---------------------------------------------------------------------------
@@ -544,11 +568,6 @@ BEGIN
                         SET @msg_id = 'U00038'
                         SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                        UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                        SET activity_status = @v_ACTIVITY_STATUS_BAD
-                        WHERE activity_date = @p_activity_date
-                        AND emp_id = @emp_id
-                        AND event_id = @v_EVENT_ID_TRANSFER
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
@@ -567,7 +586,9 @@ BEGIN
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
                             , @p_msg_desc           = 'Existing payments have not been updated into the accumulator for this employee.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
 
                         SET @w_fatal_error = 1
 
@@ -596,17 +617,13 @@ BEGIN
                             SET @msg_id = 'U00039'
                             SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                            UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                            SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                            WHERE activity_date   =   @p_activity_date
-                            AND emp_id      =   @emp_id
-                            AND event_id      = @v_EVENT_ID_TRANSFER
 
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id      As msg_id
                                 , REPLACE(t.msg_text, '@1', @empl_id) AS msg_desc
                             FROM #tbl_msg_master t
                             WHERE (msg_id = @msg_id)
+
 
                             -- Historical Message for reporting purpose
                             EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -618,7 +635,9 @@ BEGIN
                                 , @p_msg_p1             = @empl_id
                                 , @p_msg_p2             = ''
                                 , @p_msg_desc           = 'Employer does not exist - bypassing record'
+                                , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                 , @p_activity_date      = @p_activity_date
+                                , @p_audit_id           = @aud_id
 
                             SET @w_fatal_error = 1
 
@@ -654,12 +673,6 @@ BEGIN
                                 SET @msg_id = 'U00034'
                                 SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
-                                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status = @v_ACTIVITY_STATUS_BAD
-                                WHERE activity_date = @p_activity_date
-                                AND emp_id = @emp_id
-                                AND event_id = @v_EVENT_ID_TRANSFER
-
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id As msg_id
                                     , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
@@ -676,14 +689,16 @@ BEGIN
                                     , @p_msg_p1             = @empl_id
                                     , @p_msg_p2             = @cur_empl_id
                                     , @p_msg_desc           = 'Cannot transfer an employee to the same employer.'
+                                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
+                                    , @p_audit_id           = @aud_id
 
                                 SET @w_fatal_error = 1
                             --END
 
                     END
 
-
+/*
                 ---------------------------------------------------------------------------
                 -- Check to see if the employee is getting transfer to pensioner employer
                 ---------------------------------------------------------------------------
@@ -699,14 +714,9 @@ BEGIN
 
                         IF (@rehire_override = 0)
                             BEGIN
-                                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                    SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                                WHERE activity_date   =   @p_activity_date
-                                    AND emp_id      =   @emp_id
-                                    AND event_id      = @v_EVENT_ID_TRANSFER
 
                                 INSERT INTO #tbl_ghr_msg
-                                SELECT @msg_id                   As msg_id
+                                SELECT @msg_id As msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                                 FROM #tbl_msg_master t
                                 WHERE (msg_id = @msg_id)
@@ -721,7 +731,9 @@ BEGIN
                                     , @p_msg_p1             = @empl_id
                                     , @p_msg_p2             = ''
                                     , @p_msg_desc           = 'Cannot transfer an employee to a pensioner employer'
+                                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
+                                    , @p_audit_id           = @aud_id
 
                                 SET @w_fatal_error = 1
                             END
@@ -735,7 +747,7 @@ BEGIN
                             END
 
                 END
-
+*/
 
 
                 ---------------------------------------------------------------------------
@@ -748,11 +760,6 @@ BEGIN
                     BEGIN
                         IF (@rehire_override = 0)   -- not a rehire in current run
                             BEGIN
-                                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                    SET activity_status = @v_ACTIVITY_STATUS_BAD
-                                    WHERE activity_date = @p_activity_date
-                                    AND emp_id = @emp_id
-                                    AND event_id = @v_EVENT_ID_TRANSFER
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id                   As msg_id
@@ -770,21 +777,32 @@ BEGIN
                                     , @p_msg_p1             = @cur_emp_status_code
                                     , @p_msg_p2             = ''
                                     , @p_msg_desc           = 'Terminated employee cannot be transferred.'
+                                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
+                                    , @p_audit_id           = @aud_id
 
                                 SET @w_fatal_error = 1
                             END
                         ELSE
                             BEGIN
-                                -- Associate is a rehire
-                                -- negate transfer
-                                UPDATE DBShrpn.dbo.ghr_employee_events_aud
-                                SET activity_status   = @v_ACTIVITY_STATUS_BAD
-                                WHERE activity_date   = @p_activity_date
-                                AND emp_id = @emp_id
-                                AND event_id = @v_EVENT_ID_TRANSFER
+                                -- Associate is a rehire - negate transfer
+
+                                -- Historical Message for reporting purpose
+                                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                                    @p_msg_id             = @msg_id
+                                    , @p_event_id           = @v_EVENT_ID_TRANSFER
+                                    , @p_emp_id             = @emp_id
+                                    , @p_eff_date           = @eff_date
+                                    , @p_pay_element_id     = ''
+                                    , @p_msg_p1             = @cur_emp_status_code
+                                    , @p_msg_p2             = ''
+                                    , @p_msg_desc           = 'Terminated employee is a rehire in current extract - bypassing transfer.'
+                                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                                    , @p_activity_date      = @p_activity_date
+                                    , @p_audit_id           = @aud_id
 
                                 SET @w_fatal_error = 1
+
                             END
 
                     END
@@ -923,6 +941,16 @@ BEGIN
                     (emp.individual_id = ind.individual_id)
                 WHERE (emp.emp_id = @emp_id)
 
+
+                ---------------------------------------------------------------------------
+                -- Update Processed Flag after successful update
+                ---------------------------------------------------------------------------
+                UPDATE DBShrpn.dbo.ghr_employee_events_aud
+                SET proc_flag = 'Y'
+                WHERE (activity_date = @p_activity_date)
+                  AND (aud_id        = @aud_id)
+
+
             END TRY
             BEGIN CATCH
 
@@ -946,7 +974,9 @@ BEGIN
                     , @p_msg_p1             = ''
                     , @p_msg_p2             = ''
                     , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
+                    , @p_audit_id           = @aud_id
 
 
             END CATCH
@@ -957,7 +987,7 @@ BYPASS_EMPLOYEE:
                 COMMIT TRAN
 
             FETCH crsrHR
-            INTO  @event_id
+            INTO  @aud_id
                 , @emp_id
                 , @eff_date
                 , @first_name
@@ -1021,7 +1051,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1045,7 +1075,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1069,7 +1099,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1101,7 +1131,7 @@ BYPASS_EMPLOYEE:
         SET @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1143,7 +1173,7 @@ BYPASS_EMPLOYEE:
         BEGIN
             -- Add entries to DBSpscb..ssw_psc_messages_work
             EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-                @userid   = @p_userid
+                @userid   = @p_user_id
                 , @batch    = @p_batchname
                 , @qual     = @p_qualifier
                 , @msgno    = @msg_id
@@ -1179,7 +1209,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1203,7 +1233,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1227,7 +1257,7 @@ BYPASS_EMPLOYEE:
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
-            @userid   = @p_userid
+            @userid   = @p_user_id
             , @batch    = @p_batchname
             , @qual     = @p_qualifier
             , @msgno    = @msg_id
@@ -1270,7 +1300,9 @@ BYPASS_EMPLOYEE:
             , @p_msg_p1             = ''
             , @p_msg_p2             = ''
             , @p_msg_desc           = @ErrorMessage
+            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date
+            , @p_audit_id           = @aud_id
 
         RAISERROR(@ErrorMessage
                 , @ErrorSeverity
