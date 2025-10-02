@@ -16,7 +16,39 @@ BEGIN
 END
 GO
 
+/*************************************************************************************
+    SP Name:       usp_verification_rpt
 
+    Description:    HCM Interface Verification Report
+
+
+    Event                       ID
+    -----------------------     ---
+    Update New Hires            01
+    Employee Salary Changes     02
+    Employee Transfers          03
+    Employee Name Change        04
+    Employee Status Change      05
+    Employee Pay Allowances     06
+    Employee Pay Group          08
+    Employee Labor Group        09
+    Employee Position Title     10
+
+    Parameters:
+        None
+
+
+
+    Example:
+        EXEC DBShrpn.dbo.usp_verification_rpt
+
+
+   Revision history:
+   version  date        developer   SCR         description
+   -------  ----------  ---------   -----       ------------------------------------
+   1.0.00   08/27/2025  CJP                     - Cloned from GOG version
+
+************************************************************************************/
 CREATE procedure dbo.usp_verification_rpt
 AS
 
@@ -140,7 +172,7 @@ BEGIN
     ---------------------------------------------------------------------------
     SELECT @v_SPACES_30 + 'HCM - SS Interface Transaction Report'
     SELECT @v_SPACES_50 + 'All Entities'
-    SELECT 'Run Date: ' + CONVERT(char,GETDATE(),120)	+ SPACE(10)
+    SELECT 'Extract Run Date: ' + CONVERT(char, @w_activity_date, 120)	+ SPACE(10)
     SELECT @v_SPACES_50
 
 
@@ -156,12 +188,12 @@ BEGIN
            LEFT('Event ID' + @v_SPACES_30, 15) +
            'Error Message ID'
 
-    SELECT LEFT(m.msg_id + @v_SPACES_30, 15) +
-           LEFT(m.event_id + @v_SPACES_30, 15) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_historical_message m
-    WHERE (CHARINDEX('U', m.msg_id) = 0)    -- exclude message master message ids
-      AND (m.activity_date	= @w_activity_date)
+    SELECT LEFT(msg.msg_id + @v_SPACES_30, 15) +
+           LEFT(msg.event_id + @v_SPACES_30, 15) +
+           RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    WHERE (CHARINDEX('U', msg.msg_id) = 0)    -- exclude message master message ids
+      AND (msg.activity_date	= @w_activity_date)
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -180,16 +212,16 @@ BEGIN
     SELECT @v_header_base
 
     -- Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_NEW_HIRE)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_NEW_HIRE)
+      AND (aud.proc_flag = 'Y')
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -208,24 +240,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id      = @v_EVENT_ID_NEW_HIRE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_WARNING)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (msg.event_id        = @v_EVENT_ID_NEW_HIRE)
+      AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+      AND (msg.activity_date   = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -243,23 +273,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date)
-    WHERE (ev.event_id      = @v_EVENT_ID_NEW_HIRE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    JOIN DBShrpn.dbo.ghr_historical_message msg ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.activity_date   = @w_activity_date)
+      AND (aud.event_id        = @v_EVENT_ID_NEW_HIRE)
+      AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -278,17 +307,17 @@ BEGIN
     SELECT @v_header_base
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_TRANSFER)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_TRANSFER)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -307,24 +336,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Warnings Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id      = @v_EVENT_ID_TRANSFER)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_WARNING)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id      = @v_EVENT_ID_TRANSFER)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -342,24 +369,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_TRANSFER)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_TRANSFER)
+      AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+      AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -378,17 +403,17 @@ BEGIN
     SELECT @v_header_base
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (event_id = @v_EVENT_ID_NAME_CHANGE)
-      AND (activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_NAME_CHANGE)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -406,24 +431,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_NAME_CHANGE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_NAME_CHANGE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -442,17 +465,17 @@ BEGIN
     SELECT @v_header_base
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_STATUS_CHANGE)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_STATUS_CHANGE)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -471,24 +494,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Warnings Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id      = @v_EVENT_ID_STATUS_CHANGE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_WARNING)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id      = @v_EVENT_ID_STATUS_CHANGE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -506,24 +527,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_STATUS_CHANGE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_STATUS_CHANGE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -542,21 +561,21 @@ BEGIN
     SELECT @v_header_pay_ele
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_element_id + @v_SPACES_30, 20) +
-           LEFT(ev.begin_date + @v_SPACES_30, 15) +
-           LEFT(ev.end_date + @v_SPACES_30, 15) +
-           LEFT(ev.emp_calculation + @v_SPACES_30, 20)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_PAY_ELE)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_element_id + @v_SPACES_30, 20) +
+           LEFT(aud.begin_date + @v_SPACES_30, 15) +
+           LEFT(aud.end_date + @v_SPACES_30, 15) +
+           LEFT(aud.emp_calculation + @v_SPACES_30, 20)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_PAY_ELE)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -575,29 +594,26 @@ BEGIN
     SELECT @v_header_pay_ele_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_element_id + @v_SPACES_30, 20) +
-           LEFT(ev.begin_date + @v_SPACES_30, 15) +
-           LEFT(ev.end_date + @v_SPACES_30, 15) +
-           LEFT(ev.emp_calculation + @v_SPACES_30, 20) +
-           LEFT(m.msg_id + @v_SPACES_30, 15) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND   -- just in case more than one pay element id with different effective dates - should not happen
-            (m.activity_date = ev.activity_date) AND
-            (m.pay_element_id = ev.pay_element_id)
-    WHERE (ev.event_id        = @v_EVENT_ID_PAY_ELE)
-        AND (ev.activity_status = @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_element_id + @v_SPACES_30, 20) +
+           LEFT(aud.begin_date + @v_SPACES_30, 15) +
+           LEFT(aud.end_date + @v_SPACES_30, 15) +
+           LEFT(aud.emp_calculation + @v_SPACES_30, 20) +
+           LEFT(msg.msg_id + @v_SPACES_30, 15) +
+           RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_PAY_ELE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -615,17 +631,17 @@ BEGIN
     SELECT @v_header_base
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_PAY_GROUP)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_PAY_GROUP)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -643,24 +659,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Detail warning
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(m.msg_id + @v_SPACES_30, 15) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_PAY_GROUP)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_WARNING)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(msg.msg_id + @v_SPACES_30, 15) +
+           RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_PAY_GROUP)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -678,24 +692,22 @@ BEGIN
     SELECT @v_header_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_PAY_GROUP)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_PAY_GROUP)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -713,18 +725,18 @@ BEGIN
     SELECT @v_header_labor_group
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.labor_grp_code + @v_SPACES_30, 15)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_LABOR_GROUP)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.labor_grp_code + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_LABOR_GROUP)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -742,25 +754,23 @@ BEGIN
     SELECT @v_header_labor_group_err
 
     -- Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.labor_grp_code + @v_SPACES_30, 15) +
-           LEFT(m.msg_id + @v_SPACES_30, 15) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id = @v_EVENT_ID_LABOR_GROUP)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_WARNING)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.labor_grp_code + @v_SPACES_30, 15) +
+           LEFT(msg.msg_id + @v_SPACES_30, 15) +
+           RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id = @v_EVENT_ID_LABOR_GROUP)
+      AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+      AND (aud.activity_date	= @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -778,25 +788,23 @@ BEGIN
     SELECT @v_header_labor_group_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(ev.labor_grp_code + @v_SPACES_30, 15) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_LABOR_GROUP)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(aud.labor_grp_code + @v_SPACES_30, 15) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_LABOR_GROUP)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -814,18 +822,18 @@ BEGIN
     SELECT @v_header_position_title
 
     -- Detail GOOD
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.position_title + @v_SPACES_50, 50)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    WHERE (ev.event_id = @v_EVENT_ID_POSITION_TITLE)
-      AND (ev.activity_status = @v_ACTIVITY_STATUS_GOOD)
-      AND (ev.activity_date	= @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.position_title + @v_SPACES_50, 50)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_POSITION_TITLE)
+      AND (aud.proc_flag = 'Y')
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -843,25 +851,23 @@ BEGIN
     SELECT @v_header_position_title_err
 
     -- Detail warning
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-           LEFT(ev.eff_date + @v_SPACES_30, 20) +
-           LEFT(ev.first_name + @v_SPACES_30, 20) +
-           LEFT(ev.last_name + @v_SPACES_30, 20) +
-           LEFT(ev.empl_id + @v_SPACES_30, 15) +
-           LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-           LEFT(ev.position_title + @v_SPACES_50, 50) +
-           LEFT(m.msg_id + @v_SPACES_30, 15) +
-           RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_POSITION_TITLE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_WARNING)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+           LEFT(aud.position_title + @v_SPACES_50, 50) +
+           LEFT(msg.msg_id + @v_SPACES_30, 15) +
+           RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_POSITION_TITLE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -879,40 +885,27 @@ BEGIN
     SELECT @v_header_position_title_err
 
     -- Error Detail
-    SELECT LEFT(ev.emp_id + @v_SPACES_30, 20) +
-        LEFT(ev.eff_date + @v_SPACES_30, 20) +
-        LEFT(ev.first_name + @v_SPACES_30, 20) +
-        LEFT(ev.last_name + @v_SPACES_30, 20) +
-        LEFT(ev.empl_id + @v_SPACES_30, 15) +
-        LEFT(ev.pay_group_id + @v_SPACES_30, 15) +
-        LEFT(ev.position_title + @v_SPACES_50, 50) +
-        LEFT(m.msg_id + @v_SPACES_30, 15) +
-        RTRIM(m.msg_desc)
-    FROM DBShrpn.dbo.ghr_employee_events_aud ev
-    JOIN DBShrpn.dbo.ghr_historical_message m ON
-            (m.event_id = ev.event_id) AND
-            (m.emp_id   = ev.emp_id) AND
-            (m.eff_date = ev.eff_date) AND
-            (m.activity_date = ev.activity_date)
-    WHERE (ev.event_id        = @v_EVENT_ID_POSITION_TITLE)
-        AND (ev.activity_status <> @v_ACTIVITY_STATUS_BAD)
-        AND (ev.activity_date    = @w_activity_date)
-    ORDER BY ev.emp_id
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(aud.position_title + @v_SPACES_50, 50) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_POSITION_TITLE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
         SELECT 'N/A'
-
-
-
-    SELECT SPACE(1)
-    SELECT SPACE(0)
-    SELECT 'End of mail message.'
-    SELECT '    '
-    SELECT 'IPM.MICROSOFT'
-    SELECT 'GHR'
-
-    SELECT @w_distribution_id
 
 END  -- End of SP
 
