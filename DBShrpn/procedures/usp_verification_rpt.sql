@@ -177,6 +177,44 @@ BEGIN
 
 
     ---------------------------------------------------------------------------
+    -- Statistics
+    ---------------------------------------------------------------------------
+    SELECT @v_SPACES_30
+    SELECT 'Interface Statistics'
+    SELECT @v_SPACES_30
+
+    -- Headers
+    SELECT LEFT('Event' + @v_SPACES_50, 50) +
+           LEFT('Processed' + @v_SPACES_30, 30) +
+           LEFT('Not Processed' + @v_SPACES_30, 30) +
+           'Total'
+
+    SELECT  LEFT(
+                    CASE aud.event_id
+                        WHEN @v_EVENT_ID_NEW_HIRE       THEN 'New Hires'
+                        WHEN @v_EVENT_ID_TRANSFER       THEN 'Transfers'
+                        WHEN @v_EVENT_ID_NAME_CHANGE    THEN 'Name Change'
+                        WHEN @v_EVENT_ID_STATUS_CHANGE  THEN 'Status Change'
+                        WHEN @v_EVENT_ID_PAY_ELE        THEN 'Pay Allowances'
+                        WHEN @v_EVENT_ID_PAY_GROUP      THEN 'Pay Group'
+                        WHEN @v_EVENT_ID_LABOR_GROUP    THEN 'Labor Group'
+                        WHEN @v_EVENT_ID_POSITION_TITLE THEN 'Position Title'
+                        ELSE ''
+                    END +
+                    @v_SPACES_50, 50
+                ) +
+            LEFT(CAST(CASE aud.proc_flag WHEN 'Y' THEN COUNT(*) ELSE 0 END AS varchar(20)) + @v_SPACES_30, 30) +
+            LEFT(CAST(CASE aud.proc_flag WHEN 'N' THEN COUNT(*) ELSE 0 END AS varchar(20)) + @v_SPACES_30, 30) +
+            LEFT(CAST(COUNT(*) AS varchar(20)) + @v_SPACES_30, 30)
+
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+	GROUP BY aud.event_id
+           , aud.proc_flag
+
+
+
+    ---------------------------------------------------------------------------
     -- System Error Section
     ---------------------------------------------------------------------------
     SELECT @v_SPACES_30
@@ -906,6 +944,40 @@ BEGIN
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
         SELECT 'N/A'
+
+
+    ---------------------------------------------------------------------------
+    -- Unprocessed Records with no errors
+    ---------------------------------------------------------------------------
+    SELECT @v_SPACES_30
+    SELECT	'Unprocessed Record with No Errors:'
+    SELECT @v_SPACES_30
+
+    -- Headers
+    SELECT @v_header_base
+
+    -- Detail
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+           LEFT(aud.eff_date + @v_SPACES_30, 20) +
+           LEFT(aud.first_name + @v_SPACES_30, 20) +
+           LEFT(aud.last_name + @v_SPACES_30, 20) +
+           LEFT(aud.empl_id + @v_SPACES_30, 15) +
+           LEFT(aud.pay_group_id + @v_SPACES_30, 15)
+    FROM DBShrpn.dbo.ghr_employee_events_aud aud
+    WHERE (aud.activity_date = @w_activity_date)
+      AND (aud.event_id = @v_EVENT_ID_NEW_HIRE)
+      AND (aud.proc_flag = 'N')
+      AND (aud.aud_id NOT IN (
+                              SELECT msg.aud_id
+                              FROM DBShrpn.dbo.ghr_historical_message msg
+                              WHERE (msg.activity_date = aud.activity_date)
+                             )
+                            )
+
+    -- No records then not applicable
+    IF (@@ROWCOUNT = 0)
+        SELECT 'N/A'
+
 
 END  -- End of SP
 

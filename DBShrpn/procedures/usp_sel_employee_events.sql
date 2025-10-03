@@ -41,6 +41,9 @@ GO
     The records are then copied to the audit table DBShrpn.dbo.ghr_employee_events_aud. This table
     is used to track the extracts whether or not the record was processed.
 
+    Salary change transactions (Event ID '02') will be excluded from the interface. The transactions are sill included in theSalaries in HCM
+    cloud suite are not compatible with salary setup in SmartStream.
+
 
     Parameters:
         None
@@ -217,8 +220,7 @@ BEGIN
             , t.file_source
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
         FROM DBShrpn.dbo.ghr_employee_events t
-        --ORDER BY t.event_id
-        --       , t.emp_id
+        WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
 
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
