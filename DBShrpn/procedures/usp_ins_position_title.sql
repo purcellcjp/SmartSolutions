@@ -343,7 +343,7 @@ BEGIN
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_assignment_most_rec ea ON
                     (emp.emp_id = ea.emp_id)
-                JOIN DBShrpn.dbo.emp_status_most_rec stat ON
+                JOIN DBShrpn.dbo.uvu_emp_status_most_rec stat ON
                     (emp.emp_id = stat.emp_id)
                 WHERE (emp.emp_id = @emp_id)
 
@@ -668,6 +668,10 @@ BYPASS_EMPLOYEE:
         DEALLOCATE crsrHR
 
 
+        -- commit after every record
+        IF (@@TRANCOUNT > 0)
+            COMMIT TRAN
+
 
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00115  -- < POSITION TITLE SECTION (10) >
@@ -828,9 +832,7 @@ BYPASS_EMPLOYEE:
         CLOSE crsrLog
         DEALLOCATE crsrLog
 
-        -- commit after every record
-        IF (@@TRANCOUNT > 0)
-            COMMIT TRAN
+
 
 
         ---------------------------------------------------------------------------

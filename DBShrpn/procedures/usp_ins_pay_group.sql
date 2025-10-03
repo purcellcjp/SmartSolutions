@@ -400,7 +400,7 @@ BEGIN
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
                     (emp.emp_id = eempl.emp_id)
-                JOIN DBShrpn.dbo.emp_status_most_rec stat ON
+                JOIN DBShrpn.dbo.uvu_emp_status_most_rec stat ON
                     (emp.emp_id = stat.emp_id)
                 WHERE (emp.emp_id = @emp_id)
 
@@ -826,6 +826,9 @@ BEGIN
 
 
 BYPASS_EMPLOYEE:
+
+            IF (@@TRANCOUNT > 0)
+                COMMIT TRAN
 
             FETCH crsrHR
             INTO  @aud_id
