@@ -11,7 +11,7 @@ GO
 
 
 
-CREATE OR ALTER PROCEDURE [dbo].[usp_ins_hpep_02_trn]
+CREATE PROCEDURE [dbo].[usp_ins_hpep_02_trn]
        (@p_emp_id			char(15),
 	@p_old_empl_id			char(10),
 	@p_new_empl_id			char(10),

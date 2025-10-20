@@ -19,8 +19,8 @@ GO
 
   Description:  Returns the job_or_pos_id based on file_source and associates employer id.
 
-  Parameters:   @p_file_source = 'SS VENUS' or 'SS GANYMEDE'
-                @p_empl_id
+  Parameters:   @p_file_source  = 'SS VENUS' or 'SS GANYMEDE'
+                @p_emp_id       = Ganymede Employee ID
 
 
    Example:
@@ -29,7 +29,7 @@ GO
    Revision history:
       version  date        developer   SCR      description
       -------  ----------  ---------   -----    ------------------------------------
-      1.0.00   10/24/2012  CJP         2974     - Created function
+      1.0.00   09/15/2025  CJP                  - Created function
 
 ****************************************************************************************/
 

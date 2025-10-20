@@ -217,6 +217,7 @@ BEGIN
                          ,'U00044'
                          ,'U00045'
                          ,'U00010'
+                         ,'U00121'
                         ))
 
         -- ID Message templates that need to loop through errors to add to log table
@@ -230,6 +231,7 @@ BEGIN
                          ,'U00039'
                          ,'U00044'
                          ,'U00045'
+                         ,'U00121'
                         ))
 
 
@@ -468,6 +470,8 @@ BEGIN
                 -- Check to see if the employee current status is terminated and look ahead for Rehire record.
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Validation - Emp Status Check'
+                SET @msg_id = 'U00121'
+
                 -- DO I NEED TO ADD LOG ERROR MESSAGE ????
 
                 IF (@cur_emp_status_code = 'T')

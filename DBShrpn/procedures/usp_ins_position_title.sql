@@ -275,7 +275,7 @@ BEGIN
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
                         , @p_msg_desc           = 'Bypassing position title record since employee has either a new hire, transfer, or status change event in this extract.'
-                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                         , @p_activity_date      = @p_activity_date
                         , @p_audit_id           = @aud_id
 

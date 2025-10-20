@@ -87,6 +87,10 @@ VALUES
 
 , (N'U00120', 1, 0, N'Bypassing @1 record since employee (@2) is terminated in SmartStream.', N'', N'', 0, N'0', 0, 0)
 
+, (N'U00121', 1, 0, N'Associate, @1, is currently terminated and has rehire record in current extract - bypassing transfer.', N'', N'', 0, N'0', 0, 0)
+
+, (N'U00122', 1, 0, N'No records were imported in the bulkcopy step - ending job execution.', N'', N'', 0, N'0', 0, 0)
+
 GO
 
 select *

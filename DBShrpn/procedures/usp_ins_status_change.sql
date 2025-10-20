@@ -98,7 +98,7 @@ BEGIN
     DECLARE @w_eff_date                 	    datetime
     DECLARE @w_curr_status              	    char(02)
     DECLARE @w_pos_eff_date           	        datetime
-    DECLARE @w_assigned_to_code         	    char(01)
+    DECLARE @w_assigned_to_code         	    char(01)    = 'P'   -- All assocs are code 'P' in VENUS and Ganymede
     DECLARE @w_job_or_pos_id            	    char(10)
     DECLARE @w_pd_salary_tm_pd_id       	    char(05)
     DECLARE @old_eff_date               	    datetime
@@ -905,7 +905,7 @@ BEGIN
                                     , @p_new_hire_date            = @w_eff_date
                                     , @p_new_classn_cd            = @emp_status_classn_code
                                     , @p_new_reason_cd            = ' '
-                                    , @p_new_assigned_to_code     = @w_assigned_to_code
+                                    , @p_new_assigned_to_code     = @w_assigned_to_code             -- Hardcoded to 'P'
                                     , @p_new_job_or_pos_id        = @w_job_or_pos_id
                                     , @p_new_pay_group_id         = @pay_group_id
                                     , @p_new_time_reporting_meth  = @time_reporting_meth_code
@@ -1223,7 +1223,7 @@ BEGIN
                                             , @p_pay_element_id     = ''
                                             , @p_msg_p1             = @w_curr_status
                                             , @p_msg_p2             = ''
-                                            , @p_msg_desc           = 'Cannot Reactivate an employee if the current status is not inactivate.'
+                                            , @p_msg_desc           = 'Cannot Reactivate an employee if the current status is not inactive.'
                                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                             , @p_activity_date      = @p_activity_date
                                             , @p_audit_id           = @aud_id

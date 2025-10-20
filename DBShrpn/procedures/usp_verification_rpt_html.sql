@@ -6,22 +6,22 @@ GO
 SET QUOTED_IDENTIFIER ON
 GO
 
-IF OBJECT_ID(N'dbo.usp_verification_rpt', N'P') IS NOT NULL
+IF OBJECT_ID(N'dbo.usp_verification_rpt_html', N'P') IS NOT NULL
 BEGIN
-    DROP PROCEDURE dbo.usp_verification_rpt
-    IF OBJECT_ID(N'dbo.usp_verification_rpt') IS NOT NULL
-        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_verification_rpt >>>'
+    DROP PROCEDURE dbo.usp_verification_rpt_html
+    IF OBJECT_ID(N'dbo.usp_verification_rpt_html') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_verification_rpt_html >>>'
     ELSE
-        PRINT N'<<< DROPPED PROCEDURE dbo.usp_verification_rpt >>>'
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_verification_rpt_html >>>'
 END
 GO
 
 /*************************************************************************************
-    SP Name:       usp_verification_rpt
+    SP Name:       usp_verification_rpt_html
 
     Description:    HCM Interface Verification Report
 
-                    Creates a fixed-width report of the most recent execution
+                    Creates a html report of the most recent execution
                     of the GHR Interfaces job scheduler job.
 
 
@@ -45,7 +45,7 @@ GO
 
 
     Example:
-        EXEC DBShrpn.dbo.usp_verification_rpt
+        EXEC DBShrpn.dbo.usp_verification_rpt_html
 
 
    Revision history:
@@ -54,7 +54,7 @@ GO
    1.0.00   08/27/2025  CJP                     - Cloned from GOG version
 
 ************************************************************************************/
-CREATE procedure dbo.usp_verification_rpt
+CREATE procedure dbo.usp_verification_rpt_html
 AS
 
 BEGIN
@@ -81,10 +81,18 @@ BEGIN
 
     DECLARE @v_SPACES_30                    char(30)            = SPACE(30)
     DECLARE @v_SPACES_50                    char(50)            = SPACE(50)
-    declare @v_dashes_300                   char(300)           = REPLICATE('-', 300)
+    declare @v_dashes_15                    char(15)            = REPLICATE('-', 15)
+    DECLARE @v_sql                          varchar(max)        = ''
 
     DECLARE @w_activity_date                datetime
+    DECLARE @w_activity_date_char           varchar(255)
+    DECLARE @w_distribution_id              varchar(255)
+
     DECLARE @w_user_id                      char(30)
+
+
+    DECLARE @w_activity_status	            char(02)
+
 
     DECLARE @v_header_base                  varchar(255)
     DECLARE @v_header_err                   varchar(255)
@@ -101,6 +109,15 @@ BEGIN
     SET @w_user_id = SYSTEM_USER
 
 
+    ---------------------------------------------------------------------------
+    -- Lookup email(s)
+    ---------------------------------------------------------------------------
+    SELECT @w_distribution_id = psc_distribution_id
+    FROM DBSpscb.dbo.psc_batch
+    WHERE psc_userid = @w_user_id
+      AND psc_batchname = @v_PSC_BATCHNAME
+      AND psc_qualifier = @w_PSC_QUALIFIER
+
 
     ---------------------------------------------------------------------------
     -- Get date timestamp Batch name and qualifier for the job running the Bulk Copy
@@ -114,8 +131,8 @@ BEGIN
       AND psc_qualifier = @w_PSC_QUALIFIER
       AND psc_pgm_parms = @w_PSC_PSC_PGM_PARMS     -- bulkcopy step
 
-
-	-- SET @w_activity_date = '2025-08-14 16:09:31.000'
+    -- Caonvert date to string to use in dynamic queries
+    SET @w_activity_date_char = CONVERT(char, @w_activity_date, 121)
 
 
     ---------------------------------------------------------------------------
@@ -163,8 +180,8 @@ BEGIN
     ---------------------------------------------------------------------------
     SELECT @v_SPACES_30 + 'HCM - SS Interface Transaction Report'
     SELECT @v_SPACES_50 + 'All Entities'
-    SELECT 'Extract Run Date: ' + CONVERT(char, @w_activity_date, 121)	+ SPACE(10)
-    SELECT 'Server: ' + @@SERVERNAME
+    SELECT 'Extract Run Date: ' + @w_activity_date_char
+    SELECT 'Server Name: ' + @@SERVERNAME
     SELECT @v_SPACES_50
 
 
@@ -182,7 +199,7 @@ BEGIN
            RIGHT(@v_SPACES_30 + 'Total', 30)
 
     -- Add dashes after column headings
-    SELECT @v_dashes_300
+    SELECT REPLICATE('-', 120)
 
     SELECT  LEFT(
                     CASE aud.event_id
@@ -208,7 +225,7 @@ BEGIN
            , aud.proc_flag
 
     -- Add dashes before subtotals
-    SELECT @v_dashes_300
+    SELECT REPLICATE('-', 120)
 
     -- Add statistics totals
 	SELECT LEFT('Total' + @v_SPACES_30, 30)
@@ -226,24 +243,15 @@ BEGIN
     SELECT 'System Errors:'
     SELECT @v_SPACES_30
 
-    -- headers
-    SELECT @v_dashes_300
-    SELECT LEFT('Message ID' + @v_SPACES_30, 15) +
-           LEFT('Event ID' + @v_SPACES_30, 15) +
-           'Error Message ID'
-    SELECT @v_dashes_300
+    SET @v_sql = 'SELECT msg.msg_id, msg.event_id, msg.msg_desc '
+               + 'FROM DBShrpn.dbo.ghr_historical_message msg '
+               + 'WHERE (CHARINDEX(''U'', msg.msg_id) = 0) '
+               + 'AND (msg.activity_date = ''' + @w_activity_date_char + ''') '
+select @v_sql as v_sql
+    EXEC dbo.sp_ConvertQuery2HTMLTable
+                @SQLQuery = @v_sql
 
-    SELECT LEFT(msg.msg_id + @v_SPACES_30, 15) +
-           LEFT(msg.event_id + @v_SPACES_30, 15) +
-           RTRIM(msg.msg_desc)
-    FROM DBShrpn.dbo.ghr_historical_message msg
-    WHERE (CHARINDEX('U', msg.msg_id) = 0)    -- exclude message master message ids
-      AND (msg.activity_date	= @w_activity_date)
-
-    -- No records then not applicable
-    IF (@@ROWCOUNT = 0)
-        SELECT 'N/A'
-
+/*
 
 
     ---------------------------------------------------------------------------
@@ -254,12 +262,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -284,12 +290,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -304,7 +308,7 @@ BEGIN
     WHERE (msg.event_id        = @v_EVENT_ID_NEW_HIRE)
       AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
       AND (msg.activity_date   = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -319,12 +323,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -339,7 +341,7 @@ BEGIN
     WHERE (aud.activity_date   = @w_activity_date)
       AND (aud.event_id        = @v_EVENT_ID_NEW_HIRE)
       AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -355,12 +357,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -370,7 +370,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_TRANSFER)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -386,12 +386,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Warnings Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -406,7 +404,7 @@ BEGIN
     WHERE (aud.event_id      = @v_EVENT_ID_TRANSFER)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -421,12 +419,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -441,7 +437,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_TRANSFER)
       AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
       AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -457,12 +453,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -472,7 +466,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_NAME_CHANGE)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -487,12 +481,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -507,7 +499,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_NAME_CHANGE)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -523,12 +515,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -538,7 +528,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_STATUS_CHANGE)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -554,12 +544,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Warnings Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -574,7 +562,7 @@ BEGIN
     WHERE (aud.event_id      = @v_EVENT_ID_STATUS_CHANGE)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -589,12 +577,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -609,7 +595,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_STATUS_CHANGE)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -625,12 +611,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_pay_ele
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -644,7 +628,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_PAY_ELE)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -660,12 +644,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_pay_ele_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -684,7 +666,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_PAY_ELE)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -699,12 +681,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -714,7 +694,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_PAY_GROUP)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -729,12 +709,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Detail warning
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -749,7 +727,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_PAY_GROUP)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -764,12 +742,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -784,7 +760,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_PAY_GROUP)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -799,12 +775,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_labor_group
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -815,7 +789,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_LABOR_GROUP)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -830,12 +804,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_labor_group_err
-    SELECT @v_dashes_300
 
     -- Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -851,7 +823,7 @@ BEGIN
     WHERE (aud.event_id = @v_EVENT_ID_LABOR_GROUP)
       AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
       AND (aud.activity_date	= @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -866,12 +838,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_labor_group_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
         LEFT(aud.eff_date + @v_SPACES_30, 20) +
         LEFT(aud.first_name + @v_SPACES_30, 20) +
         LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -887,7 +857,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_LABOR_GROUP)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -902,12 +872,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_position_title
-    SELECT @v_dashes_300
 
     -- Detail GOOD
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -918,7 +886,7 @@ BEGIN
     WHERE (aud.activity_date = @w_activity_date)
       AND (aud.event_id = @v_EVENT_ID_POSITION_TITLE)
       AND (aud.proc_flag = 'Y')
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -933,12 +901,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_position_title_err
-    SELECT @v_dashes_300
 
     -- Detail warning
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -954,7 +920,7 @@ BEGIN
     WHERE (aud.event_id        = @v_EVENT_ID_POSITION_TITLE)
         AND (msg.activity_status = @v_ACTIVITY_STATUS_WARNING)
         AND (aud.activity_date    = @w_activity_date)
-    ORDER BY DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -969,13 +935,26 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- headers
-    SELECT @v_dashes_300
     SELECT @v_header_position_title_err
-    SELECT @v_dashes_300
 
     -- Error Detail
-
-
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
+        LEFT(aud.eff_date + @v_SPACES_30, 20) +
+        LEFT(aud.first_name + @v_SPACES_30, 20) +
+        LEFT(aud.last_name + @v_SPACES_30, 20) +
+        LEFT(aud.empl_id + @v_SPACES_30, 15) +
+        LEFT(aud.pay_group_id + @v_SPACES_30, 15) +
+        LEFT(aud.position_title + @v_SPACES_50, 50) +
+        LEFT(msg.msg_id + @v_SPACES_30, 15) +
+        RTRIM(msg.msg_desc)
+    FROM DBShrpn.dbo.ghr_historical_message msg
+    JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
+            (msg.activity_date = aud.activity_date) AND
+            (msg.aud_id        = aud.aud_id)
+    WHERE (aud.event_id        = @v_EVENT_ID_POSITION_TITLE)
+        AND (msg.activity_status = @v_ACTIVITY_STATUS_BAD)
+        AND (aud.activity_date    = @w_activity_date)
+    ORDER BY aud.emp_id
 
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
@@ -990,12 +969,10 @@ BEGIN
     SELECT @v_SPACES_30
 
     -- Headers
-    SELECT @v_dashes_300
     SELECT @v_header_base
-    SELECT @v_dashes_300
 
     -- Detail
-    SELECT LEFT(DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) + @v_SPACES_30, 20) +
+    SELECT LEFT(aud.emp_id + @v_SPACES_30, 20) +
            LEFT(aud.eff_date + @v_SPACES_30, 20) +
            LEFT(aud.first_name + @v_SPACES_30, 20) +
            LEFT(aud.last_name + @v_SPACES_30, 20) +
@@ -1015,17 +992,17 @@ BEGIN
     -- No records then not applicable
     IF (@@ROWCOUNT = 0)
         SELECT 'N/A'
-
+*/
 
 END  -- End of SP
 
 GO
-ALTER AUTHORIZATION ON dbo.usp_verification_rpt TO SCHEMA OWNER
+ALTER AUTHORIZATION ON dbo.usp_verification_rpt_html TO SCHEMA OWNER
 GO
 
 
-IF OBJECT_ID(N'dbo.usp_verification_rpt', N'P') IS NOT NULL
-    PRINT N'<<< CREATED PROCEDURE dbo.usp_verification_rpt >>>'
+IF OBJECT_ID(N'dbo.usp_verification_rpt_html', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_verification_rpt_html >>>'
 ELSE
-    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_verification_rpt >>>'
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_verification_rpt_html >>>'
 GO

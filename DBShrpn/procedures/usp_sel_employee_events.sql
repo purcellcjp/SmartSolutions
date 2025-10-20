@@ -35,7 +35,7 @@ GO
     Employee Position Title     10      dbo.usp_ins_position_title
 
     Interface records are imported into table DBShrpn..ghr_employee_events. This procedure
-    will copy teh records to temp table #ghr_employee_events_temp that all the child procedures
+    will copy the records to temp table #ghr_employee_events_temp that all the child procedures
     interact with.
 
     The records are then copied to the audit table DBShrpn.dbo.ghr_employee_events_aud. This table
@@ -76,8 +76,9 @@ BEGIN
     DECLARE @ErrorState                     int
     DECLARE @v_ret_val                      int                 = 0
     DECLARE @v_msg                          varchar(255)        = ''
+    DECLARE @v_count                        int                 = 0
 
-    DECLARE @v_event_id                     char(2)
+    DECLARE @v_event_id                     char(2)             = '00'
 
     DECLARE @v_PSC_BATCHNAME                char(08)            = 'GHR'
     DECLARE @w_PSC_QUALIFIER                char(30)            = 'INTERFACES'
@@ -152,12 +153,13 @@ BEGIN
 
         SET @v_step_position = 'Set Variables'
 
+        -- Get the user id executing the job
         SET @w_userid = SYSTEM_USER
 
         -- Find the Batch name and qualifier for the job running the Bulk Copy
         SELECT @w_activity_date = psc_last_comp_date
         FROM DBSpscb.dbo.psc_step
-        WHERE psc_userid = @w_userid
+        WHERE   (psc_userid    = @w_userid)
             AND (psc_batchname = @v_PSC_BATCHNAME)
             AND (psc_qualifier = @w_PSC_QUALIFIER)
             AND (psc_pgm_parms = @w_PSC_PSC_PGM_PARMS)     -- bulkcopy step
@@ -166,12 +168,6 @@ BEGIN
         --SET @w_activity_status	= '00'
         -- Use date on bulkcopy step    SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
 
-
-        -- Get input filename
-        -- WHY IS THIS NEEDED???
-        -- SELECT @w_inputfile	= batch_parameter_3
-        -- FROM DBSentp.dbo.batch_parameters
-        -- WHERE (batch_parameter_key = 'GHR_EMPLOYEE_EVENTS')
 
 
         ---------------------------------------------------------------------------
@@ -221,6 +217,43 @@ BEGIN
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
         FROM DBShrpn.dbo.ghr_employee_events t
         WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
+
+
+        ---------------------------------------------------------------------------
+        -- Check to see if any records were imported in bulk copy step
+        ---------------------------------------------------------------------------
+        -- Note: There could be just salary change records but those records are not processed in GOSL
+
+        IF (@@ROWCOUNT = 0)
+        BEGIN
+            SET @v_step_position = 'Validate existence of imported records'
+            SET @ErrorMessage = 'No records were imported in the bulkcopy step - ending job execution.'
+
+            EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                  @p_msg_id             = 'U00122'
+                , @p_event_id           = @v_event_id
+                , @p_emp_id             = ''
+                , @p_eff_date           = ''
+                , @p_pay_element_id     = ''
+                , @p_msg_p1             = @v_step_position
+                , @p_msg_p2             = ''
+                , @p_msg_desc           = @ErrorMessage
+                , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                , @p_activity_date      = @w_activity_date
+
+            GOTO END_EXECUTION
+
+        END
+
+
+        ---------------------------------------------------------------------------
+        -- Ganymede Employee ID - Replace leading '4' to 'D'
+        ---------------------------------------------------------------------------
+        UPDATE #ghr_employee_events_temp
+        SET emp_id = STUFF(emp_id, 1, 1, 'D')
+        WHERE (file_source = 'SS GANYMEDE')
+          AND (CHARINDEX('4', emp_id, 1) = 1)
+
 
 
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
@@ -628,6 +661,8 @@ BEGIN
             END
 
         END
+
+END_EXECUTION:
 
 
     END TRY
