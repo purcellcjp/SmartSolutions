@@ -59,6 +59,8 @@ BEGIN
 
     DECLARE @v_step_position                            varchar(255)        = 'Begin Procedure'
     DECLARE @msg_id                                     char(10)
+    DECLARE @v_debug									varchar(4000)       = ''    -- used to save SQL statements to table
+    DECLARE @v_single_quote								char(01)            = char(39)
 
     DECLARE @v_EVENT_ID_SALARY_CHANGE                   char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER                        char(2)             = '03'
@@ -138,6 +140,7 @@ BEGIN
     DECLARE @tax_ceiling_amt                            char(15)        -- employee.user_monetary_amt_1
     DECLARE @labor_grp_code                             char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                                char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+    DECLARE @job_or_pos_id                              char(10)        = ''
 
     DECLARE @w_eff_date                                 datetime
     DECLARE @v_cal_year                                 smallint
@@ -150,7 +153,7 @@ BEGIN
     DECLARE @cur_emp_asgn_end_date                      datetime
     DECLARE @cur_emp_asgn_job_position_end_date         datetime
     DECLARE @cur_emp_asgn_assigned_to_code              char(01)
-    DECLARE @cur_emp_asgn_job_or_pos_id                 char(10)
+    --DECLARE @cur_emp_asgn_job_or_pos_id                 char(10)
     DECLARE @cur_emp_status_code                        char(02)
     DECLARE @new_taxing_country_code                    char(02)
     DECLARE @new_curr_code                              char(03)
@@ -249,8 +252,8 @@ BEGIN
              , t.national_id_type_code
              , t.national_id
              , t.organization_group_id
-             , ''       -- t.organization_chart_name
-             , ''       -- t.organization_unit_name
+             , t.organization_chart_name
+             , t.organization_unit_name
              , t.emp_status_classn_code
              , t.position_title
              , t.employment_type_code
@@ -276,6 +279,7 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
+             , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_TRANSFER)
 
@@ -321,6 +325,7 @@ BEGIN
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
+            , @job_or_pos_id
 
 
         WHILE (@@FETCH_STATUS = 0)
@@ -341,7 +346,7 @@ BEGIN
                     , @cur_emp_asgn_end_date                   = @v_END_OF_TIME_DATE
                     , @cur_emp_asgn_job_position_end_date      = @v_END_OF_TIME_DATE
                     , @cur_emp_asgn_assigned_to_code           = ''
-                    , @cur_emp_asgn_job_or_pos_id              = ''
+                    --, @cur_emp_asgn_job_or_pos_id              = ''
                     , @cur_emp_status_code                     = ''
                     , @new_tax_entity                          = ''
                     , @new_taxing_country_code                 = ''
@@ -407,7 +412,7 @@ BEGIN
                     , @cur_emp_asgn_end_date                   = ea.end_date
                     , @cur_emp_asgn_job_position_end_date      = ea.end_date
                     , @cur_emp_asgn_assigned_to_code           = ea.assigned_to_code
-                    , @cur_emp_asgn_job_or_pos_id              = ea.job_or_pos_id
+                    --, @cur_emp_asgn_job_or_pos_id              = ea.job_or_pos_id
                     , @cur_emp_status_code                     = stat.emp_status_code
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
@@ -520,8 +525,7 @@ BEGIN
                 SET @v_step_position = 'Validation'
 
 
-                IF --(@new_emp_asgn_emp_employment_exists = 'Y') AND
-                (@cur_eempl_eff_date > @w_eff_date)
+                IF (@w_eff_date <= @cur_eempl_eff_date)
                     BEGIN
 
                         SET @msg_id = 'U00027'
@@ -547,7 +551,7 @@ BEGIN
                             , @p_pay_element_id     = ''
                             , @p_msg_p1             = @w_msg_text_2
                             , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'The new effective date for employee must be greater than the current employee employment effective date'
+                            , @p_msg_desc           = 'The new effective date for employee must be greater than the current employee employment effective date.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -839,13 +843,42 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Execute DBShrpn.dbo.usp_upd_hrpn_02_trn'
 
+/*
+                -- Debug
+                SET @v_debug = 'EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn'
+                             +  ' @p_emp_id '                        + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote
+                             + ', @p_new_empl_id '                   + '= ' + @v_single_quote + RTRIM(@empl_id)                                              + @v_single_quote
+                             + ', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                           + @v_single_quote
+                             + ', @p_assign_to '                     + '= ' + @v_single_quote + RTRIM(@cur_emp_asgn_assigned_to_code)                        + @v_single_quote
+                             + ', @p_job_or_pos_id '                 + '= ' + @v_single_quote + RTRIM(@job_or_pos_id)                                        + @v_single_quote
+                             + ', @p_org_grp_id '                    + '= ' + @v_single_quote + RTRIM(@organization_group_id))                               + @v_single_quote
+                             + ', @p_org_chart_name '                + '= ' + @v_single_quote + RTRIM(@organization_chart_name)                              + @v_single_quote
+                             + ', @p_org_unit_name '                 + '= ' + @v_single_quote + RTRIM(@organization_unit_name)                               + @v_single_quote
+                             + ', @p_location '                      + '= ' + @v_single_quote + RTRIM(@emp_location_code)                                    + @v_single_quote
+                             + ', @p_new_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@new_tax_entity)                                       + @v_single_quote
+                             + ', @p_old_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@cur_tax_entity_id)                                    + @v_single_quote
+                             + ', @p_eff_date '                      + '= ' + @v_single_quote + CONVERT(char(8), @cur_eempl_eff_date, 112)                   + @v_single_quote
+                             + ', @p_pay_group '                     + '= ' + @v_single_quote + RTRIM(@pay_group_id)                                         + @v_single_quote
+                             + ', @p_emp_info_change_reason '        + '= ' + @v_single_quote + RTRIM(@employment_info_chg_reason_cd)                        + @v_single_quote
+                             + ', @p_job_position_end_date '         + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_job_position_end_date, 112)   + @v_single_quote
+                             + ', @p_assignment_end_date '           + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_end_date, 112)                + @v_single_quote
+                             + ', @p_xfer_different_taxing_cntry '   + '= ' + @v_single_quote + 'N'                                                          + @v_single_quote
+                             + ', @p_new_empl_taxing_country_cd '    + '= ' + @v_single_quote + RTRIM(@new_taxing_country_code)                              + @v_single_quote
+                             + ', @p_new_empl_curr_code '            + '= ' + @v_single_quote + RTRIM(@new_curr_code)                                        + @v_single_quote
+                             + ', @p_use_policy_xfer_options '       + '= ' + @v_single_quote + 'Y'                                                          + @v_single_quote
+
+                INSERT DBShrpn.dbo.ghr_debug (text_line)
+                VALUES (@v_debug)
+                , (' ');
+*/
+
                 EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn
                     @p_emp_id                         = @emp_id
                     , @p_empl_id                        = @cur_empl_id
                     , @p_new_empl_id                    = @empl_id
                     , @p_transfer_date                  = @w_eff_date      --CAST(@eff_date AS datetime)
                     , @p_assign_to                      = @cur_emp_asgn_assigned_to_code
-                    , @p_job_or_pos_id                  = @cur_emp_asgn_job_or_pos_id       --'99999' -- Default Position
+                    , @p_job_or_pos_id                  = @job_or_pos_id       --'99999' -- Default Position
                     , @p_org_grp_id                     = @organization_group_id		--CAST(@organization_group_id AS int)
                     , @p_org_chart_name                 = @organization_chart_name
                     , @p_org_unit_name                  = @organization_unit_name
@@ -867,7 +900,7 @@ BEGIN
                 SET @v_step_position = 'Execute DBShrpn.dbo.usp_ins_hpep_02_trn'
 
                 EXECUTE DBShrpy.dbo.usp_ins_hpep_02_trn
-                    @p_emp_id                     = @emp_id
+                      @p_emp_id                     = @emp_id
                     , @p_old_empl_id                = @cur_empl_id
                     , @p_new_empl_id                = @empl_id
                     , @p_transfer_date              = @w_eff_date      --CAST(@eff_date AS datetime)
@@ -907,19 +940,20 @@ BEGIN
 
                 UPDATE DBShrpn.dbo.emp_assignment
                 SET annual_salary_amt           = @new_annual_salary_amt
-                , hourly_pay_rate             = @new_emp_asgn_hourly_rate_amt
-                , pd_salary_amt               = @new_emp_asgn_period_amt
-                , salary_change_type_code     = @new_emp_asgn_salary_change_type_code
-                , work_tm_code                = @new_emp_asgn_work_tm_code
-                , base_rate_tbl_id            = @new_emp_asgn_base_rate_tbl_id
-                , base_rate_tbl_entry_code    = @new_emp_asgn_base_rate_tbl_entry_code
-                , organization_group_id       = @organization_group_id
-                , organization_chart_name     = @organization_chart_name
-                , organization_unit_name      = @organization_unit_name
-                WHERE (emp_id           = @emp_id)
-                AND (assigned_to_code = @new_emp_asgn_assigned_to_code)
-                AND (job_or_pos_id    = @new_emp_asgn_job_or_pos_id)
-                AND (eff_date         = @new_emp_asgn_eff_date)
+                  , hourly_pay_rate             = @new_emp_asgn_hourly_rate_amt
+                  , pd_salary_amt               = @new_emp_asgn_period_amt
+                  , salary_change_type_code     = @new_emp_asgn_salary_change_type_code
+                  , work_tm_code                = @new_emp_asgn_work_tm_code
+                  , base_rate_tbl_id            = @new_emp_asgn_base_rate_tbl_id
+                  , base_rate_tbl_entry_code    = @new_emp_asgn_base_rate_tbl_entry_code
+                  , organization_group_id       = @organization_group_id
+                  , organization_chart_name     = @organization_chart_name
+                  , organization_unit_name      = @organization_unit_name
+                  , user_text_2                 = @position_title
+                WHERE   (emp_id           = @emp_id)
+                    AND (assigned_to_code = @new_emp_asgn_assigned_to_code)
+                    AND (job_or_pos_id    = @new_emp_asgn_job_or_pos_id)
+                    AND (eff_date         = @new_emp_asgn_eff_date)
 
 
                 ---------------------------------------------------------------------------
@@ -1028,6 +1062,7 @@ BYPASS_EMPLOYEE:
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
+                , @job_or_pos_id
 
         END  -- While Loop
 

@@ -1189,6 +1189,7 @@ BEGIN
                             BEGIN  --2
                                 SET @v_step_position = 'Rehire RA Inactive'
 
+                                -- Note: This proceure does not create a new employee assignment record
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate
                                     @p_emp_id   =   @emp_id,
                                     @p_status_change_date            =   @w_status_change_date,
@@ -1198,6 +1199,11 @@ BEGIN
                                     @p_allow_emp_pay_updates_ind      =   'Y',
                                     @p_pay_status_code               =   @pay_status_code,
                                     @p_old_chgstamp                   =   @w_old_chgstamp
+
+
+
+
+
 
                             END  --2
                         ELSE
@@ -1260,7 +1266,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Update NIC, TAX Flag, Tax Ceiling
                 ---------------------------------------------------------------------------
-                IF (@emp_status_code = 'RH')
+                IF (@emp_status_code IN ('RA','RH'))
                     BEGIN
 
                         ---------------------------------------------------------------------------

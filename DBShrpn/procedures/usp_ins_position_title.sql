@@ -106,6 +106,25 @@ BEGIN
     DECLARE @empl_id                        char(10)
     DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
     DECLARE @position_title				    char(50)        -- DBShrpn..emp_assignment.user_text_2
+    DECLARE @job_or_pos_id                  char(10)        = ''
+
+    DECLARE @new_annual_salary_amt                      money       = 0.00
+    DECLARE @new_emp_asgn_assigned_to_code              char(01)
+    DECLARE @new_emp_asgn_job_or_pos_id                 char(10)
+    DECLARE @new_emp_asgn_eff_date                      datetime
+    DECLARE @new_emp_asgn_standard_work_pd_id           char(5)     = ''
+    DECLARE @new_emp_asgn_salary_change_type_code       char(5)     = ''
+    DECLARE @new_emp_asgn_standard_work_hrs             float       = 0.00
+    DECLARE @new_emp_asgn_yearly_std_work_hrs           float       = 0.00
+    DECLARE @new_emp_asgn_hourly_rate_amt               money       = 0.00
+    DECLARE @new_emp_asgn_period_amt                    money       = 0.00
+    DECLARE @new_emp_asgn_work_tm_code                  char(01)    = ''
+    DECLARE @new_emp_asgn_base_rate_tbl_id              char(10)    = ''
+    DECLARE @new_emp_asgn_base_rate_tbl_entry_code      char(08)    = ''
+    DECLARE @new_emp_asgn_pd_salary_tm_pd_id            char(05)    = ''
+
+
+
 
     CREATE TABLE #tbl_ghr_msg
         (
@@ -178,6 +197,7 @@ BEGIN
              , t.empl_id
              , t.position_title
              , t.file_source
+             , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_POSITION_TITLE)
 
@@ -192,6 +212,7 @@ BEGIN
             , @empl_id
             , @position_title
             , @file_source
+            , @job_or_pos_id
 
 
         WHILE (@@FETCH_STATUS = 0)
@@ -251,7 +272,7 @@ BEGIN
                     AND (event_id IN (
                                         @v_EVENT_ID_NEW_HIRE
                                     , @v_EVENT_ID_TRANSFER
-                                    , @v_EVENT_ID_STATUS_CHANGE
+                                    --, @v_EVENT_ID_STATUS_CHANGE
                                     ))
                 )
                 BEGIN
@@ -274,7 +295,7 @@ BEGIN
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Bypassing position title record since employee has either a new hire, transfer, or status change event in this extract.'
+                        , @p_msg_desc           = 'Bypassing position title record since employee has either a new hire or transfer event in this extract.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                         , @p_activity_date      = @p_activity_date
                         , @p_audit_id           = @aud_id
@@ -477,7 +498,7 @@ BEGIN
                             , @p_pay_element_id     = ''
                             , @p_msg_p1             = @w_msg_text_2
                             , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
+                            , @p_msg_desc           = 'New effective date must be greater than or equal to current employee assignment effective date.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -497,114 +518,141 @@ BEGIN
                 -- Update Employee Assignment with new position title
                 ---------------------------------------------------------------------------
 
-                -- Update date pointer on old record
-                UPDATE DBShrpn.dbo.emp_assignment
-                SET next_eff_date = @w_eff_date
-                WHERE emp_id = @emp_id
-                AND (assigned_to_code = @cur_ea_assigned_to_code)
-                AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
-                AND (eff_date         = @cur_ea_eff_date)
+                IF (@W_eff_date > @cur_ea_eff_date)
+                    BEGIN
+
+                        -- Update date pointer on old record
+                        UPDATE DBShrpn.dbo.emp_assignment
+                        SET next_eff_date = @w_eff_date
+                        WHERE emp_id = @emp_id
+                        AND (assigned_to_code = @cur_ea_assigned_to_code)
+                        AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
+                        AND (eff_date         = @cur_ea_eff_date)
 
 
-                -- insert new record
-                INSERT DBShrpn.dbo.emp_assignment
-                SELECT emp_id                                                    -- emp_id                                 char(15)
-                            , assigned_to_code                                          -- assigned_to_code                       char(1)
-                            , job_or_pos_id                                             -- job_or_pos_id                          char(10)
-                            , @w_eff_date                                               -- eff_date                               datetime
-                            , @v_END_OF_TIME_DATE                                       -- next_eff_date                          datetime
-                            , @cur_ea_eff_date                                          -- prior_eff_date                         datetime
-                            , next_assigned_to_code                                     -- next_assigned_to_code                  char(1)
-                            , next_job_or_pos_id                                        -- next_job_or_pos_id                     char(10)
-                            , prior_assigned_to_code                                    -- prior_assigned_to_code                 char(1)
-                            , prior_job_or_pos_id                                       -- prior_job_or_pos_id                    char(10)
-                            , begin_date                                                -- begin_date                             datetime
-                            , end_date                                                  -- end_date                               datetime
-                            , assignment_reason_code                                    -- assignment_reason_code                 char(5)
-                            , organization_chart_name                                   -- organization_chart_name                varchar(
-                            , organization_unit_name                                    -- organization_unit_name                 varchar(
-                            , organization_group_id                                     -- organization_group_id                  int
-                            , organization_change_reason_cd                             -- organization_change_reason_cd          char(5)
-                            , loc_code                                                  -- loc_code                               char(10)
-                            , mgr_emp_id                                                -- mgr_emp_id                             char(15)
-                            , official_title_code                                       -- official_title_code                    char(5)
-                            , official_title_date                                       -- official_title_date                    datetime
-                            , salary_change_date                                        -- salary_change_date                     datetime
-                            , annual_salary_amt                                         -- annual_salary_amt                      money
-                            , pd_salary_amt                                             -- pd_salary_amt                          money
-                            , pd_salary_tm_pd_id                                        -- pd_salary_tm_pd_id                     char(5)
-                            , hourly_pay_rate                                           -- hourly_pay_rate                        float
-                            , curr_code                                                 -- curr_code                              char(3)
-                            , pay_on_reported_hrs_ind                                   -- pay_on_reported_hrs_ind                char(1)
-                            , ''                                                        -- salary_change_type_code                char(5)
-                            , standard_work_pd_id                                       -- standard_work_pd_id                    char(5)
-                            , standard_work_hrs                                         -- standard_work_hrs                      float
-                            , work_tm_code                                           -- work_tm_code                           char(1)
-                            , work_shift_code                                           -- work_shift_code                        char(5)
-                            , salary_structure_id                                       -- salary_structure_id                    char(10)
-                            , salary_increase_guideline_id                              -- salary_increase_guideline_id           char(10)
-                            , pay_grade_code                                            -- pay_grade_code                         char(6)
-                            , pay_grade_date                                            -- pay_grade_date                         datetime
-                            , job_evaluation_points_nbr                                 -- job_evaluation_points_nbr              smallint
-                            , salary_step_nbr                                           -- salary_step_nbr                        smallint
-                            , salary_step_date                                          -- salary_step_date                       datetime
-                            , phone_1_type_code                                         -- phone_1_type_code                      char(5)
-                            , phone_1_fmt_code                                          -- phone_1_fmt_code                       char(6)
-                            , phone_1_fmt_delimiter                                     -- phone_1_fmt_delimiter                  char(1)
-                            , phone_1_intl_code                                         -- phone_1_intl_code                      char(4)
-                            , phone_1_country_code                                      -- phone_1_country_code                   char(4)
-                            , phone_1_area_city_code                                    -- phone_1_area_city_code                 char(5)
-                            , phone_1_nbr                                               -- phone_1_nbr                            char(12)
-                            , phone_1_extension_nbr                                     -- phone_1_extension_nbr                  char(5)
-                            , phone_2_type_code                                         -- phone_2_type_code                      char(5)
-                            , phone_2_fmt_code                                          -- phone_2_fmt_code                       char(6)
-                            , phone_2_fmt_delimiter                                     -- phone_2_fmt_delimiter                  char(1)
-                            , phone_2_intl_code                                         -- phone_2_intl_code                      char(4)
-                            , phone_2_country_code                                      -- phone_2_country_code                   char(4)
-                            , phone_2_area_city_code                                    -- phone_2_area_city_code                 char(5)
-                            , phone_2_nbr                                               -- phone_2_nbr                            char(12)
-                            , phone_2_extension_nbr                                     -- phone_2_extension_nbr                  char(5)
-                            , prime_assignment_ind                                      -- prime_assignment_ind                   char(1)
-                            , pay_basis_code                                            -- pay_basis_code                         char(1)
-                            , occupancy_code                                            -- occupancy_code                         char(1)
-                            , regulatory_reporting_unit_code                            -- regulatory_reporting_unit_code         char(10)
-                            , base_rate_tbl_id                                       -- base_rate_tbl_id                       char(10)
-                            , base_rate_tbl_entry_code                               -- base_rate_tbl_entry_code               char(8)
-                            , shift_differential_rate_tbl_id                            -- shift_differential_rate_tbl_id         char(10)
-                            , ref_annual_salary_amt                                     -- ref_annual_salary_amt                  money
-                            , ref_pd_salary_amt                                         -- ref_pd_salary_amt                      money
-                            , ref_pd_salary_tm_pd_id                                    -- ref_pd_salary_tm_pd_id                 char(5)
-                            , ref_hourly_pay_rate                                       -- ref_hourly_pay_rate                    float
-                            , guaranteed_annual_salary_amt                              -- guaranteed_annual_salary_amt           money
-                            , guaranteed_pd_salary_amt                                  -- guaranteed_pd_salary_amt               money
-                            , guaranteed_pd_salary_tm_pd_id                             -- guaranteed_pd_salary_tm_pd_id          char(5)
-                            , guaranteed_hourly_pay_rate                                -- guaranteed_hourly_pay_rate             float
-                            , exception_rate_ind                                        -- exception_rate_ind                     char(1)
-                            , overtime_status_code                                      -- overtime_status_code                   char(2)
-                            , shift_differential_status_code                            -- shift_differential_status_code         char(2)
-                            , standard_daily_work_hrs                                   -- standard_daily_work_hrs                money
-                            , user_amt_1                                                -- user_amt_1                             float
-                            , user_amt_2                                                -- user_amt_2                             float
-                            , user_code_1                                               -- user_code_1                            char(5)
-                            , user_code_2                                               -- user_code_2                            char(5)
-                            , user_date_1                                               -- user_date_1                            datetime
-                            , user_date_2                                               -- user_date_2                            datetime
-                            , user_ind_1                                                -- user_ind_1                             char(1)
-                            , user_ind_2                                                -- user_ind_2                             char(1)
-                            , user_monetary_amt_1                                       -- user_monetary_amt_1                    money
-                            , user_monetary_amt_2                                       -- user_monetary_amt_2                    money
-                            , user_monetary_curr_code                                   -- user_monetary_curr_code                char(3)
-                            , user_text_1                                               -- user_text_1                            char(50)
-                            , @position_title                                           -- user_text_2                            char(50)
-                            , unemployment_loc_code                                     -- unemployment_loc_code                  char(10)
-                            , include_salary_in_autopay_ind                             -- include_salary_in_autopay_ind          char(1)
-                            , chgstamp                                                  -- chgstamp                               smallint
-                    FROM DBShrpn.dbo.emp_assignment
-                    WHERE (emp_id =	@emp_id)
-                    AND (assigned_to_code = @cur_ea_assigned_to_code)
-                    AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
-                    AND (eff_date         = @cur_ea_eff_date)
+                        -- insert new record
+                        INSERT DBShrpn.dbo.emp_assignment
+                        SELECT emp_id                                                    -- emp_id                                 char(15)
+                                , assigned_to_code                                          -- assigned_to_code                       char(1)
+                                , @job_or_pos_id                                            -- job_or_pos_id                          char(10)
+                                , @w_eff_date                                               -- eff_date                               datetime
+                                , @v_END_OF_TIME_DATE                                       -- next_eff_date                          datetime
+                                , @cur_ea_eff_date                                          -- prior_eff_date                         datetime
+                                , next_assigned_to_code                                     -- next_assigned_to_code                  char(1)
+                                , next_job_or_pos_id                                        -- next_job_or_pos_id                     char(10)
+                                , prior_assigned_to_code                                    -- prior_assigned_to_code                 char(1)
+                                , job_or_pos_id                                       -- prior_job_or_pos_id                    char(10)
+                                , begin_date                                                -- begin_date                             datetime
+                                , end_date                                                  -- end_date                               datetime
+                                , assignment_reason_code                                    -- assignment_reason_code                 char(5)
+                                , @organization_chart_name                                   -- organization_chart_name                varchar(
+                                , @organization_unit_name                                    -- organization_unit_name                 varchar(
+                                , @organization_group_id                                     -- organization_group_id                  int
+                                , organization_change_reason_cd                             -- organization_change_reason_cd          char(5)
+                                , loc_code                                                  -- loc_code                               char(10)
+                                , mgr_emp_id                                                -- mgr_emp_id                             char(15)
+                                , official_title_code                                       -- official_title_code                    char(5)
+                                , official_title_date                                       -- official_title_date                    datetime
+                                , salary_change_date                                        -- salary_change_date                     datetime
+                                , @new_annual_salary_amt                                         -- annual_salary_amt                      money
+                                , @new_emp_asgn_period_amt                                             -- pd_salary_amt                          money
+                                , pd_salary_tm_pd_id                                        -- pd_salary_tm_pd_id                     char(5)
+                                , @new_emp_asgn_hourly_rate_amt                                           -- hourly_pay_rate                        float
+                                , curr_code                                                 -- curr_code                              char(3)
+                                , pay_on_reported_hrs_ind                                   -- pay_on_reported_hrs_ind                char(1)
+                                , ''                                                        -- salary_change_type_code                char(5)
+                                , standard_work_pd_id                                       -- standard_work_pd_id                    char(5)
+                                , standard_work_hrs                                         -- standard_work_hrs                      float
+                                , @new_emp_asgn_work_tm_code                                           -- work_tm_code                           char(1)
+                                , work_shift_code                                           -- work_shift_code                        char(5)
+                                , salary_structure_id                                       -- salary_structure_id                    char(10)
+                                , salary_increase_guideline_id                              -- salary_increase_guideline_id           char(10)
+                                , pay_grade_code                                            -- pay_grade_code                         char(6)
+                                , pay_grade_date                                            -- pay_grade_date                         datetime
+                                , job_evaluation_points_nbr                                 -- job_evaluation_points_nbr              smallint
+                                , salary_step_nbr                                           -- salary_step_nbr                        smallint
+                                , salary_step_date                                          -- salary_step_date                       datetime
+                                , phone_1_type_code                                         -- phone_1_type_code                      char(5)
+                                , phone_1_fmt_code                                          -- phone_1_fmt_code                       char(6)
+                                , phone_1_fmt_delimiter                                     -- phone_1_fmt_delimiter                  char(1)
+                                , phone_1_intl_code                                         -- phone_1_intl_code                      char(4)
+                                , phone_1_country_code                                      -- phone_1_country_code                   char(4)
+                                , phone_1_area_city_code                                    -- phone_1_area_city_code                 char(5)
+                                , phone_1_nbr                                               -- phone_1_nbr                            char(12)
+                                , phone_1_extension_nbr                                     -- phone_1_extension_nbr                  char(5)
+                                , phone_2_type_code                                         -- phone_2_type_code                      char(5)
+                                , phone_2_fmt_code                                          -- phone_2_fmt_code                       char(6)
+                                , phone_2_fmt_delimiter                                     -- phone_2_fmt_delimiter                  char(1)
+                                , phone_2_intl_code                                         -- phone_2_intl_code                      char(4)
+                                , phone_2_country_code                                      -- phone_2_country_code                   char(4)
+                                , phone_2_area_city_code                                    -- phone_2_area_city_code                 char(5)
+                                , phone_2_nbr                                               -- phone_2_nbr                            char(12)
+                                , phone_2_extension_nbr                                     -- phone_2_extension_nbr                  char(5)
+                                , prime_assignment_ind                                      -- prime_assignment_ind                   char(1)
+                                , pay_basis_code                                            -- pay_basis_code                         char(1)
+                                , occupancy_code                                            -- occupancy_code                         char(1)
+                                , regulatory_reporting_unit_code                            -- regulatory_reporting_unit_code         char(10)
+                                , @new_emp_asgn_base_rate_tbl_id                                       -- base_rate_tbl_id                       char(10)
+                                , @new_emp_asgn_base_rate_tbl_entry_code                               -- base_rate_tbl_entry_code               char(8)
+                                , shift_differential_rate_tbl_id                            -- shift_differential_rate_tbl_id         char(10)
+                                , ref_annual_salary_amt                                     -- ref_annual_salary_amt                  money
+                                , ref_pd_salary_amt                                         -- ref_pd_salary_amt                      money
+                                , ref_pd_salary_tm_pd_id                                    -- ref_pd_salary_tm_pd_id                 char(5)
+                                , ref_hourly_pay_rate                                       -- ref_hourly_pay_rate                    float
+                                , guaranteed_annual_salary_amt                              -- guaranteed_annual_salary_amt           money
+                                , guaranteed_pd_salary_amt                                  -- guaranteed_pd_salary_amt               money
+                                , guaranteed_pd_salary_tm_pd_id                             -- guaranteed_pd_salary_tm_pd_id          char(5)
+                                , guaranteed_hourly_pay_rate                                -- guaranteed_hourly_pay_rate             float
+                                , exception_rate_ind                                        -- exception_rate_ind                     char(1)
+                                , overtime_status_code                                      -- overtime_status_code                   char(2)
+                                , shift_differential_status_code                            -- shift_differential_status_code         char(2)
+                                , standard_daily_work_hrs                                   -- standard_daily_work_hrs                money
+                                , user_amt_1                                                -- user_amt_1                             float
+                                , user_amt_2                                                -- user_amt_2                             float
+                                , user_code_1                                               -- user_code_1                            char(5)
+                                , user_code_2                                               -- user_code_2                            char(5)
+                                , user_date_1                                               -- user_date_1                            datetime
+                                , user_date_2                                               -- user_date_2                            datetime
+                                , user_ind_1                                                -- user_ind_1                             char(1)
+                                , user_ind_2                                                -- user_ind_2                             char(1)
+                                , user_monetary_amt_1                                       -- user_monetary_amt_1                    money
+                                , user_monetary_amt_2                                       -- user_monetary_amt_2                    money
+                                , user_monetary_curr_code                                   -- user_monetary_curr_code                char(3)
+                                , user_text_1                                               -- user_text_1                            char(50)
+                                , @position_title                                           -- user_text_2                            char(50)
+                                , unemployment_loc_code                                     -- unemployment_loc_code                  char(10)
+                                , include_salary_in_autopay_ind                             -- include_salary_in_autopay_ind          char(1)
+                                , chgstamp                                                  -- chgstamp                               smallint
+                        FROM DBShrpn.dbo.emp_assignment
+                        WHERE (emp_id =	@emp_id)
+                        AND (assigned_to_code = @cur_ea_assigned_to_code)
+                        AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
+                        AND (eff_date         = @cur_ea_eff_date)
 
+                    END
+                ELSE    -- Effective dates match - update current record
+                    BEGIN
+
+
+                        UPDATE DBShrpn.dbo.emp_assignment
+                        SET annual_salary_amt           = @new_annual_salary_amt
+                        , hourly_pay_rate             = @new_emp_asgn_hourly_rate_amt
+                        , pd_salary_amt               = @new_emp_asgn_period_amt
+                        , salary_change_type_code     = @new_emp_asgn_salary_change_type_code
+                        , work_tm_code                = @new_emp_asgn_work_tm_code
+                        , base_rate_tbl_id            = @new_emp_asgn_base_rate_tbl_id
+                        , base_rate_tbl_entry_code    = @new_emp_asgn_base_rate_tbl_entry_code
+                        , organization_group_id       = @organization_group_id
+                        , organization_chart_name     = @organization_chart_name
+                        , organization_unit_name      = @organization_unit_name
+                        , user_text_2                 = @position_title
+                        WHERE   (emp_id           = @emp_id)
+                            AND (assigned_to_code = @cur_ea_assigned_to_code)
+                            AND (job_or_pos_id    = @cur_ea_job_or_pos_id)
+                            AND (eff_date         = @cur_ea_eff_date)
+
+
+                    END
 
                 ---------------------------------------------------------------------------
                 -- Update Processed Flag after successful update
@@ -659,6 +707,7 @@ BYPASS_EMPLOYEE:
                 , @empl_id
                 , @position_title
                 , @file_source
+                , @job_or_pos_id
 
 
         END -- end of while loop

@@ -51,7 +51,7 @@ GO
    Revision history:
    version  date        developer   SCR         description
    -------  ----------  ---------   -----       ------------------------------------
-   1.0.00   08/27/2025  CJP                     - Cloned from GOG version
+   1.0.00   08/27/2025  CJP                     - Created 10/10/2025
 
 ************************************************************************************/
 CREATE procedure dbo.usp_verification_rpt_csv
@@ -59,6 +59,7 @@ AS
 
 BEGIN
 
+    SET NOCOUNT ON
 
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
