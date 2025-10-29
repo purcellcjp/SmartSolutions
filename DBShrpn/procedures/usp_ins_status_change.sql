@@ -779,29 +779,7 @@ BEGIN
                 --   Obtain the setup variables
                 ---------------------------------------------------------------------------
                 ---------------------------------------------------------------------------
-/*
-                ---------------------------------------------------------------------------
-                -- Determine Emp Assignment Position - Not provided by HCM
-                ---------------------------------------------------------------------------
-                -- Added here to allow validate of value in case not setup in SS
 
-                SET @v_step_position = 'Begin Emp Assignment Position'
-
-                -- Based on server and employer
-                -- source field has been added to input file
-                IF (CHARINDEX('VENUS', @@SERVERNAME) > 0)
-                    IF EXISTS(
-                            SELECT 1
-                            FROM DBShrpn.dbo.employer
-                            WHERE empl_id = @empl_id
-                                AND (name LIKE 'PEN%')
-                            )
-                        SET @w_job_or_pos_id = 'PEN-0001'
-                    ELSE
-                        SET @w_job_or_pos_id = 'GEN-0001'
-                ELSE   -- Ganymede FORTHCM
-                    SET @w_job_or_pos_id = 'FORT-0001'
-*/
 
                 ---------------------------------------------------------------------------
                 -- Find the tax entity
@@ -839,16 +817,11 @@ BEGIN
                 FROM DBShrpn.dbo.employer empl
                 WHERE (empl.empl_id = @empl_id)
 
-                --
-                --
-                --
-                --SELECT   @w_eff_date = CAST(@eff_date   As datetime)
 
-                --
-                --
-                --   Perform the main logic
-                --
-                --
+
+                ---------------------------------------------------------------------------
+                -- Rehire Associate
+                ---------------------------------------------------------------------------
                 IF (@emp_status_code = 'RH')
                     BEGIN
 
@@ -897,7 +870,7 @@ BEGIN
 
 
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire
-                                        @p_emp_id                   = @emp_id
+                                      @p_emp_id                   = @emp_id
                                     , @p_previous_emp_id          = @w_previous_emp_id
                                     , @p_status_change_date       = @w_status_change_date
                                     , @p_new_empl_id              = @empl_id
@@ -929,8 +902,12 @@ BEGIN
                                 , (' ');
                                 */
 
+
+                                ---------------------------------------------------------------------------
+                                -- Updates associate's pay elements
+                                ---------------------------------------------------------------------------
                                 EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy
-                                    @p_emp_id           = @emp_id
+                                      @p_emp_id           = @emp_id
                                     , @p_empl_id          = @empl_id
                                     , @p_new_pay_group_id = @pay_group_id
                                     , @p_new_pecg_id      = @pay_element_ctrl_grp_id
@@ -938,32 +915,24 @@ BEGIN
 
 
                                 ---------------------------------------------------------------------------
-                                ---------------------------------------------------------------------------
-                                --   Obtain the current record for this employee assignment
-                                ---------------------------------------------------------------------------
-                                ---------------------------------------------------------------------------
-
-
-                                ---------------------------------------------------------------------------
                                 --   Update the Salary and Position Title in the Assignment Record
                                 ---------------------------------------------------------------------------
-
-
-                                SELECT   @i_emp_id            =   emp_id,
-                                        @i_assigned_to_code      =   assigned_to_code,
-                                        @i_job_or_pos_id      =   job_or_pos_id,
-                                        @i_eff_date            =   eff_date,
-                                        @i_next_eff_date      =   next_eff_date,
-                                        @i_prior_eff_date      =   prior_eff_date
+                                SELECT @i_emp_id           = emp_id
+                                     , @i_assigned_to_code = assigned_to_code
+                                     , @i_job_or_pos_id    = job_or_pos_id
+                                     , @i_eff_date         = eff_date
+                                     , @i_next_eff_date    = next_eff_date
+                                     , @i_prior_eff_date   = prior_eff_date
                                 FROM DBShrpn.dbo.emp_assignment   ea
-                                WHERE emp_id =   @emp_id
-                                AND prime_assignment_ind   =   'Y'
-                                AND eff_date = (
-                                                SELECT MAX(eff_date)
-                                                FROM   DBShrpn.dbo.emp_assignment t
-                                                WHERE   t.emp_id =   ea.emp_id
-                                                    AND prime_assignment_ind = 'Y'
-                                                )
+                                WHERE (ea.emp_id             = @emp_id)
+                                AND (ea.prime_assignment_ind = 'Y')
+                                AND (ea.eff_date = (
+                                                    SELECT MAX(ea2.eff_date)
+                                                    FROM DBShrpn.dbo.emp_assignment ea2
+                                                    WHERE (ea2.emp_id               = ea.emp_id)
+                                                      AND (ea2.prime_assignment_ind = ea.prime_assignment_ind)
+                                                   ))
+
 
                                 -- GOSL: HCM Salary data will not be extracted to SS
                                 -- Blank them out
@@ -1030,12 +999,15 @@ BEGIN
                                     , @p_audit_id           = @aud_id
 
                             END
-                    END  -- End of RH Logic
+                    END  -- End of Rehire (RH) Logic
 
 
+                ---------------------------------------------------------------------------
+                -- Inactivate Associate
+                ---------------------------------------------------------------------------
                 IF (@emp_status_code = 'I')
                     BEGIN
-                        SET @v_step_position = 'Begin Inactive'
+                        SET @v_step_position = 'Inactivate Associate'
 
                         IF (@w_curr_status = 'A')
                             BEGIN
@@ -1076,21 +1048,23 @@ BEGIN
                                     , @p_pay_element_id     = ''
                                     , @p_msg_p1             = @w_curr_status
                                     , @p_msg_p2             = @w_msg_text_2
-                                    , @p_msg_desc           = 'Cannot inactivate an employee if the current status is not active.'
+                                    , @p_msg_desc           = 'Cannot inactivate associate if the current status is not active.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
                                     , @p_audit_id           = @aud_id
-
 
                             END
 
                     END  -- End of Inactivate Logic
 
 
+                ---------------------------------------------------------------------------
+                -- Terminate Associate
+                ---------------------------------------------------------------------------
                 IF (@emp_status_code = 'T')
                     BEGIN
 
-                        SET @v_step_position = 'Termination'
+                        SET @v_step_position = 'Terminate Assocaite'
 
                         IF (@w_curr_status IN ('A','I'))
                             BEGIN
@@ -1163,7 +1137,7 @@ BEGIN
 
                     END  -- End of Terminate Logic
 
-
+/*
                 ---------------------------------------------------------------------------
                 -- Override the message if this cycle contains an employee rehire record
                 ---------------------------------------------------------------------------
@@ -1177,52 +1151,72 @@ BEGIN
                     SET @rehire_override = '1'
                 ELSE
                     SET @rehire_override = '0'
+*/
 
-                --
-                --
-                --
+                ---------------------------------------------------------------------------
+                -- Set Rehire Override Flag
+                ---------------------------------------------------------------------------
+                -- If current record is reactivation (RA) and rehire (RH) transaction is present in extract
+                -- Used to generate log messages when associate is not inactive and
+                -- interface is trying to reactivate
+
+                IF  EXISTS (
+                            SELECT 1
+                            FROM #ghr_employee_events_temp t
+                            WHERE (t.event_id = @v_EVENT_ID_STATUS_CHANGE)
+                            AND (t.aud_id <> @aud_id)   -- 
+                            AND (t.emp_id = @emp_id)
+                            AND (t.emp_status_code = 'RH')
+                        )
+                    SET @rehire_override = 'Y'
+                ELSE
+                    SET @rehire_override = 'N'
+
+
+
+                ---------------------------------------------------------------------------
+                -- Reactivate Associate
+                ---------------------------------------------------------------------------
+                -- Assocaite must be inactive otherwise log error based on rehire overide flag
 
                 IF   (@emp_status_code = 'RA')
                     BEGIN --1
 
-                        IF @w_curr_status = 'I'
+                        IF (@w_curr_status = 'I')
                             BEGIN  --2
                                 SET @v_step_position = 'Rehire RA Inactive'
 
                                 -- Note: This proceure does not create a new employee assignment record
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate
-                                    @p_emp_id   =   @emp_id,
-                                    @p_status_change_date            =   @w_status_change_date,
-                                    @p_reactivate_date               =   @w_eff_date,
-                                    @p_new_reason                  =   @reason_code,
-                                    @p_new_classification_cd         =   @emp_status_classn_code,
-                                    @p_allow_emp_pay_updates_ind      =   'Y',
-                                    @p_pay_status_code               =   @pay_status_code,
-                                    @p_old_chgstamp                   =   @w_old_chgstamp
-
-
-
-
-
+                                      @p_emp_id                    = @emp_id
+                                    , @p_status_change_date        = @w_status_change_date
+                                    , @p_reactivate_date           = @w_eff_date
+                                    , @p_new_reason                = @reason_code
+                                    , @p_new_classification_cd     = @emp_status_classn_code
+                                    , @p_allow_emp_pay_updates_ind = 'Y'
+                                    , @p_pay_status_code           = @pay_status_code
+                                    , @p_old_chgstamp              = @w_old_chgstamp
 
                             END  --2
                         ELSE
+                            -- Terminated Associate
                             BEGIN --3
-                                IF @rehire_override = '0'   -- RH record not present in extract
+                                -- RH record not present in extract
+                                IF (@rehire_override = 'N')
                                     BEGIN  --4
 
                                         SET @msg_id = 'U00025'
                                         SET @v_step_position = 'Rehire Overide - ''0'' - ' + @msg_id
 
                                         INSERT INTO #tbl_ghr_msg
-                                        SELECT @msg_id                  As msg_id
+                                        SELECT @msg_id As msg_id
                                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                                         FROM #tbl_msg_master t
                                         WHERE (msg_id = @msg_id)
 
                                         -- Historical Message for reporting purpose
                                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                                            @p_msg_id             = @msg_id
+                                              @p_msg_id             = @msg_id
                                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                             , @p_emp_id             = @emp_id
                                             , @p_eff_date           = @eff_date

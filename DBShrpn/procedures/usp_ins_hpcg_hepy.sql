@@ -1,6 +1,6 @@
 USE [DBShrpn]
 GO
-/****** Object:  StoredProcedure [dbo].[usp_ins_hpcg_hepy]    Script Date: 4/1/2025 4:33:00 PM ******/
+
 SET ANSI_NULLS OFF
 GO
 SET QUOTED_IDENTIFIER OFF
@@ -10,7 +10,7 @@ GO
 CREATE procedure [dbo].[usp_ins_hpcg_hepy]
 	(@p_emp_id			char(15),
 	 @p_empl_id 			char(10),
-         @p_new_pay_group_id		char(10), 
+         @p_new_pay_group_id		char(10),
 	 @p_new_pecg_id			char(10),
          @p_as_of_date			datetime)
 as
@@ -39,7 +39,7 @@ declare
         @w_epe_stop_date                datetime,
         @w_pe_count                     int,
         @w_limit_cycle_type_code        char(1)
- 
+
 /* ==================================================================== */
 /* Authenticate the request for this process                            */
 /* ==================================================================== */
@@ -48,8 +48,8 @@ declare @ret int
 --if @ret != 0
     --return
 
-declare @w_error char(1)                
-select  @w_error = 'N' 
+declare @w_error char(1)
+select  @w_error = 'N'
 
 /* ==================================================================== */
 /* Begin Audit setup                                                    */
@@ -92,8 +92,8 @@ select @w_employer_taxing_ctry_code = taxing_country_code
  where empl_id = @p_empl_id
 
 select @w_pensioner_indicator = 'N'
-select @w_pensioner_indicator = pensioner_indicator	
-  FROM emp_employment 
+select @w_pensioner_indicator = pensioner_indicator
+  FROM emp_employment
  WHERE emp_id        = @p_emp_id
    AND next_eff_date = @w_eot
    AND empl_id       = @p_empl_id
@@ -101,7 +101,7 @@ select @w_pensioner_indicator = pensioner_indicator
 begin transaction
 
 if @w_employer_taxing_ctry_code = 'US' and @w_pensioner_indicator = 'N'
-  BEGIN 
+  BEGIN
     declare est_pecg_pe_cursor cursor
       for Select a.pay_element_id,
                  b.deduction_type_code,
@@ -124,8 +124,8 @@ if @w_employer_taxing_ctry_code = 'US' and @w_pensioner_indicator = 'N'
              and b.start_date             <= @p_as_of_date
              and b.stop_date               > @p_as_of_date
              and b.earn_type_code         <> '6' /* pension earnings */
-  END 
-else         
+  END
+else
   BEGIN /* Declare cursor to select pay element info for CANADA */
     declare est_pecg_pe_cursor cursor
       for Select a.pay_element_id,
@@ -167,8 +167,8 @@ Fetch est_pecg_pe_cursor
       @w_limit_cycle_type_code
 
 select @w_direct_deposit_ind = 'N'
- 
-While @@fetch_status = 0 
+
+While @@fetch_status = 0
   Begin         /* A */
         /* If the Pay Group is entered, the autopay pay element will already be started before */
         /* reaching this stored procedure, so no need to check if the autopay pay element is   */
@@ -181,7 +181,7 @@ While @@fetch_status = 0
         /**************************************************************************
          Check if employee already has the PE.
         **************************************************************************/
-        if exists(select * 
+        if exists(select *
                     from emp_pay_element
                    where emp_id          = @p_emp_id
                      and empl_id         = @p_empl_id
@@ -190,7 +190,7 @@ While @@fetch_status = 0
             /**********************************************************************
              If employee has the PE and eff date >= hire date, get next PE.
             ***********************************************************************/
-            if exists (select * 
+            if exists (select *
                          from emp_pay_element
                         where emp_id         = @p_emp_id
                           and eff_date      >= @p_as_of_date
@@ -200,12 +200,12 @@ While @@fetch_status = 0
               begin
                 Goto next_pecg_pe_cursor
               end
-                 
+
             /**********************************************************************
-             If employee has the PE and eff date < hire date, 
+             If employee has the PE and eff date < hire date,
              update next_eff_date on prior row, set prior_eff_date for new row.
              Only want to reestablish PEs which are stopped before @p_as_of_date.
-             [R6.5.03M-ALS#563565: corrected comment-removed "(stop_date <> @w_eot)" 
+             [R6.5.03M-ALS#563565: corrected comment-removed "(stop_date <> @w_eot)"
               and replaced with "before @p_as_of_date"]
             ***********************************************************************/
             if exists (select * from emp_pay_element
@@ -247,7 +247,7 @@ While @@fetch_status = 0
                   goto next_pecg_pe_cursor
               end   /* D */
           END  /* C */
-        else   /* employee does not already have the PE */   
+        else   /* employee does not already have the PE */
           BEGIN
             select @w_epe_prior_eff_date = @w_eot
             select @w_limit_amt          = 0
@@ -257,34 +257,34 @@ While @@fetch_status = 0
         /* Get info for new emp_pay_element row.                 */
         /*********************************************************/
         if @w_start_date <= @p_as_of_date
-          select @w_start_date = @p_as_of_date 
-      
+          select @w_start_date = @p_as_of_date
+
         if @w_stop_date = @w_eot
-          BEGIN 
+          BEGIN
             select @w_inact_by_pay_element_ind = 'N'
             if @w_next_eff_date = @w_eot
               select @w_stop_date = stop_date
                 from pay_element
                where pay_element_id = @w_pay_element_id
                  and next_eff_date  = @w_eot
-          END     
-        else  
+          END
+        else
           select @w_inact_by_pay_element_ind = 'Y'
-       
+
         if @w_calc_method_code in ('01','02','04','06','13','14','17','18','19','21','22','25')
-          BEGIN 
-            if @w_std_calc_factor_1 = 0 
+          BEGIN
+            if @w_std_calc_factor_1 = 0
               select @w_schedule_code = '00'
             else
               select @w_schedule_code = ''
-          END 
+          END
         else if @w_calc_method_code in ('03','05','23','24')
-          BEGIN 
-            if @w_std_calc_factor_1 = 0 or @w_std_calc_factor_2 = 0                   
+          BEGIN
+            if @w_std_calc_factor_1 = 0 or @w_std_calc_factor_2 = 0
               select @w_schedule_code = '00'
             else
               select @w_schedule_code = ''
-          END               
+          END
         else if @w_calc_method_code in ('07','08','09','10','11','12','15','16','20')
            select @w_schedule_code = '00'
         else
@@ -349,17 +349,17 @@ While @@fetch_status = 0
                    pension_distn_code_2,
                    pre_1990_rpp_ctrb_type_cd,
                    chgstamp,
-                   first_roth_ctrb,                 /* r71m - 578919 in 2006 reg pack 576240 */  
+                   first_roth_ctrb,                 /* r71m - 578919 in 2006 reg pack 576240 */
                    ira_sep_simple_ind,              /* r71m - 581591 in 582025 */
                    taxable_amt_not_determined_ind)  /* r71m - 581591 in 582025 */
-        values 
+        values
                   (@p_emp_id,
                    @p_empl_id,
                    @w_pay_element_id,
                    @p_as_of_date,
                    @w_start_date,
                    @w_stop_date,
-                   @w_epe_prior_eff_date, 
+                   @w_epe_prior_eff_date,
                    @w_eot,
                    @w_inact_by_pay_element_ind,
                    "",
@@ -402,13 +402,13 @@ While @@fetch_status = 0
                    "N",
                    "N",
                    "",
-                   "", 
-                   "N", 
-                   "", 
-                   "", 
+                   "",
+                   "N",
+                   "",
+                   "",
                    "0",
                    0,
-                   @w_eot,      /* r71m - 578919 in 2006 reg pack 576240 */  
+                   @w_eot,      /* r71m - 578919 in 2006 reg pack 576240 */
                    "N",         /* r71m - 581591 in 582025 */
                    "N")         /* r71m - 581591 in 582025 */
 
@@ -448,13 +448,13 @@ While @@fetch_status = 0
         if @w_ded_type_code = '3'  /* direct deposit */
           select @w_prenote_code       = '4',
                  @w_direct_deposit_ind = 'Y'
-        else                   
+        else
           select @w_prenote_code = ''
 
         /**********************************************************************
          If not already exists, insert emp_pay_element_non_dtd
         ***********************************************************************/
-        if not exists (select * from emp_pay_element_non_dtd 
+        if not exists (select * from emp_pay_element_non_dtd
                         where emp_id         = @p_emp_id
                           and pay_element_id = @w_pay_element_id
                           and empl_id        = @p_empl_id)
@@ -500,7 +500,7 @@ While @@fetch_status = 0
                     @w_start_date,
                     0,
                     0)
-          END 
+          END
 
 next_pecg_pe_cursor:
     Fetch est_pecg_pe_cursor
@@ -536,7 +536,7 @@ if @w_direct_deposit_ind  = 'Y'
         select @w_error_return_code = "50436" + "/" + @p_new_pecg_id /* warning */
     else
         select @w_error_return_code = @w_error_return_code + "/" + "50436" + "/" + @p_new_pecg_id /* warning */
-  end 
+  end
 
 /* If there are future active pay elements that the user has indicated to   */
 /* establish on hire, set the return to inform the user that these were not */
@@ -570,7 +570,7 @@ if exists (select a.pay_element_id
 	select @w_error_return_code = "520106" + "/" + @p_new_pecg_id /* warning */
     else
 	select @w_error_return_code = @w_error_return_code + "/" + "520106" + "/" + @p_new_pecg_id /* warning */
-  end 
+  end
 
 /* If the employee being hired is designated as a pensioner in the U.S., */
 /* and there are non-pension earnings in the pay element control group,  */
@@ -585,7 +585,7 @@ if @w_employer_taxing_ctry_code = 'US'
                     and a.pay_element_id          = b.pay_element_id
                     and a.establish_on_hire_ind   = 'Y'
                     and b.pay_element_type_code   = '1'
-                    and b.earn_type_code          = '6')                         
+                    and b.earn_type_code          = '6')
         begin
           if @w_error_return_code = ""
 	    select @w_error_return_code = "50435" + "/" + @p_new_pecg_id /* warning */
@@ -593,7 +593,7 @@ if @w_employer_taxing_ctry_code = 'US'
             select @w_error_return_code = @w_error_return_code + "/" + "50435" + "/" + @p_new_pecg_id /* warning */
         end
   end
- 
+
 /* ==================================================================== */
 /*   --  Return to the client                                           */
 /* ==================================================================== */
@@ -601,19 +601,19 @@ end_proc:
 --select @w_error_return_code,
 --       @w_pe_count
 
-if @w_error = 'Y'    
-  begin     
+if @w_error = 'Y'
+  begin
 --SYBSQL    raiserror 520100  "Auto Setup Failed"
-          raiserror ('520100  Auto Setup Failed',16,0) 
+          raiserror ('520100  Auto Setup Failed',16,0)
    rollback transaction
-  end       
+  end
 else
    commit transaction
 
- 
 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_ins_hpcg_hepy] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_ins_hpcg_hepy] TO  SCHEMA OWNER
 GO

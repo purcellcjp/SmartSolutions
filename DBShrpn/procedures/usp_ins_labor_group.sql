@@ -19,7 +19,11 @@ GO
 /*************************************************************************************
     SP Name:       usp_ins_labor_group
 
-    Description:
+    Description:    Populates labor group on Employee Employment by creating a new effective dated record.
+
+                    Table: DBShrpn.dbo.emp_employment
+
+                    Field: labor_grp_code
 
 
     Parameters:
@@ -31,7 +35,7 @@ GO
 
     Example:
         EXEC DBShrpn.dbo.usp_ins_labor_group
-              @p_user_id          = @w_userid
+              @p_user_id         = @w_userid
             , @p_batchname       = @v_PSC_BATCHNAME
             , @p_qualifier       = @w_PSC_QUALIFIER
             , @p_activity_date   = @w_activity_date
@@ -96,7 +100,7 @@ BEGIN
 
     DECLARE @cur_empl_id                    char(10)
     DECLARE @cur_eempl_eff_date             datetime
-    DECLARE @cur_tax_entity_id              char(10)
+    --DECLARE @cur_tax_entity_id              char(10)
     DECLARE @cur_labor_grp_code             char(05)
     DECLARE @cur_stat_emp_status_code       char(01)
     DECLARE @w_eff_date                     datetime
@@ -293,7 +297,7 @@ BEGIN
                 SET @w_fatal_error = 0
 
                 BEGIN TRAN
-                
+
 
                 ---------------------------------------------------------------------------
                 ---------------------------------------------------------------------------
@@ -306,15 +310,20 @@ BEGIN
 
                 --Skip Record if associate also has New Hire, Transfer, Status Change
                 IF EXISTS (
-                    SELECT 1
-                    FROM #ghr_employee_events_temp
-                    WHERE (emp_id = @emp_id)
-                    AND (event_id IN (
-                                        @v_EVENT_ID_NEW_HIRE
-                                      , @v_EVENT_ID_TRANSFER
-                                      , @v_EVENT_ID_STATUS_CHANGE
-                                    ))
-                )
+                            SELECT 1
+                            FROM #ghr_employee_events_temp
+                            WHERE (emp_id = @emp_id)
+                            AND (event_id IN (
+                                                @v_EVENT_ID_NEW_HIRE
+                                             , @v_EVENT_ID_TRANSFER
+                                            ))
+                            UNION ALL
+                            SELECT 1
+                            FROM #ghr_employee_events_temp
+                            WHERE (emp_id = @emp_id)
+                            AND (event_id = @v_EVENT_ID_STATUS_CHANGE)
+                            AND (emp_status_code = 'RH')
+                          )
                 BEGIN
 
                     SET @msg_id = 'U00119'  -- New code
@@ -335,7 +344,7 @@ BEGIN
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Bypassing labor group record since employee has either a new hire, transfer, or status change event in this extract.'
+                        , @p_msg_desc           = 'Bypassing labor group record since update has either occurred in either new hire, transfer, or rehire status change event in this extract.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                         , @p_activity_date      = @p_activity_date
                         , @p_audit_id           = @aud_id
@@ -427,7 +436,7 @@ BEGIN
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                 SELECT @cur_empl_id                 = eempl.empl_id
-                    , @cur_tax_entity_id            = eempl.tax_entity_id
+                    --, @cur_tax_entity_id            = eempl.tax_entity_id
                     , @cur_eempl_eff_date           = eempl.eff_date
                     , @cur_labor_grp_code           = eempl.labor_grp_code
                     , @cur_stat_emp_status_code     = stat.emp_status_code
@@ -581,13 +590,13 @@ BEGIN
 
 
                 ---------------------------------------------------------------------------
-                -- Effective date must be greater than current effective date
+                -- Effective date must be greater or equal to current effective date
                 ---------------------------------------------------------------------------
                 SET @msg_id = 'U00027'
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-                IF (@w_fatal_error = 0) AND
-                (@w_eff_date <= @cur_eempl_eff_date)
+                IF  (@w_fatal_error = 0) AND
+                    (@w_eff_date < @cur_eempl_eff_date)
                     BEGIN
 
                         -- Convert date to string for log table
@@ -609,7 +618,7 @@ BEGIN
                             , @p_pay_element_id     = ''
                             , @p_msg_p1             = @w_msg_text_2
                             , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'New effective date must be greater than current employee employment effective date.'
+                            , @p_msg_desc           = 'New effective date must be greater or equal to current employee employment effective date.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -623,204 +632,223 @@ BEGIN
                     GOTO BYPASS_EMPLOYEE
 
 
+                -- If pay group even in current transaction
+                -- then update current emp employment record
+                IF (@w_eff_date = @cur_eempl_eff_date)
+                    BEGIN
+                        -- Update existing record
+                        UPDATE DBShrpn.dbo.emp_employment
+                        SET labor_grp_code = @labor_grp_code
+                        WHERE (emp_id = @emp_id)
+                        AND (eff_date = @w_eff_date)
 
-                ---------------------------------------------------------------------------
-                -- Update Employee Employment with new Pay Group
-                ---------------------------------------------------------------------------
+                    END
 
-                -- Update current record date pointers
-                UPDATE DBShrpn.dbo.emp_employment
-                SET next_eff_date = @w_eff_date
-                WHERE (emp_id = @emp_id)
-                AND (eff_date = @w_eff_date)
+                ELSE -- Create new record
+                    BEGIN
 
+                        ---------------------------------------------------------------------------
+                        -- Update Employee Employment with new Pay Group
+                        ---------------------------------------------------------------------------
 
-                -- Create new record
-                INSERT INTO #temp14
-                SELECT emp_id
-                    , @w_eff_date                      -- eff_date
-                    , @v_END_OF_TIME_DATE              -- next_eff_date
-                    , @cur_eempl_eff_date              -- prior_eff_date
-                    , employment_type_code
-                    , work_tm_code
-                    , official_title_code
-                    , official_title_date
-                    , mgr_ind
-                    , recruiter_ind
-                    , pensioner_indicator
-                    , payroll_company_code
-                    , pmt_ctrl_code
-                    , us_federal_tax_meth_code
-                    , us_federal_tax_amt
-                    , us_federal_tax_pct
-                    , us_federal_marital_status_code
-                    , us_federal_exemp_nbr
-                    , us_work_st_code
-                    , canadian_work_province_code
-                    , ipp_payroll_id
-                    , ipp_max_pay_level_amt
-                    , pay_through_date
-                    , empl_id
-                    , tax_entity_id
-                    , pay_status_code
-                    , clock_nbr
-                    , provided_i_9_ind
-                    , time_reporting_meth_code
-                    , regular_hrs_tracked_code
-                    , pay_element_ctrl_grp_id
-                    , pay_group_id
-                    , us_pension_ind
-                    , professional_cat_code
-                    , corporate_officer_ind
-                    , prim_disbursal_loc_code
-                    , alternate_disbursal_loc_code
-                    , @labor_grp_code                  -- labor_grp_code
-                    , employment_info_chg_reason_cd
-                    , highly_compensated_emp_ind
-                    , nbr_of_dependent_children
-                    , canadian_federal_tax_meth_cd
-                    , canadian_federal_tax_amt
-                    , canadian_federal_tax_pct
-                    , canadian_federal_claim_amt
-                    , canadian_province_claim_amt
-                    , tax_unit_code
-                    , requires_tm_card_ind
-                    , xfer_type_code
-                    , tax_clear_code
-                    , pay_type_code
-                    , labor_distn_code
-                    , labor_distn_ext_code
-                    , us_fui_status_code
-                    , us_fica_status_code
-                    , payable_through_bank_id
-                    , disbursal_seq_nbr_1
-                    , disbursal_seq_nbr_2
-                    , non_employee_indicator
-                    , excluded_from_payroll_ind
-                    , emp_info_source_code
-                    , user_amt_1
-                    , user_amt_2
-                    , user_monetary_amt_1
-                    , user_monetary_amt_2
-                    , user_monetary_curr_code
-                    , user_code_1
-                    , user_code_2
-                    , user_date_1
-                    , user_date_2
-                    , user_ind_1
-                    , user_ind_2
-                    , user_text_1
-                    , user_text_2
-                    , t4_employ_code
-                    , chgstamp
-                FROM DBShrpn.dbo.emp_employment
-                WHERE (emp_id   = @emp_id)
-                AND (eff_date = @cur_eempl_eff_date)
+                        -- Update current record date pointers
+                        UPDATE DBShrpn.dbo.emp_employment
+                        SET next_eff_date = @w_eff_date
+                        WHERE (emp_id = @emp_id)
+                        AND (eff_date = @w_eff_date)
 
 
-                INSERT INTO emp_employment
-                SELECT emp_id
-                    , eff_date
-                    , next_eff_date
-                    , prior_eff_date
-                    , employment_type_code
-                    , work_tm_code
-                    , official_title_code
-                    , official_title_date
-                    , mgr_ind
-                    , recruiter_ind
-                    , pensioner_indicator
-                    , payroll_company_code
-                    , pmt_ctrl_code
-                    , us_federal_tax_meth_code
-                    , us_federal_tax_amt
-                    , us_federal_tax_pct
-                    , us_federal_marital_status_code
-                    , us_federal_exemp_nbr
-                    , us_work_st_code
-                    , canadian_work_province_code
-                    , ipp_payroll_id
-                    , ipp_max_pay_level_amt
-                    , pay_through_date
-                    , empl_id
-                    , tax_entity_id
-                    , pay_status_code
-                    , clock_nbr
-                    , provided_i_9_ind
-                    , time_reporting_meth_code
-                    , regular_hrs_tracked_code
-                    , pay_element_ctrl_grp_id
-                    , pay_group_id
-                    , us_pension_ind
-                    , professional_cat_code
-                    , corporate_officer_ind
-                    , prim_disbursal_loc_code
-                    , alternate_disbursal_loc_code
-                    , labor_grp_code
-                    , employment_info_chg_reason_cd
-                    , highly_compensated_emp_ind
-                    , nbr_of_dependent_children
-                    , canadian_federal_tax_meth_cd
-                    , canadian_federal_tax_amt
-                    , canadian_federal_tax_pct
-                    , canadian_federal_claim_amt
-                    , canadian_province_claim_amt
-                    , tax_unit_code
-                    , requires_tm_card_ind
-                    , xfer_type_code
-                    , tax_clear_code
-                    , pay_type_code
-                    , labor_distn_code
-                    , labor_distn_ext_code
-                    , us_fui_status_code
-                    , us_fica_status_code
-                    , payable_through_bank_id
-                    , disbursal_seq_nbr_1
-                    , disbursal_seq_nbr_2
-                    , non_employee_indicator
-                    , excluded_from_payroll_ind
-                    , emp_info_source_code
-                    , user_amt_1
-                    , user_amt_2
-                    , user_monetary_amt_1
-                    , user_monetary_amt_2
-                    , user_monetary_curr_code
-                    , user_code_1
-                    , user_code_2
-                    , user_date_1
-                    , user_date_2
-                    , user_ind_1
-                    , user_ind_2
-                    , user_text_1
-                    , user_text_2
-                    , t4_employ_code
-                    , chgstamp
-                FROM #temp14 t14
-                WHERE NOT EXISTS (
-                                SELECT 1
-                                FROM DBShrpn.dbo.emp_employment t2
-                                WHERE (t2.emp_id = t14.emp_id)
-                                    AND (t2.eff_date = @w_eff_date)
-                                )
+                        -- Create new record
+                        INSERT INTO #temp14
+                        SELECT emp_id
+                            , @w_eff_date                      -- eff_date
+                            , @v_END_OF_TIME_DATE              -- next_eff_date
+                            , @cur_eempl_eff_date              -- prior_eff_date
+                            , employment_type_code
+                            , work_tm_code
+                            , official_title_code
+                            , official_title_date
+                            , mgr_ind
+                            , recruiter_ind
+                            , pensioner_indicator
+                            , payroll_company_code
+                            , pmt_ctrl_code
+                            , us_federal_tax_meth_code
+                            , us_federal_tax_amt
+                            , us_federal_tax_pct
+                            , us_federal_marital_status_code
+                            , us_federal_exemp_nbr
+                            , us_work_st_code
+                            , canadian_work_province_code
+                            , ipp_payroll_id
+                            , ipp_max_pay_level_amt
+                            , pay_through_date
+                            , empl_id
+                            , tax_entity_id
+                            , pay_status_code
+                            , clock_nbr
+                            , provided_i_9_ind
+                            , time_reporting_meth_code
+                            , regular_hrs_tracked_code
+                            , pay_element_ctrl_grp_id
+                            , pay_group_id
+                            , us_pension_ind
+                            , professional_cat_code
+                            , corporate_officer_ind
+                            , prim_disbursal_loc_code
+                            , alternate_disbursal_loc_code
+                            ---------------------------------------------------------------------------
+                            , @labor_grp_code                  -- labor_grp_code
+                            ---------------------------------------------------------------------------
+                            , employment_info_chg_reason_cd
+                            , highly_compensated_emp_ind
+                            , nbr_of_dependent_children
+                            , canadian_federal_tax_meth_cd
+                            , canadian_federal_tax_amt
+                            , canadian_federal_tax_pct
+                            , canadian_federal_claim_amt
+                            , canadian_province_claim_amt
+                            , tax_unit_code
+                            , requires_tm_card_ind
+                            , xfer_type_code
+                            , tax_clear_code
+                            , pay_type_code
+                            , labor_distn_code
+                            , labor_distn_ext_code
+                            , us_fui_status_code
+                            , us_fica_status_code
+                            , payable_through_bank_id
+                            , disbursal_seq_nbr_1
+                            , disbursal_seq_nbr_2
+                            , non_employee_indicator
+                            , excluded_from_payroll_ind
+                            , emp_info_source_code
+                            , user_amt_1
+                            , user_amt_2
+                            , user_monetary_amt_1
+                            , user_monetary_amt_2
+                            , user_monetary_curr_code
+                            , user_code_1
+                            , user_code_2
+                            , user_date_1
+                            , user_date_2
+                            , user_ind_1
+                            , user_ind_2
+                            , user_text_1
+                            , user_text_2
+                            , t4_employ_code
+                            , chgstamp
+                        FROM DBShrpn.dbo.emp_employment
+                        WHERE (emp_id   = @emp_id)
+                        AND (eff_date = @cur_eempl_eff_date)
+
+
+                        INSERT INTO emp_employment
+                        SELECT emp_id
+                            , eff_date
+                            , next_eff_date
+                            , prior_eff_date
+                            , employment_type_code
+                            , work_tm_code
+                            , official_title_code
+                            , official_title_date
+                            , mgr_ind
+                            , recruiter_ind
+                            , pensioner_indicator
+                            , payroll_company_code
+                            , pmt_ctrl_code
+                            , us_federal_tax_meth_code
+                            , us_federal_tax_amt
+                            , us_federal_tax_pct
+                            , us_federal_marital_status_code
+                            , us_federal_exemp_nbr
+                            , us_work_st_code
+                            , canadian_work_province_code
+                            , ipp_payroll_id
+                            , ipp_max_pay_level_amt
+                            , pay_through_date
+                            , empl_id
+                            , tax_entity_id
+                            , pay_status_code
+                            , clock_nbr
+                            , provided_i_9_ind
+                            , time_reporting_meth_code
+                            , regular_hrs_tracked_code
+                            , pay_element_ctrl_grp_id
+                            , pay_group_id
+                            , us_pension_ind
+                            , professional_cat_code
+                            , corporate_officer_ind
+                            , prim_disbursal_loc_code
+                            , alternate_disbursal_loc_code
+                            ---------------------------------------------------------------------------
+                            , labor_grp_code
+                            ---------------------------------------------------------------------------
+                            , employment_info_chg_reason_cd
+                            , highly_compensated_emp_ind
+                            , nbr_of_dependent_children
+                            , canadian_federal_tax_meth_cd
+                            , canadian_federal_tax_amt
+                            , canadian_federal_tax_pct
+                            , canadian_federal_claim_amt
+                            , canadian_province_claim_amt
+                            , tax_unit_code
+                            , requires_tm_card_ind
+                            , xfer_type_code
+                            , tax_clear_code
+                            , pay_type_code
+                            , labor_distn_code
+                            , labor_distn_ext_code
+                            , us_fui_status_code
+                            , us_fica_status_code
+                            , payable_through_bank_id
+                            , disbursal_seq_nbr_1
+                            , disbursal_seq_nbr_2
+                            , non_employee_indicator
+                            , excluded_from_payroll_ind
+                            , emp_info_source_code
+                            , user_amt_1
+                            , user_amt_2
+                            , user_monetary_amt_1
+                            , user_monetary_amt_2
+                            , user_monetary_curr_code
+                            , user_code_1
+                            , user_code_2
+                            , user_date_1
+                            , user_date_2
+                            , user_ind_1
+                            , user_ind_2
+                            , user_text_1
+                            , user_text_2
+                            , t4_employ_code
+                            , chgstamp
+                        FROM #temp14 t14
+                        WHERE NOT EXISTS (
+                                        SELECT 1
+                                        FROM DBShrpn.dbo.emp_employment t2
+                                        WHERE (t2.emp_id = t14.emp_id)
+                                            AND (t2.eff_date = @w_eff_date)
+                                        )
 
 
 
-                /*  DO WE NEED TO CREATE AN AUDIT RECORD?????
-                    -- WE'LL NEED AN ACTIVITY ACTION CODE
+                        /*  DO WE NEED TO CREATE AN AUDIT RECORD?????
+                            -- WE'LL NEED AN ACTIVITY ACTION CODE
 
-                        INSERT INTO work_emp_employment_aud
-                            (user_id, activity_action_code, action_date, emp_id, eff_date,
-                            next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
-                            new_tax_entity_id, xfer_date, pay_through_date)
-                        VALUES
-                            (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
-                            @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
+                                INSERT INTO work_emp_employment_aud
+                                    (user_id, activity_action_code, action_date, emp_id, eff_date,
+                                    next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
+                                    new_tax_entity_id, xfer_date, pay_through_date)
+                                VALUES
+                                    (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
+                                    @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
 
-                        DELETE work_emp_employment_aud
-                        WHERE user_id = @W_ACTION_USER
-                        AND activity_action_code = 'ERTRANSFER'
-                        AND emp_id = @emp_id
-                */
+                                DELETE work_emp_employment_aud
+                                WHERE user_id = @W_ACTION_USER
+                                AND activity_action_code = 'ERTRANSFER'
+                                AND emp_id = @emp_id
+                        */
+                    END
 
 
                 ---------------------------------------------------------------------------

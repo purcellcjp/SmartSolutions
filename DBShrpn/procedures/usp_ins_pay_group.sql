@@ -19,7 +19,11 @@ GO
 /*************************************************************************************
     SP Name:       usp_ins_pay_group
 
-    Description:
+    Description:    Populates pay group on Employee Employment by creating a new effective dated record.
+
+                    Table: DBShrpn.dbo.emp_employment
+
+                    Field: pay_group_id
 
 
     Parameters:
@@ -96,7 +100,7 @@ BEGIN
 
     DECLARE @cur_empl_id                    char(10)
     DECLARE @cur_eempl_eff_date             datetime
-    DECLARE @cur_tax_entity_id              char(10)
+    --DECLARE @cur_tax_entity_id              char(10)
     DECLARE @cur_pay_group_id               char(10)
     DECLARE @cur_stat_emp_status_code       char(01)
     DECLARE @w_eff_date                     datetime
@@ -303,19 +307,24 @@ BEGIN
 
                 --Skip Record if associate also has New Hire, Transfer, Status Change
                 IF EXISTS (
-                    SELECT 1
-                    FROM #ghr_employee_events_temp
-                    WHERE (emp_id = @emp_id)
-                    AND (event_id IN (
-                                        @v_EVENT_ID_NEW_HIRE
-                                    , @v_EVENT_ID_TRANSFER
-                                    , @v_EVENT_ID_STATUS_CHANGE
-                                    ))
-                )
+                            SELECT 1
+                            FROM #ghr_employee_events_temp
+                            WHERE (emp_id = @emp_id)
+                            AND (event_id IN (
+                                                @v_EVENT_ID_NEW_HIRE
+                                             , @v_EVENT_ID_TRANSFER
+                                            ))
+                            UNION ALL
+                            SELECT 1
+                            FROM #ghr_employee_events_temp
+                            WHERE (emp_id = @emp_id)
+                            AND (event_id = @v_EVENT_ID_STATUS_CHANGE)
+                            AND (emp_status_code = 'RH')
+                          )
                 BEGIN
 
                     SET @msg_id = 'U00119'  -- New code
-                    SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or status change event records'
+                    SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains new hire, transfer, or rehire status change event records.'
 
                     INSERT INTO #tbl_ghr_msg
                     SELECT @msg_id      AS msg_id
@@ -332,7 +341,7 @@ BEGIN
                         , @p_pay_element_id     = ''
                         , @p_msg_p1             = ''
                         , @p_msg_p2             = ''
-                        , @p_msg_desc           = 'Bypassing pay group record since employee has either a new hire, transfer, or status change event in this extract.'
+                        , @p_msg_desc           = 'Bypassing pay group record since pay group update has either occurred in new hire, transfer, or rehire status change event in this extract.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                         , @p_activity_date      = @p_activity_date
                         , @p_audit_id           = @aud_id
@@ -393,7 +402,7 @@ BEGIN
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                 SELECT @cur_empl_id                 = eempl.empl_id
-                    , @cur_tax_entity_id            = eempl.tax_entity_id
+                    --, @cur_tax_entity_id            = eempl.tax_entity_id
                     , @cur_eempl_eff_date           = eempl.eff_date
                     , @cur_pay_group_id             = eempl.pay_group_id
                     , @cur_stat_emp_status_code     = stat.emp_status_code
@@ -416,7 +425,7 @@ BEGIN
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                            @p_msg_id             = @msg_id
+                              @p_msg_id             = @msg_id
                             , @p_event_id           = @v_EVENT_ID_PAY_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
@@ -631,7 +640,9 @@ BEGIN
                     , time_reporting_meth_code
                     , regular_hrs_tracked_code
                     , pay_element_ctrl_grp_id
+                    ---------------------------------------------------------------------------
                     , @pay_group_id        -- pay_group_id
+                    ---------------------------------------------------------------------------
                     , us_pension_ind
                     , professional_cat_code
                     , corporate_officer_ind

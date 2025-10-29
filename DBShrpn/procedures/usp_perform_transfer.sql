@@ -59,8 +59,8 @@ BEGIN
 
     DECLARE @v_step_position                            varchar(255)        = 'Begin Procedure'
     DECLARE @msg_id                                     char(10)
-    DECLARE @v_debug									varchar(4000)       = ''    -- used to save SQL statements to table
-    DECLARE @v_single_quote								char(01)            = char(39)
+    DECLARE @v_debug                                    varchar(4000)       = ''    -- used to save SQL statements to table
+    DECLARE @v_single_quote                             char(01)            = char(39)
 
     DECLARE @v_EVENT_ID_SALARY_CHANGE                   char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER                        char(2)             = '03'

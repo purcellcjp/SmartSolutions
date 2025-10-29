@@ -87,7 +87,7 @@ BEGIN
 
     CREATE TABLE #tbl_vhcmrpt
     (
-      row_id                                int	IDENTITY(1,1)   NOT NULL
+      row_id                                int	IDENTITY(1,1)       NOT NULL
     , activity_date                         varchar(255)            NOT NULL
     , event_id                              varchar(255)            NOT NULL
     , event_desc                            varchar(255)            NOT NULL
@@ -99,10 +99,13 @@ BEGIN
     , last_name                             varchar(255)            NOT NULL
     , empl_id                               varchar(255)            NOT NULL
     , pay_group_id                          varchar(255)            NOT NULL
+    , job_or_pos_id                         varchar(255)            NOT NULL
     , position_title                        varchar(255)            NOT NULL
+    , pay_element_id                        varchar(255)            NOT NULL
+    , emp_calculation                       varchar(255)            NOT NULL
     , proc_flag                             varchar(255)            NOT NULL
     , msg_id                                varchar(255)            NOT NULL
-    , msg_desc                              varchar(255)        NOT NULL
+    , msg_desc                              varchar(255)            NOT NULL
     )
 
 
@@ -136,7 +139,10 @@ BEGIN
            , 'Last Name'
            , 'Employer ID'
            , 'Pay Group ID'
+           , 'Job/Position ID'
            , 'Position Title'
+           , 'Pay Element ID'
+           , 'Pay Element Amount'
            , 'Process Flag'
            , 'Error Message ID'
            , 'Error Message Description'
@@ -159,6 +165,9 @@ BEGIN
          , ''
          , ''
          , ''
+         , ''
+         , ''
+         , '0.00'
          , ''
          , msg.msg_id
          , msg.msg_desc
@@ -212,8 +221,11 @@ BEGIN
          , aud.last_name
          , aud.empl_id
          , aud.pay_group_id
+         , aud.job_or_pos_id
          , aud.position_title
-         , aud.proc_flag
+         , aud.pay_element_id
+         , CONVERT(varchar(20), CAST(aud.emp_calculation AS money), 1) AS emp_calculation
+		 , aud.proc_flag
          , ISNULL(msg.msg_id, '') AS msg_id
          , ISNULL(msg.msg_desc, '') AS msg_desc
     FROM DBShrpn.dbo.ghr_employee_events_aud aud
@@ -239,7 +251,10 @@ BEGIN
          , last_name
          , empl_id
          , pay_group_id
+         , job_or_pos_id
          , position_title
+         , pay_element_id
+         , emp_calculation
          , proc_flag
          , msg_id
          , msg_desc
