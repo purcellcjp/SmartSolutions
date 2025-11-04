@@ -1,14 +1,47 @@
-USE [DBShrpn]
-GO
-/****** Object:  StoredProcedure [dbo].[usp_upd_hrpn_02_trn]    Script Date: 4/1/2025 4:33:00 PM ******/
-SET ANSI_NULLS OFF
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_upd_hrpn_02_trn') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_upd_hrpn_02_trn
+    IF OBJECT_ID(N'dbo.usp_upd_hrpn_02_trn') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_upd_hrpn_02_trn >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_upd_hrpn_02_trn >>>'
+END
+go
+SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER OFF
 GO
 
+/*************************************************************************************
+
+   SP Name:      usp_upd_hrpn_02_trn
+
+   Description:  Transfers employee from one tax employer to another.
+
+                 (THIS SP PERFORMS ALL PROCESSING NECESSARY TO TABLES WITHIN 'HRPN')
+
+                 Cloned from SmartStream procedure DBShrpn..hsp_upd_hrpn_02
+                 in order to use with HCM Interface.
+
+   Parameters:
 
 
-CREATE PROCEDURE [dbo].[usp_upd_hrpn_02_trn] 
+   Tables
+
+   Example:
+      exec usp_upd_hrpn_02_trn ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hrpn_02
+                                                    1) Disabled authentication
+
+************************************************************************************/
+
+CREATE PROCEDURE [dbo].[usp_upd_hrpn_02_trn]
 	(@p_emp_id                       char(15),
 	@p_empl_id                       char(10),
 	@p_new_empl_id                   char(10),
@@ -139,14 +172,14 @@ declare @w_empl_transfer_w_no_salary    char(1),
 	@w_stop_date                    datetime,
 	@w_tax_auth_complete_ret_cd     char(3),
 	@w_pay_element_ctrl_grp_id	    char(10),
-	@w_end_active_assignment        char(1),           /* R6.1M-SSA#131194 */ 
+	@w_end_active_assignment        char(1),           /* R6.1M-SSA#131194 */
     @w_emp_status_code              char(1),           /* R6.1M-SSA#131194 */
     @w_emp_assign_end_date          datetime,          /* R6.1M-SSA#131194 */
     @w_reg_rpt_unit_loc_code        char(10)           /* R653m SSAa#465447 */
-    
+
 select @w_EOT = '12/31/2999',
        @w_end_active_assignment = 'Y'                  /* R6.1M-SSA#131194 */
-     
+
 
 /*------ AUDIT SECTION ------*/
 
@@ -155,13 +188,13 @@ declare @W_MS	char(3), @W_ACTION_USER	char(30)
 select @W_ACTION_USER = suser_sname()
 
 select @W_MS = convert (char(3), datepart(millisecond,getdate()))
-if datalength(rtrim(@W_MS)) = 1 
+if datalength(rtrim(@W_MS)) = 1
 	begin
 		select @W_MS = '00'+substring(@W_MS,1,1)
 	end
 else
 	begin
-		if datalength(rtrim(@W_MS)) = 2 
+		if datalength(rtrim(@W_MS)) = 2
 	begin
 		select @W_MS = '0'+substring(@W_MS,1,2)
 	end
@@ -224,14 +257,14 @@ exec @w_emp_pay_elem_ret_cd = hsp_upd_hrpn_02a_trn
 if  @w_emp_pay_elem_ret_cd <> 0
   begin
 --SYBSQL     raiserror 30001 'Error occurred when trying to transfer employee pay elements'
-          raiserror ('30001 Error occurred when trying to transfer employee pay elements',16,0) 
+          raiserror ('30001 Error occurred when trying to transfer employee pay elements',16,0)
     return
   end
 /***************************************************************/
 /***  ssa#23033, 23012 from this point, the original         ***/
 /***  procedure processing picks up                          ***/
 /***************************************************************/
-    
+
 /*   END EMPLOYEE'S ACTIVE ASSIGNMENTS */
 declare  @audit_eff_date     datetime,
 	     @audit_next_eff_date        datetime,
@@ -269,10 +302,10 @@ SELECT @w_emp_status_code = emp_status_code
 /* R6.1M-SSA#131194 begin add */
     if (@@fetch_status <> 0) or
        (@w_emp_assign_end_date = @p_transfer_date and
-        @w_emp_status_code = 'T')                          
-          select @w_end_active_assignment = 'N'         
+        @w_emp_status_code = 'T')
+          select @w_end_active_assignment = 'N'
 /* R6.1M-SSA#131194 end add */
-   
+
 WHILE @@fetch_status = 0
 
 BEGIN       /*****  begin while loop for cursor3  ******/
@@ -334,8 +367,8 @@ BEGIN       /*****  begin while loop for cursor3  ******/
 /* R6.1M-SSA#131194 begin add */
     if (@@fetch_status <> 0) or
        (@w_emp_assign_end_date = @p_transfer_date and
-        @w_emp_status_code = 'T')                          
-          select @w_end_active_assignment = 'N'         
+        @w_emp_status_code = 'T')
+          select @w_end_active_assignment = 'N'
 /* R6.1M-SSA#131194 end add */
 
           /*******************************************/
@@ -350,7 +383,7 @@ deallocate cursor3
 /* ===AUDIT SECTION ===*/
 	INSERT into work_emp_assignment_aud
 	SELECT @W_ACTION_USER, 'ERXFERAGDL', @W_ACTION_DATETIME,
-			asg.emp_id, asg.assigned_to_code, asg.job_or_pos_id, asg.eff_date, 
+			asg.emp_id, asg.assigned_to_code, asg.job_or_pos_id, asg.eff_date,
 		'', '', '', '', '', '', '', ''
 	FROM	emp_assignment asg
 	WHERE	emp_id	= @p_emp_id
@@ -360,7 +393,7 @@ deallocate cursor3
 	DELETE  emp_assignment
 	WHERE   emp_id                  = @p_emp_id
 	AND     begin_date              >= @p_transfer_date
-	
+
 	DELETE  emp_assignment_comnt
 	WHERE   emp_id                  = @p_emp_id
 	AND     begin_date              >= @p_transfer_date
@@ -382,7 +415,7 @@ else
 	WHERE   emp_id                  = @p_emp_id
 	AND     assigned_to_code        = @p_assign_to
 	AND     job_or_pos_id           = @p_job_or_pos_id
-	AND     next_eff_date           = @w_EOT          
+	AND     next_eff_date           = @w_EOT
 /*   SELECT NEW JOB TO DEFAULT INFORMATION INTO EMPLOYEE TABLES */
 if @p_assign_to = 'J'
    BEGIN       /*****  begin @p_assign_to = 'J'  ******/
@@ -403,7 +436,7 @@ if @p_assign_to = 'J'
 	WHERE   job_id          = @p_job_or_pos_id
 	AND     (eff_date       <= @p_transfer_date
 	AND     next_eff_date   > @p_transfer_date)
-	
+
 	if @job_base_rate_tbl_id != '' and @job_base_rate_tbl_id != null
 
 /*   SELECT JOB BASE RATE TABLE INFORMATION */
@@ -412,7 +445,7 @@ if @p_assign_to = 'J'
 			@j_rate_tbl_id                  = rate_tbl_id,
 			@j_rate_tbl_eff_date            = eff_date,
 			@j_rate_tbl_tm_pd_id            = tm_pd_id
-		FROM    rate_tbl                          
+		FROM    rate_tbl
 		WHERE   rate_tbl_id                     = @job_base_rate_tbl_id
 		AND     (eff_date                       <= @p_transfer_date
 		AND     next_eff_date                   > @p_transfer_date)
@@ -420,13 +453,13 @@ if @p_assign_to = 'J'
 		if @@rowcount = 0
 			BEGIN
 --SYBSQL 			  raiserror 30000 'hpn26258'
-          raiserror ('30000 hpn26258',16,0) 
+          raiserror ('30000 hpn26258',16,0)
 			  return
 			END
 		if @job_base_rate_tbl_entry_code != '' and @job_base_rate_tbl_entry_code != null
-		   BEGIN        
+		   BEGIN
 				SELECT  @rate_tbl_entry_rate_amt= rate_tbl_amt
-				FROM    rate_tbl_entry                    
+				FROM    rate_tbl_entry
 				WHERE   rate_tbl_id     = @j_rate_tbl_id
 				AND     eff_date        = @j_rate_tbl_eff_date
 				AND     rate_code       = @job_base_rate_tbl_entry_code
@@ -434,7 +467,7 @@ if @p_assign_to = 'J'
 				if @@rowcount = 0
 				  BEGIN
 --SYBSQL 				    raiserror 30000 'hpn26258'
-          raiserror ('30000 hpn26258',16,0) 
+          raiserror ('30000 hpn26258',16,0)
 				    return
 				  END
 
@@ -452,7 +485,7 @@ if @p_assign_to = 'J'
 else
    BEGIN     /*****  begin @p_assign_to = 'P'  ******/
 /*   SELECT NEW POSITION TO DEFAULT INFORMATION INTO EMPLOYEE TABLES */
-	
+
 	SELECT  @pos_end_date               = end_date,
 		@pos_work_time                  = full_tm_ind,
 		@pos_sal_struct_id              = salary_structure_id,
@@ -479,16 +512,16 @@ else
 	WHERE   pos_id          = @p_job_or_pos_id
 	AND     (eff_date       <= @p_transfer_date
 	AND     next_eff_date   > @p_transfer_date)
-	
+
 	if @pos_base_rate_tbl_id != '' and @pos_base_rate_tbl_id != null
 
 /*   SELECT POSITION BASE RATE TABLE INFORMATION */
-	  BEGIN 
+	  BEGIN
 		SELECT  @p_rate_tbl_amt_type_code       = amt_type_code,
 			@p_rate_tbl_id                  = rate_tbl_id,
 			@p_rate_tbl_eff_date            = eff_date,
 			@p_rate_tbl_tm_pd_id            = tm_pd_id
-		FROM    rate_tbl                          
+		FROM    rate_tbl
 		WHERE   rate_tbl_id             = @pos_base_rate_tbl_id
 		AND     (eff_date               <= @p_transfer_date
 		AND     next_eff_date           > @p_transfer_date)
@@ -496,13 +529,13 @@ else
 		if @@rowcount = 0
 			BEGIN
 --SYBSQL 			  raiserror 30000 'hpn26258'
-          raiserror ('30000 hpn26258',16,0) 
+          raiserror ('30000 hpn26258',16,0)
 			  return
 			END
 		if @pos_base_rate_tbl_entry_code != '' and @pos_base_rate_tbl_entry_code != null
 		   BEGIN
 				SELECT  @rate_tbl_entry_rate_amt= rate_tbl_amt
-				FROM    rate_tbl_entry                    
+				FROM    rate_tbl_entry
 				WHERE   rate_tbl_id             = @p_rate_tbl_id
 				AND     eff_date                = @p_rate_tbl_eff_date
 				AND     rate_code               = @pos_base_rate_tbl_entry_code
@@ -510,7 +543,7 @@ else
 				if @@rowcount = 0
 				  BEGIN
 --SYBSQL 				    raiserror 30000 'hpn26258'
-          raiserror ('30000 hpn26258',16,0) 
+          raiserror ('30000 hpn26258',16,0)
 				    return
 				  END
 
@@ -578,9 +611,9 @@ if @@rowcount = 0 /* THERE WAS NO PRIME ASSIGNMENT IN EFFECT 1 DAY EARLIER THAN 
    END
 else
   BEGIN
-    if @w_end_active_assignment = 'N' and @w_emp_status_code = 'T' /* R6.1M-SSA#131194 */  
+    if @w_end_active_assignment = 'N' and @w_emp_status_code = 'T' /* R6.1M-SSA#131194 */
        select @p_assignment_end_date = @p_transfer_date            /* R6.1M-SSA#131194 */
- 
+
 	INSERT INTO  #temp11
 	SELECT *
 	FROM    emp_assignment
@@ -668,7 +701,7 @@ if @p_assign_to = 'J'
 		UPDATE #temp11
 		SET     end_date	= @p_assignment_end_date
 
-/* SET PAY GRADE AND STEP DATES  */ 
+/* SET PAY GRADE AND STEP DATES  */
 
 	if @job_pay_grade != @w_pay_grade
 	   BEGIN
@@ -713,7 +746,7 @@ if @p_assign_to = 'J'
 			guaranteed_pd_salary_amt= 0,	guaranteed_pd_salary_tm_pd_id= '',
 			guaranteed_hourly_pay_rate	= 0
 	    END
-/*   CALCULATE SALARY AMOUNTS WHEN JOB RATE ENTRY CODE PRESENT */    
+/*   CALCULATE SALARY AMOUNTS WHEN JOB RATE ENTRY CODE PRESENT */
 
 	if @job_base_rate_tbl_entry_code != '' and @job_base_rate_tbl_entry_code != null
 	   BEGIN
@@ -725,15 +758,15 @@ if @p_assign_to = 'J'
 		   UPDATE #temp11
 		   SET  pay_basis_code  = '1',
 			hourly_pay_rate = @rate_tbl_entry_rate_amt
-			
+
 		   if @w_standard_work_hrs != 0 and
 			@w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 			BEGIN
 			   UPDATE #temp11
-			   SET  annual_salary_amt = 
+			   SET  annual_salary_amt =
 			   (@rate_tbl_entry_rate_amt * @w_standard_work_hrs * @w_std_work_ann_factor)
 			END
-		END             
+		END
 	   else
 	     BEGIN
 		if @w_per_sal_ann_factor = 1   /* ANNUAL SALARY AMOUNTS */
@@ -741,7 +774,7 @@ if @p_assign_to = 'J'
 			UPDATE #temp11
 			SET     pay_basis_code	= '3',
 				annual_salary_amt = @rate_tbl_entry_rate_amt
-		
+
 			if @w_standard_work_hrs != 0 and
 			   @w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 			   BEGIN
@@ -757,14 +790,14 @@ if @p_assign_to = 'J'
 			   pd_salary_amt		= @rate_tbl_entry_rate_amt,
 			   pd_salary_tm_pd_id	= @j_rate_tbl_tm_pd_id,
 			   annual_salary_amt	= (@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor)
-			
+
 			if @w_standard_work_hrs != 0 and
 			   @w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 			   BEGIN
 			      UPDATE #temp11
-			      SET     hourly_pay_rate = 
+			      SET     hourly_pay_rate =
  round(((@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor) / (@w_standard_work_hrs * @w_std_work_ann_factor)),4)
-			   END  
+			   END
 		    END
 	     END
 	   END
@@ -775,7 +808,7 @@ if @p_assign_to = 'J'
 	    UPDATE #temp11
 	    SET base_rate_tbl_id = ''
 	  END
-	  
+
    INSERT INTO emp_assignment
    SELECT *
    FROM   #temp11
@@ -785,7 +818,7 @@ if @p_assign_to = 'J'
              /***************************************/
 else
     BEGIN    /*****  begin @p_assign_to = 'P'  ******/
-    
+
 /*   DEFAULT POSITION INFORMATION INTO EMPLOYEE ASSIGNMENT */
 /* bhrpl R6.1 defect 980928132812 if user entered loc,use it otherwise dft pos loc*/
     if @p_location != '' and @p_location != null
@@ -865,8 +898,8 @@ else
 			guaranteed_pd_salary_amt		= 0,guaranteed_pd_salary_tm_pd_id	= '',
 			guaranteed_hourly_pay_rate		= 0
 	    END
-	
-/*   CALCULATE SALARY AMOUNTS WHEN POSITION RATE ENTRY CODE PRESENT */    
+
+/*   CALCULATE SALARY AMOUNTS WHEN POSITION RATE ENTRY CODE PRESENT */
 
 	if @pos_base_rate_tbl_entry_code != '' and @pos_base_rate_tbl_entry_code != null
 	   BEGIN
@@ -878,12 +911,12 @@ else
 		   UPDATE #temp11
 		   SET  pay_basis_code  = '1',
 			hourly_pay_rate = @rate_tbl_entry_rate_amt
-			
+
 		   if   @pos_standard_work_hrs != 0 and
 				@pos_standard_work_pd_id != '' and @pos_standard_work_pd_id != null
 			BEGIN
 			   UPDATE #temp11
-			   SET  annual_salary_amt = 
+			   SET  annual_salary_amt =
 			   (@rate_tbl_entry_rate_amt * @pos_standard_work_hrs * @w_std_work_ann_factor)
 			END
 		   else
@@ -892,11 +925,11 @@ else
 				@w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 				BEGIN
 				   UPDATE #temp11
-				   SET  annual_salary_amt = 
+				   SET  annual_salary_amt =
 				   (@rate_tbl_entry_rate_amt * @w_standard_work_hrs * @w_std_work_ann_factor)
 				END
 			END
-		END             
+		END
 	   else
 	     BEGIN
 		if @w_per_sal_ann_factor = 1   /* ANNUAL SALARY AMOUNTS */
@@ -904,12 +937,12 @@ else
 			UPDATE #temp11
 			SET	pay_basis_code	= '3',
 				annual_salary_amt = @rate_tbl_entry_rate_amt
-		
+
 			if 	@pos_standard_work_hrs	!= 0 and
 				@pos_standard_work_pd_id != '' and @pos_standard_work_pd_id != null
 				BEGIN
 				   UPDATE #temp11
-				   SET     hourly_pay_rate = 
+				   SET     hourly_pay_rate =
 			round((@rate_tbl_entry_rate_amt / (@pos_standard_work_hrs * @w_std_work_ann_factor)),4)
 				END
 			else
@@ -918,7 +951,7 @@ else
 				   @w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 				   BEGIN
 				      UPDATE #temp11
-				      SET     hourly_pay_rate = 
+				      SET     hourly_pay_rate =
 			round((@rate_tbl_entry_rate_amt / (@w_standard_work_hrs * @w_std_work_ann_factor)),4)
 				   END
 			  END
@@ -930,12 +963,12 @@ else
 			   pd_salary_amt        = @rate_tbl_entry_rate_amt,
 			   pd_salary_tm_pd_id   = @p_rate_tbl_tm_pd_id,
 			   annual_salary_amt    = (@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor)
-			
+
 			if 	@pos_standard_work_hrs != 0 and
 				@pos_standard_work_pd_id != '' and @pos_standard_work_pd_id != null
 				BEGIN
 				   UPDATE #temp11
-				   SET	hourly_pay_rate = 
+				   SET	hourly_pay_rate =
 round(((@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor)/ (@pos_standard_work_hrs * @w_std_work_ann_factor)),4)
 				END
 			else
@@ -944,9 +977,9 @@ round(((@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor)/ (@pos_standard_work_h
 				   @w_standard_work_pd_id != '' and @w_standard_work_pd_id != null
 				   BEGIN
 				      UPDATE #temp11
-				      SET	hourly_pay_rate = 
+				      SET	hourly_pay_rate =
 round(((@rate_tbl_entry_rate_amt * @w_per_sal_ann_factor)/ (@w_standard_work_hrs * @w_std_work_ann_factor)),4)
-				   END  
+				   END
 			  END
 		    END
 	     END
@@ -976,7 +1009,7 @@ else
 	select @w_empl_transfer_w_no_salary = 'N'
   END
 
-/*	UPDATE POSITION SUCCESSION PLANNING INFORMATION IF IT EXISTS  */	
+/*	UPDATE POSITION SUCCESSION PLANNING INFORMATION IF IT EXISTS  */
 
 if @p_assign_to = 'P'
   BEGIN
@@ -1017,7 +1050,7 @@ EXECUTE hsp_upd_hrpn_04_trn @p_emp_id,
 	  		@p_new_empl_taxing_country_cd,
             @w_us_authorities_complete  output,
 			@w_tax_auth_complete_ret_cd output
-  
+
 /*   SET YEAR BEGIN DATE TO JANUARY 1 OF THE YEAR OF THE TRANSFER  */
 
 declare @w_date_1	int,
@@ -1054,7 +1087,7 @@ select @w_year_begin_date 	= dateadd(month,0, convert(char(4),@w_date_1))
 		select  @w_return_to_prior_tax_entity = 'Y'
 	else
 		select  @w_return_to_prior_tax_entity = 'N'
- 
+
 /*   UPDATE CURRENT EMPLOYMENT VERSION EFFECTIVE DATE POINTER */
 
 	UPDATE  emp_employment
@@ -1085,12 +1118,12 @@ select @w_year_begin_date 	= dateadd(month,0, convert(char(4),@w_date_1))
 	INSERT INTO emp_employment
 	SELECT *
 	FROM   #temp14 t14
-	WHERE not exists (SELECT 1 FROM DBShrpn.dbo.emp_employment t2                    
-							  WHERE t2.emp_id = t14.emp_id   
+	WHERE not exists (SELECT 1 FROM DBShrpn.dbo.emp_employment t2
+							  WHERE t2.emp_id = t14.emp_id
 							    AND t2.eff_date = @p_transfer_date)
 
 	DELETE FROM #temp14
-	
+
 	INSERT INTO work_emp_employment_aud
 		(user_id, activity_action_code, action_date, emp_id, eff_date,
 		 next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
@@ -1121,7 +1154,15 @@ select  @w_return_to_prior_empl,
 	@w_tax_auth_complete_ret_cd
 */
 
- 
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_upd_hrpn_02_trn] TO  SCHEMA OWNER 
+
+
+ALTER AUTHORIZATION ON dbo.usp_upd_hrpn_02_trn TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_upd_hrpn_02_trn', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_upd_hrpn_02_trn >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_upd_hrpn_02_trn >>>'
 GO

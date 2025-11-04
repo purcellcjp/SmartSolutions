@@ -1,16 +1,44 @@
-USE [DBShrpn]
-GO
-/****** Object:  StoredProcedure [dbo].[usp_upd_hmpl_reactivate]    Script Date: 4/1/2025 4:33:00 PM ******/
-SET ANSI_NULLS OFF
-GO
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_reactivate') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_upd_hmpl_reactivate
+    IF OBJECT_ID(N'dbo.usp_upd_hmpl_reactivate') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_upd_hmpl_reactivate >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_upd_hmpl_reactivate >>>'
+END
+go
+SET ANSI_NULLS ON
+go
 SET QUOTED_IDENTIFIER OFF
 GO
 
 
+/*************************************************************************************
+
+   SP Name:      usp_upd_hmpl_reactivate
+
+   Description:  Executes SmartStream rehire process
+
+                 Cloned from DBShrpn..hsp_upd_hmpl_reactivate in order to use with
+                 HCM Interface position title update procedure DBShrpn..usp_ins_position_title.
+
+   Parameters:
 
 
+   Tables
 
+   Example:
+      exec usp_upd_hmpl_reactivate ....
 
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hmpl_reactivate
+                                                    1) Disabled authentication
+
+************************************************************************************/
 CREATE procedure [dbo].[usp_upd_hmpl_reactivate]
 
 (	@p_emp_id							char(15),
@@ -52,7 +80,7 @@ select	@w_end_of_time	= "12/31/2999",
 begin transaction
 
 update emp_status
-	set	next_change_date  = @p_reactivate_date,		
+	set	next_change_date  = @p_reactivate_date,
 		chgstamp          = @w_new_chgstamp
 	where	emp_id = @p_emp_id
 	and	status_change_date = @p_status_change_date
@@ -64,10 +92,10 @@ if @@rowcount = 0
 				where emp_id = @p_emp_id
 				and	status_change_date = @p_status_change_date)
 --SYBSQL 			raiserror 20001 "Row updated by another user."
-          raiserror ('20001 Row updated by another user.',16,0) 
+          raiserror ('20001 Row updated by another user.',16,0)
 		else
 --SYBSQL 			raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
 			rollback transaction
 			return
 		end
@@ -79,8 +107,8 @@ if @@rowcount = 0
 
 insert into emp_status
 	select  @p_emp_id,			@p_reactivate_date,
-		@p_status_change_date,	@w_end_of_time,	
-		@w_status_code,			@p_new_classification_cd,	
+		@p_status_change_date,	@w_end_of_time,
+		@w_status_code,			@p_new_classification_cd,
 		@w_spaces,					hire_date,
 		@w_end_of_time,			@w_rehire_conson,
 		@p_new_reason,			@w_spaces,
@@ -95,7 +123,7 @@ if @@error != 0
 			return
 		end
 
-	
+
 /***************************************************************/
 /* Execute the Employee Update Employment stored procedure     */
 /* if the Allow Employee Pay Updates indicator is on.          */
@@ -110,7 +138,7 @@ if @p_allow_emp_pay_updates_ind = "Y"
 		if @w_return_status = -1
 			begin
 --SYBSQL 				raiserror 26097 "Employee has corrupted Employee Employment info."
-          raiserror ('26097 Employee has corrupted Employee Employment info.',16,0) 
+          raiserror ('26097 Employee has corrupted Employee Employment info.',16,0)
 				rollback transaction
 				return
 			end
@@ -166,10 +194,16 @@ declare @W_MS             char(3)
 
 
 commit transaction
- 
 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_reactivate] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_reactivate] TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_reactivate', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_upd_hmpl_reactivate >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_upd_hmpl_reactivate >>>'
 GO

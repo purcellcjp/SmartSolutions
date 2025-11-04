@@ -1,12 +1,44 @@
-USE [DBShrpn]
-GO
-/****** Object:  StoredProcedure [dbo].[usp_upd_hmpl_terminate]    Script Date: 4/1/2025 4:33:00 PM ******/
-SET ANSI_NULLS OFF
-GO
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_terminate') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_upd_hmpl_terminate
+    IF OBJECT_ID(N'dbo.usp_upd_hmpl_terminate') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_upd_hmpl_terminate >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_upd_hmpl_terminate >>>'
+END
+go
+SET ANSI_NULLS ON
+go
 SET QUOTED_IDENTIFIER OFF
 GO
 
 
+/*************************************************************************************
+
+   SP Name:      usp_upd_hmpl_terminate
+
+   Description:  Executes SmartStream rehire process
+
+                 Cloned from DBShrpn..hsp_upd_hmpl_terminate in order to use with
+                 HCM Interface position title update procedure DBShrpn..usp_ins_position_title.
+
+   Parameters:
+
+
+   Tables
+
+   Example:
+      exec usp_upd_hmpl_terminate ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hmpl_rehire
+                                                    1) Disabled authentication
+
+************************************************************************************/
 
 CREATE procedure [dbo].[usp_upd_hmpl_terminate]
 
@@ -64,14 +96,14 @@ declare  @w_end_of_time          	datetime,
 /* R6.1M-ssa# 29829 End */
          @w_next_eff_date               datetime,
          @w_emp_id			char(15),		/* SSA 30832 */
-	 @w_assigned_to_code		char(1),		/* SSA 30832 */	
+	 @w_assigned_to_code		char(1),		/* SSA 30832 */
          @w_job_or_pos_id		char(10),		/* SSA 30832 */
          @w_effect_date			datetime,		/* SSA 30832 */
          @w_next_effect_date		datetime,		/* SSA 30832 */
          @w_prior_effect_date       	datetime,		/* SSA 30832 */
 /* R6.1M-ssa #30724 Begin */
 	 @ret_val			int,
-/* R6.1M-ssa #30724 End */                  
+/* R6.1M-ssa #30724 End */
 /* SSA 30724 Begin */
 	@w_total_rows			int,
 	@w_row 				int
@@ -146,13 +178,13 @@ select @W_ACTION_USER = suser_sname()
 declare @W_MS             char(3)
 
 select @W_MS = convert (char(3), datepart(millisecond,getdate()))
-if datalength(rtrim(@W_MS)) = 1 
+if datalength(rtrim(@W_MS)) = 1
   begin
     select @W_MS = '00'+substring(@W_MS,1,1)
   end
 else
   begin
-    if datalength(rtrim(@W_MS)) = 2 
+    if datalength(rtrim(@W_MS)) = 2
       begin
         select @W_MS = '0'+substring(@W_MS,1,2)
       end
@@ -167,9 +199,9 @@ select @W_ACTION_DATETIME = convert(char(10), getdate(), 111) + '-' +
 insert into work_emp_employment_aud
         (user_id, activity_action_code, action_date, emp_id, eff_date,
          next_eff_date, prior_eff_date, new_eff_date, new_empl_id,
-         new_tax_entity_id, xfer_date, pay_through_date) 
-    values 
-        (@W_ACTION_USER, 'TERM', @W_ACTION_DATETIME, 
+         new_tax_entity_id, xfer_date, pay_through_date)
+    values
+        (@W_ACTION_USER, 'TERM', @W_ACTION_DATETIME,
         @p_emp_id, @p_new_pay_through_date,'','','','','','','')
 
 /* END AUDIT SECTION ==========================================*/
@@ -184,13 +216,13 @@ update emp_employment
  where emp_id = @p_emp_id
    and eff_date <= @p_termination_date /* 1665080/20160121 @p_new_pay_through_date */
    and next_eff_date > @p_termination_date /* 1665080/20160121 @p_new_pay_through_date */
-   
+
 if @@error != 0
       begin
 --SYBSQL           raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
           /*  rollback transaction ssa 30724 */
-            return 
+            return
       end
 
 /* *********************************************************** */
@@ -202,10 +234,10 @@ if @@error != 0
 /* existed, the row is updated.                                */
 /* *********************************************************** */
 
-if @p_pay_status_code <> "" 
+if @p_pay_status_code <> ""
 begin
     select  @w_pay_status_code = pay_status_code
-        from    emp_employment 
+        from    emp_employment
         where   emp_id = @p_emp_id
           and   eff_date <= @p_termination_date /* 1665080/20160121 @p_new_pay_through_date */
           and   next_eff_date > @p_termination_date /* 1665080/20160121 @p_new_pay_through_date */
@@ -249,95 +281,95 @@ begin
                                      where emp_id = @p_emp_id
                                        and eff_date = @w_pay_through_date_plus_one)
 --SYBSQL            raiserror 20001 "Row updated by another user."
-              raiserror ('20001 Row updated by another user.',16,0) 
+              raiserror ('20001 Row updated by another user.',16,0)
                 else
 --SYBSQL            raiserror 20002 "Row does not exist."
-              raiserror ('20002 Row does not exist.',16,0) 
+              raiserror ('20002 Row does not exist.',16,0)
                 /* rollback transaction ssa 30724 */
-                return 
+                return
             end /* if @@rowcount = 0 */
 
         end /* if exists (select * from emp_employment where emp_id = @p_emp_id and eff_date = @w_pay_through_date_plus_one) */
         else /* need new row */
         begin
             insert into emp_employment
-                     select    emp_id, 
-                               @w_pay_through_date_plus_one, 
-                               next_eff_date, 
-                               eff_date, 
-                               employment_type_code, 
-                               work_tm_code, 
-                               official_title_code, 
-                               official_title_date, 
-                               mgr_ind, 
-                               recruiter_ind, 
-                               pensioner_indicator, 
-                               payroll_company_code, 
-                               pmt_ctrl_code, 
-                               us_federal_tax_meth_code, 
-                               us_federal_tax_amt, 
-                               us_federal_tax_pct, 
-                               us_federal_marital_status_code, 
-                               us_federal_exemp_nbr, 
-                               us_work_st_code, 
-                               canadian_work_province_code, 
-                               ipp_payroll_id, 
-                               ipp_max_pay_level_amt, 
-                               @p_new_pay_through_date, 
-                               empl_id, 
-                               tax_entity_id, 
-                               @p_pay_status_code, 
-                               clock_nbr, 
-                               provided_i_9_ind, 
-                               time_reporting_meth_code, 
-                               regular_hrs_tracked_code, 
-                               pay_element_ctrl_grp_id, 
-                               pay_group_id, 
-                               us_pension_ind, 
-                               professional_cat_code, 
-                               corporate_officer_ind, 
-                               prim_disbursal_loc_code, 
-                               alternate_disbursal_loc_code, 
-                               labor_grp_code, 
-                               employment_info_chg_reason_cd, 
-                               highly_compensated_emp_ind, 
-                               nbr_of_dependent_children, 
-                               canadian_federal_tax_meth_cd, 
-                               canadian_federal_tax_amt, 
-                               canadian_federal_tax_pct, 
-                               canadian_federal_claim_amt, 
-                               canadian_province_claim_amt, 
-                               tax_unit_code, 
-                               requires_tm_card_ind, 
-                               xfer_type_code, 
-                               tax_clear_code, 
-                               pay_type_code, 
-                               labor_distn_code, 
-                               labor_distn_ext_code, 
-                               us_fui_status_code, 
-                               us_fica_status_code, 
-                               payable_through_bank_id, 
-                               disbursal_seq_nbr_1, 
-                               disbursal_seq_nbr_2, 
-                               non_employee_indicator, 
-                               excluded_from_payroll_ind, 
+                     select    emp_id,
+                               @w_pay_through_date_plus_one,
+                               next_eff_date,
+                               eff_date,
+                               employment_type_code,
+                               work_tm_code,
+                               official_title_code,
+                               official_title_date,
+                               mgr_ind,
+                               recruiter_ind,
+                               pensioner_indicator,
+                               payroll_company_code,
+                               pmt_ctrl_code,
+                               us_federal_tax_meth_code,
+                               us_federal_tax_amt,
+                               us_federal_tax_pct,
+                               us_federal_marital_status_code,
+                               us_federal_exemp_nbr,
+                               us_work_st_code,
+                               canadian_work_province_code,
+                               ipp_payroll_id,
+                               ipp_max_pay_level_amt,
+                               @p_new_pay_through_date,
+                               empl_id,
+                               tax_entity_id,
+                               @p_pay_status_code,
+                               clock_nbr,
+                               provided_i_9_ind,
+                               time_reporting_meth_code,
+                               regular_hrs_tracked_code,
+                               pay_element_ctrl_grp_id,
+                               pay_group_id,
+                               us_pension_ind,
+                               professional_cat_code,
+                               corporate_officer_ind,
+                               prim_disbursal_loc_code,
+                               alternate_disbursal_loc_code,
+                               labor_grp_code,
+                               employment_info_chg_reason_cd,
+                               highly_compensated_emp_ind,
+                               nbr_of_dependent_children,
+                               canadian_federal_tax_meth_cd,
+                               canadian_federal_tax_amt,
+                               canadian_federal_tax_pct,
+                               canadian_federal_claim_amt,
+                               canadian_province_claim_amt,
+                               tax_unit_code,
+                               requires_tm_card_ind,
+                               xfer_type_code,
+                               tax_clear_code,
+                               pay_type_code,
+                               labor_distn_code,
+                               labor_distn_ext_code,
+                               us_fui_status_code,
+                               us_fica_status_code,
+                               payable_through_bank_id,
+                               disbursal_seq_nbr_1,
+                               disbursal_seq_nbr_2,
+                               non_employee_indicator,
+                               excluded_from_payroll_ind,
                         /* R6.1M-ssa# 29829 Begin */
                         /*     emp_info_source_code,  */
                                @w_source_code,
                         /* R6.1M-ssa# 29829 End */
-                               user_amt_1, 
-                               user_amt_2, 
-                               user_monetary_amt_1, 
-                               user_monetary_amt_2, 
-                               user_monetary_curr_code, 
-                               user_code_1, 
-                               user_code_2, 
-                               user_date_1, 
-                               user_date_2, 
-                               user_ind_1, 
-                               user_ind_2, 
-                               user_text_1, 
-                               user_text_2, 
+                               user_amt_1,
+                               user_amt_2,
+                               user_monetary_amt_1,
+                               user_monetary_amt_2,
+                               user_monetary_curr_code,
+                               user_code_1,
+                               user_code_2,
+                               user_date_1,
+                               user_date_2,
+                               user_ind_1,
+                               user_ind_2,
+                               user_text_1,
+                               user_text_2,
                                t4_employ_code,         /* R6.0M - SSA# 23771 */
                                0
                         from  emp_employment
@@ -349,11 +381,11 @@ begin
             begin
                 /* rollback transaction ssa 30724 */
 --SYBSQL        raiserror 20003 "Error inserting into emp_employment"
-          raiserror ('20003 Error inserting into emp_employment',16,0) 
-                return 
+          raiserror ('20003 Error inserting into emp_employment',16,0)
+                return
             end /* if @@error != 0 */
-                        
-            select @w_next_eff_date = next_eff_date 
+
+            select @w_next_eff_date = next_eff_date
                          from emp_employment
                         where emp_id = @p_emp_id
                           and eff_date <= @p_new_pay_through_date
@@ -365,22 +397,22 @@ begin
                     set  prior_eff_date = @w_pay_through_date_plus_one
                                  where  emp_id = @p_emp_id
                                    and  eff_date = @w_next_eff_date
-            
+
                 if @@rowcount = 0
                 begin
                     if exists (select * from emp_employment
                                                  where emp_id = @p_emp_id
                                                    and eff_date = @w_pay_through_date_plus_one)
 --SYBSQL                raiserror 20001 "Row updated by another user."
-                  raiserror ('20001 Row updated by another user.',16,0) 
+                  raiserror ('20001 Row updated by another user.',16,0)
                     else
 --SYBSQL                raiserror 20002 "Row does not exist."
-                  raiserror ('20002 Row does not exist.',16,0) 
+                  raiserror ('20002 Row does not exist.',16,0)
                     /* rollback transaction  ssa 30724 */
-                    return 
+                    return
                 end /* if @@error != 0 */
             end /* if @w_next_eff_date <> "29991231" */
-                        
+
             update  emp_employment
                 set  next_eff_date = @w_pay_through_date_plus_one
                          where  emp_id = @p_emp_id
@@ -393,17 +425,17 @@ begin
                                          where emp_id = @p_emp_id
                                            and eff_date = @w_pay_through_date_plus_one)
 --SYBSQL            raiserror 20001 "Row updated by another user."
-              raiserror ('20001 Row updated by another user.',16,0) 
+              raiserror ('20001 Row updated by another user.',16,0)
                 else
 --SYBSQL            raiserror 20002 "Row does not exist."
-              raiserror ('20002 Row does not exist.',16,0) 
+              raiserror ('20002 Row does not exist.',16,0)
                 /* rollback transaction ssa 30724 */
-                return 
+                return
             end /* if @@error != 0 */
-        end /* need new row */ 
+        end /* need new row */
     end /* if @p_pay_status_code <> @w_pay_status_code */
 end /* if @p_pay_status_code <> "" */
-    
+
 /* ************************************************************ */
 /* Update employment versions effective dated after the         */
 /* termination date.    1665080/20160121                        */
@@ -421,7 +453,7 @@ begin
                and activity_action_code = 'TERM'
                and user_id = @W_ACTION_USER
             /* R6.5.01M-ALS#286282: end-add */
-             
+
     /* END AUDIT SECTION==================================*/
     /* UPDATE work employee employment audit table -      */
     /* ===================================================*/
@@ -487,12 +519,12 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
 /* Set up the work employee assignment audit table             */
 /* ============================================================*/
 
-   DECLARE EMPASSIGNCURSOR cursor FOR  
+   DECLARE EMPASSIGNCURSOR cursor FOR
    SELECT  emp_id, assigned_to_code, job_or_pos_id, eff_date, next_eff_date, prior_eff_date
    FROM    emp_assignment
    WHERE   emp_id = @p_emp_id AND
            eff_date <= @p_termination_date AND
-           ( 
+           (
              (next_eff_date > @p_termination_date AND next_eff_date != @w_end_of_time) OR
              (next_eff_date = @w_end_of_time  AND end_date > @p_termination_date)
            )
@@ -501,20 +533,20 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
    OPEN EMPASSIGNCURSOR
 
    FETCH EMPASSIGNCURSOR INTO
-         @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, 
-         @w_next_effect_date,@w_prior_effect_date       
+         @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date,
+         @w_next_effect_date,@w_prior_effect_date
 
    WHILE (@@fetch_status=0)
    BEGIN
 
         SELECT @W_MS = CONVERT (char(3), datepart(millisecond,getdate()))
-        IF datalength(rtrim(@W_MS)) = 1 
+        IF datalength(rtrim(@W_MS)) = 1
         BEGIN
 		    SELECT @W_MS = '00'+substring(@W_MS,1,1)
         END
         ELSE
         BEGIN
-            IF datalength(rtrim(@W_MS)) = 2 
+            IF datalength(rtrim(@W_MS)) = 2
             BEGIN
                 SELECT @W_MS = '0'+substring(@W_MS,1,2)
             END
@@ -526,12 +558,12 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
 
         INSERT INTO work_emp_assignment_aud
         VALUES (@W_ACTION_USER, 'TERMENDASG', @W_ACTION_DATETIME,
-                @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, @w_next_effect_date, 
+                @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, @w_next_effect_date,
                 @w_prior_effect_date, '', '', @p_termination_date, '', '', '')
 
-       
+
         DELETE work_emp_assignment_aud
-        WHERE  user_id = @W_ACTION_USER AND 
+        WHERE  user_id = @W_ACTION_USER AND
                activity_action_code = 'TERMENDASG' AND
                emp_id = @w_emp_id /* 564993 */
 
@@ -540,13 +572,13 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
         waitfor delay "00:00:00:150"
 
         FETCH EMPASSIGNCURSOR INTO
-              @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, 
-              @w_next_effect_date,@w_prior_effect_date         
+              @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date,
+              @w_next_effect_date,@w_prior_effect_date
 
    END
 
    CLOSE EMPASSIGNCURSOR
-   deallocate EMPASSIGNCURSOR	
+   deallocate EMPASSIGNCURSOR
 
    /* SSA 30832 END */
 
@@ -601,25 +633,25 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
    DECLARE EMPASSIGNCURSOR cursor FOR
    SELECT emp_id, assigned_to_code, job_or_pos_id, eff_date, next_eff_date, prior_eff_date
    FROM emp_assignment
-   WHERE emp_id = @p_emp_id AND eff_date > @p_termination_date    
+   WHERE emp_id = @p_emp_id AND eff_date > @p_termination_date
 
    OPEN EMPASSIGNCURSOR
 
    FETCH EMPASSIGNCURSOR INTO
-         @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, 
-         @w_next_effect_date,@w_prior_effect_date       
+         @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date,
+         @w_next_effect_date,@w_prior_effect_date
 
    WHILE (@@fetch_status=0)
    BEGIN
 
         SELECT @W_MS = CONVERT (char(3), datepart(millisecond,getdate()))
-        IF datalength(rtrim(@W_MS)) = 1 
+        IF datalength(rtrim(@W_MS)) = 1
         BEGIN
 		    SELECT @W_MS = '00'+substring(@W_MS,1,1)
         END
         ELSE
         BEGIN
-            IF datalength(rtrim(@W_MS)) = 2 
+            IF datalength(rtrim(@W_MS)) = 2
             BEGIN
                 SELECT @W_MS = '0'+substring(@W_MS,1,2)
             END
@@ -627,12 +659,12 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
 
         SELECT @W_ACTION_DATETIME = CONVERT(char(10), getdate(), 111) + '-' +
                                     CONVERT(char(8), getdate(), 108) + ':' + @W_MS
-    
+
         INSERT INTO work_emp_assignment_aud
         VALUES (@W_ACTION_USER, 'TERMASGDV', @W_ACTION_DATETIME,
-                @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, @w_next_effect_date, 
+                @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, @w_next_effect_date,
                 @w_prior_effect_date, '', '', @p_termination_date, '', '', '' )
-   
+
         DELETE work_emp_assignment_aud
         WHERE user_id = @W_ACTION_USER AND
               activity_action_code = 'TERMASGDV' AND
@@ -643,13 +675,13 @@ if @w_audit_emp_assign_tbl = "N" /* 564993 */
         waitfor delay "00:00:00:150"
 
         FETCH EMPASSIGNCURSOR INTO
-              @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date, 
-              @w_next_effect_date,@w_prior_effect_date         
+              @w_emp_id, @w_assigned_to_code, @w_job_or_pos_id, @w_effect_date,
+              @w_next_effect_date,@w_prior_effect_date
 
    END
 
    CLOSE EMPASSIGNCURSOR
-   deallocate EMPASSIGNCURSOR	
+   deallocate EMPASSIGNCURSOR
 
    /* SSA 30832 END */
 
@@ -690,7 +722,7 @@ delete from emp_assignment_distribution
 /* ============================================================*/
    insert into work_emp_pay_element_aud
    select
-      @W_ACTION_USER, 'TERMSTOPPE', @W_ACTION_DATETIME, emp_id,    
+      @W_ACTION_USER, 'TERMSTOPPE', @W_ACTION_DATETIME, emp_id,
       empl_id, emp_pay_element.pay_element_id, emp_pay_element.eff_date,
         '', '', '', '', @p_new_pay_through_date
 
@@ -699,7 +731,7 @@ delete from emp_assignment_distribution
       and  emp_pay_element.eff_date <= @p_new_pay_through_date
       and    ((emp_pay_element.next_eff_date > @p_new_pay_through_date
            and emp_pay_element.next_eff_date != @w_end_of_time)
-         or (emp_pay_element.next_eff_date = @w_end_of_time 
+         or (emp_pay_element.next_eff_date = @w_end_of_time
             and emp_pay_element.stop_date > @p_new_pay_through_date))
       and    pay_element.pay_element_id = emp_pay_element.pay_element_id
       and pay_element.eff_date <= @p_new_pay_through_date     /* 564993 */
@@ -780,7 +812,7 @@ declare emp_pay_element_cursor cursor for
 /* ============================================================*/
    insert into work_emp_pay_element_aud
    select
-      @W_ACTION_USER, 'TERMDELPE', @W_ACTION_DATETIME, emp_id, 
+      @W_ACTION_USER, 'TERMDELPE', @W_ACTION_DATETIME, emp_id,
          empl_id, emp_pay_element.pay_element_id, emp_pay_element.eff_date,
              '', '', '', '', ''
 
@@ -807,7 +839,7 @@ declare emp_pay_element_cursor cursor for
         and emp_pay_element.eff_date > @p_new_pay_through_date
         and emp_pay_element.pay_element_id in
             (select pay_element_id from #temp1) /* SSA 30724 */
-      
+
    delete from emp_pay_element_limit
       where emp_pay_element_limit.emp_id = @p_emp_id
         and emp_pay_element_limit.start_date > @p_new_pay_through_date
@@ -842,12 +874,12 @@ declare ben_plan_ptcp_cursor cursor for
       and end_ptcpn_on_emplmnt_termn_ind      = "Y"
       and (ben_plan.eff_date      <= @p_termination_date and
            ben_plan.next_eff_date >  @p_termination_date)
-                       
+
      open ben_plan_ptcp_cursor
 
     fetch ben_plan_ptcp_cursor
-     into @c_ben_plan_id,            
-          @c_end_ptcpn_as_of_code,   
+     into @c_ben_plan_id,
+          @c_end_ptcpn_as_of_code,
           @c_participant_id
 
     while (@@fetch_status = 0)
@@ -896,7 +928,7 @@ declare ben_plan_ptcp_cursor cursor for
                   select @w_third_date  = IsNull (LTrim (@w_first_date), '') + "/" + "01" + "/" + @w_second_date
                   select @w_as_of_date  = @w_third_date
                   select @w_as_of_date  = dateadd(day, -1, @w_as_of_date)
-               end   
+               end
 
               /* Process Active Benefit Plans */
               /* Determine the plans the employee is participating in based on the  */
@@ -904,7 +936,7 @@ declare ben_plan_ptcp_cursor cursor for
               /* Termination Participation Date Code (@c_end_ptcpn_as_of_code).     */
               /* (If next_status_change_date = @w_as_of_date, then that row will    */
               /* not be selected.  The stop dates do not need to be updated.)       */
-              if exists (select * 
+              if exists (select *
                          from ben_plan, ben_plan_ptcp_status, participant
                         where ben_plan_ptcp_status.participant_id = @c_participant_id
                           and participant.participant_id          = @c_participant_id
@@ -924,7 +956,7 @@ declare ben_plan_ptcp_cursor cursor for
                           @c_participant_id,
                           @c_ben_plan_id,
                           @w_as_of_date,
-                          @p_emp_id         
+                          @p_emp_id
                 end
 
               /* ************************************************************** */
@@ -933,7 +965,7 @@ declare ben_plan_ptcp_cursor cursor for
               /* the Benefit Plan Termination Policy.  If the employee had been */
               /* in the plan previously, then only delete their participation   */
               /* that was scheduled to start after their termination date.      */
-              /* ************************************************************** */ 
+              /* ************************************************************** */
               if exists(select *
                         from ben_plan, ben_plan_ptcp_status, participant
                         where ben_plan_ptcp_status.participant_id = @c_participant_id
@@ -954,18 +986,18 @@ declare ben_plan_ptcp_cursor cursor for
                           @p_emp_id,
                           '',
                           @w_as_of_date
-                end	
+                end
 
             fetch ben_plan_ptcp_cursor
-             into @c_ben_plan_id,            
-                  @c_end_ptcpn_as_of_code,   
+             into @c_ben_plan_id,
+                  @c_end_ptcpn_as_of_code,
                   @c_participant_id
          end
 
     close ben_plan_ptcp_cursor
     deallocate ben_plan_ptcp_cursor
 /* R6.5.02MCEXP-ALS#523706: End - rewrite */
-            
+
 /****************************************************************/
 /* Update the Employee Status Next Change Date with the         */
 /* Termination Date.                                            */
@@ -983,12 +1015,12 @@ if @@rowcount = 0
             where emp_id = @p_emp_id
               and status_change_date = @p_status_change_date)
 --SYBSQL             raiserror 20001 "Row updated by another user."
-          raiserror ('20001 Row updated by another user.',16,0) 
+          raiserror ('20001 Row updated by another user.',16,0)
        else
 --SYBSQL             raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
            /*  rollback transaction ssa 30724 */
-            return 
+            return
     end
 
 /***************************************************************/
@@ -1011,8 +1043,8 @@ if @@error != 0
                 begin
                         /* rollback transaction  ssa 30724 */
 --SYBSQL 			raiserror 20004 "Error inserting into emp_status"
-          raiserror ('20004 Error inserting into emp_status',16,0) 
-                        return 
+          raiserror ('20004 Error inserting into emp_status',16,0)
+                        return
                 end
 /**************************************************************/
 /* If the date of death has been entered, update individual   */
@@ -1026,16 +1058,16 @@ if @p_date_of_death != @w_end_of_time
                              from individual, employee
                             where individual.individual_id = employee.individual_id /*SSA# 18025 R4.1M */
                               and employee.emp_id          = @p_emp_id)
-   
+
 
 /* AUDIT SECTION ==============================================*/
 /* Set up the work employee status audit table                 */
 /* ============================================================*/
    insert into work_emp_status_aud
-      (user_id, activity_action_code, action_date, emp_id, 
+      (user_id, activity_action_code, action_date, emp_id,
        status_change_date, prior_change_date, prior_emp_id)
-   values 
-      (@W_ACTION_USER, 'TERMINATE', @W_ACTION_DATETIME, 
+   values
+      (@W_ACTION_USER, 'TERMINATE', @W_ACTION_DATETIME,
        @p_emp_id, @p_termination_date, @p_status_change_date, '')
 
    Delete work_emp_status_aud
@@ -1068,13 +1100,13 @@ if @p_date_of_death != @w_end_of_time
 **********************************************************************/
 SELECT @w_row = 0
 
-INSERT INTO #temp2 
+INSERT INTO #temp2
 SELECT  @w_row,
-        emp_id,          
+        emp_id,
         assigned_to_code,
-        job_or_pos_id,   
+        job_or_pos_id,
         eff_date,
-        next_eff_date,   
+        next_eff_date,
         prior_eff_date,
         end_date
 FROM    emp_assignment
@@ -1117,12 +1149,12 @@ BEGIN
 	       @c_assigned_to_code = assigned_to_code,
 	       @c_job_or_pos_id = job_or_pos_id,
 	       @c_eff_date = eff_date,
-	       @c_next_eff_date = next_eff_date,      
+	       @c_next_eff_date = next_eff_date,
 	       @c_prior_eff_date = prior_eff_date,
 	       @c_end_date = end_date
 	FROM   #temp2
-	WHERE  row_id = @w_row 	
-	
+	WHERE  row_id = @w_row
+
 	SELECT @w_row = @w_row + 1
 
    if @c_end_date <= @p_termination_date /* 564993 */
@@ -1132,13 +1164,13 @@ BEGIN
 
 
         SELECT @W_MS = CONVERT (char(3), datepart(millisecond,getdate()))
-        IF datalength(rtrim(@W_MS)) = 1 
+        IF datalength(rtrim(@W_MS)) = 1
           BEGIN
 		    SELECT @W_MS = '00'+substring(@W_MS,1,1)
           END
         ELSE
           BEGIN
-            IF datalength(rtrim(@W_MS)) = 2 
+            IF datalength(rtrim(@W_MS)) = 2
               BEGIN
                 SELECT @W_MS = '0'+substring(@W_MS,1,2)
               END
@@ -1146,12 +1178,12 @@ BEGIN
 
         SELECT @W_ACTION_DATETIME = CONVERT(char(10), getdate(), 111) + '-' +
                                     CONVERT(char(8), getdate(), 108) + ':' + @W_MS
-    
+
         INSERT INTO work_emp_assignment_aud
         VALUES (@W_ACTION_USER, 'TERMDELMGR', @W_ACTION_DATETIME,
-                @c_emp_id, @c_assigned_to_code, @c_job_or_pos_id, @c_eff_date, 
+                @c_emp_id, @c_assigned_to_code, @c_job_or_pos_id, @c_eff_date,
                 @p_termination_date, '', '', '', '', '', '', '' )
-   
+
         DELETE work_emp_assignment_aud
         WHERE user_id = @W_ACTION_USER AND
               activity_action_code = 'TERMDELMGR' AND
@@ -1176,12 +1208,12 @@ While (@w_row <= @w_total_rows)
 	       @c_assigned_to_code = assigned_to_code,
 	       @c_job_or_pos_id = job_or_pos_id,
 	       @c_eff_date = eff_date,
-	       @c_next_eff_date = next_eff_date,      
+	       @c_next_eff_date = next_eff_date,
 	       @c_prior_eff_date = prior_eff_date,
 	       @c_end_date = end_date
 	FROM   #temp2
-	WHERE  row_id = @w_row 	
-	
+	WHERE  row_id = @w_row
+
 	SELECT @w_row = @w_row + 1
 
    if @c_end_date <= @p_termination_date /* 564993 */
@@ -1212,12 +1244,12 @@ While (@w_row <= @w_total_rows)
       begin /* 521449 */
 	   INSERT INTO emp_assignment
 	   SELECT emp_id,
-		  assigned_to_code,			job_or_pos_id,         
-		  @w_termination_date_plus_one,		@c_next_eff_date,         
-		  @c_eff_date,				next_assigned_to_code,   
-		  next_job_or_pos_id,			prior_assigned_to_code,   
+		  assigned_to_code,			job_or_pos_id,
+		  @w_termination_date_plus_one,		@c_next_eff_date,
+		  @c_eff_date,				next_assigned_to_code,
+		  next_job_or_pos_id,			prior_assigned_to_code,
 		  prior_job_or_pos_id,			begin_date,
-		  @c_end_date,				assignment_reason_code,			  		  		  		  organization_chart_name,		organization_unit_name,   
+		  @c_end_date,				assignment_reason_code,			  		  		  		  organization_chart_name,		organization_unit_name,
 		  organization_group_id,		organization_change_reason_cd,
  		  loc_code,               		@w_spaces,
 	          official_title_code,      		official_title_date,
@@ -1254,10 +1286,10 @@ While (@w_row <= @w_total_rows)
 	          user_ind_1,            		user_ind_2,
 	          user_monetary_amt_1,      		user_monetary_amt_2,
 	          user_monetary_curr_code,   		user_text_1,
-	          user_text_2, 				unemployment_loc_code,   
+	          user_text_2, 				unemployment_loc_code,
 	          include_salary_in_autopay_ind,	0
-	   FROM   emp_assignment  
-	   WHERE  emp_id = @c_emp_id AND	
+	   FROM   emp_assignment
+	   WHERE  emp_id = @c_emp_id AND
 		  assigned_to_code = @c_assigned_to_code AND
 	          job_or_pos_id = @c_job_or_pos_id AND
         	  eff_date = @c_eff_date AND                        /* 521449 */
@@ -1287,11 +1319,17 @@ update emp_assignment
 
 /* commit transaction  ssa 30724 */
 
-return 
- 
+return
 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_terminate] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_terminate] TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_terminate', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_upd_hmpl_terminate >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_upd_hmpl_terminate >>>'
 GO

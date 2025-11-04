@@ -59,7 +59,6 @@ BEGIN
 
     DECLARE @v_step_position                            varchar(255)        = 'Begin Procedure'
     DECLARE @msg_id                                     char(10)
-    DECLARE @v_debug                                    varchar(4000)       = ''    -- used to save SQL statements to table
     DECLARE @v_single_quote                             char(01)            = char(39)
 
     DECLARE @v_EVENT_ID_SALARY_CHANGE                   char(2)             = '02'
@@ -101,6 +100,20 @@ BEGIN
     DECLARE @new_emp_asgn_base_rate_tbl_id              char(10)
     DECLARE @new_emp_asgn_base_rate_tbl_entry_code      char(08)
     DECLARE @new_emp_asgn_pd_salary_tm_pd_id            char(05)
+
+    DECLARE @cur_ea_user_amt_1                  float
+    DECLARE @cur_ea_user_amt_2                  float
+    DECLARE @cur_ea_user_code_1                 char(05)
+    DECLARE @cur_ea_user_code_2                 char(05)
+    DECLARE @cur_ea_user_date_1                 datetime
+    DECLARE @cur_ea_user_date_2                 datetime
+    DECLARE @cur_ea_user_ind_1                  char(01)
+    DECLARE @cur_ea_user_ind_2                  char(01)
+    DECLARE @cur_ea_user_monetary_amt_1         money
+    DECLARE @cur_ea_user_monetary_amt_2         money
+    DECLARE @cur_ea_user_monetary_curr_code     char(03)
+    DECLARE @cur_ea_user_text_1                 char(50)
+    DECLARE @cur_ea_user_text_2                 char(50)
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                     int             = 0
@@ -401,18 +414,35 @@ BEGIN
                     SELECT @w_eff_date = CONVERT(datetime, @eff_date)
 
 
+                ---------------------------------------------------------------------------
                 -- Validate Employee ID - U00012
+                ---------------------------------------------------------------------------
 
                 ---------------------------------------------------------------------------
                 -- Lookup current SS associate details
                 ---------------------------------------------------------------------------
                 SELECT @cur_empl_id                             = eempl.empl_id
-                    , @cur_tax_entity_id                       = eempl.tax_entity_id
-                    , @cur_eempl_eff_date                      = eempl.eff_date
-                    , @cur_emp_asgn_end_date                   = ea.end_date
-                    , @cur_emp_asgn_job_position_end_date      = ea.end_date
-                    , @cur_emp_asgn_assigned_to_code           = ea.assigned_to_code
+                    , @cur_tax_entity_id                        = eempl.tax_entity_id
+                    , @cur_eempl_eff_date                       = eempl.eff_date
+                    , @cur_emp_asgn_end_date                    = ea.end_date
+                    , @cur_emp_asgn_job_position_end_date       = ea.end_date
+                    , @cur_emp_asgn_assigned_to_code            = ea.assigned_to_code
                     --, @cur_emp_asgn_job_or_pos_id              = ea.job_or_pos_id
+
+                    , @cur_ea_user_amt_1                        = ea.user_amt_1
+                    , @cur_ea_user_amt_2                        = ea.user_amt_2
+                    , @cur_ea_user_code_1                       = ea.user_code_1
+                    , @cur_ea_user_code_2                       = ea.user_code_2
+                    , @cur_ea_user_date_1                       = ea.user_date_1
+                    , @cur_ea_user_date_2                       = ea.user_date_2
+                    , @cur_ea_user_ind_1                        = ea.user_ind_1
+                    , @cur_ea_user_ind_2                        = ea.user_ind_2
+                    , @cur_ea_user_monetary_amt_1               = ea.user_monetary_amt_1
+                    , @cur_ea_user_monetary_amt_2               = ea.user_monetary_amt_2
+                    , @cur_ea_user_monetary_curr_code           = ea.user_monetary_curr_code
+                    , @cur_ea_user_text_1                       = ea.user_text_1
+                    , @cur_ea_user_text_2                       = ea.user_text_2
+
                     , @cur_emp_status_code                     = stat.emp_status_code
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
@@ -841,36 +871,37 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Execute Transfer
                 ---------------------------------------------------------------------------
-                SET @v_step_position = 'Execute DBShrpn.dbo.usp_upd_hrpn_02_trn'
 
 /*
                 -- Debug
-                SET @v_debug = 'EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn'
-                             +  ' @p_emp_id '                        + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote
-                             + ', @p_new_empl_id '                   + '= ' + @v_single_quote + RTRIM(@empl_id)                                              + @v_single_quote
-                             + ', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                           + @v_single_quote
-                             + ', @p_assign_to '                     + '= ' + @v_single_quote + RTRIM(@cur_emp_asgn_assigned_to_code)                        + @v_single_quote
-                             + ', @p_job_or_pos_id '                 + '= ' + @v_single_quote + RTRIM(@job_or_pos_id)                                        + @v_single_quote
-                             + ', @p_org_grp_id '                    + '= ' + @v_single_quote + RTRIM(@organization_group_id))                               + @v_single_quote
-                             + ', @p_org_chart_name '                + '= ' + @v_single_quote + RTRIM(@organization_chart_name)                              + @v_single_quote
-                             + ', @p_org_unit_name '                 + '= ' + @v_single_quote + RTRIM(@organization_unit_name)                               + @v_single_quote
-                             + ', @p_location '                      + '= ' + @v_single_quote + RTRIM(@emp_location_code)                                    + @v_single_quote
-                             + ', @p_new_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@new_tax_entity)                                       + @v_single_quote
-                             + ', @p_old_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@cur_tax_entity_id)                                    + @v_single_quote
-                             + ', @p_eff_date '                      + '= ' + @v_single_quote + CONVERT(char(8), @cur_eempl_eff_date, 112)                   + @v_single_quote
-                             + ', @p_pay_group '                     + '= ' + @v_single_quote + RTRIM(@pay_group_id)                                         + @v_single_quote
-                             + ', @p_emp_info_change_reason '        + '= ' + @v_single_quote + RTRIM(@employment_info_chg_reason_cd)                        + @v_single_quote
-                             + ', @p_job_position_end_date '         + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_job_position_end_date, 112)   + @v_single_quote
-                             + ', @p_assignment_end_date '           + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_end_date, 112)                + @v_single_quote
-                             + ', @p_xfer_different_taxing_cntry '   + '= ' + @v_single_quote + 'N'                                                          + @v_single_quote
-                             + ', @p_new_empl_taxing_country_cd '    + '= ' + @v_single_quote + RTRIM(@new_taxing_country_code)                              + @v_single_quote
-                             + ', @p_new_empl_curr_code '            + '= ' + @v_single_quote + RTRIM(@new_curr_code)                                        + @v_single_quote
-                             + ', @p_use_policy_xfer_options '       + '= ' + @v_single_quote + 'Y'                                                          + @v_single_quote
+                SET @v_step_position = 'Execute DBShrpn.dbo.usp_upd_hrpn_02_trn DEBUG'
 
                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                VALUES (@v_debug)
+                VALUES('EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn')
+                , (' @p_emp_id '                        + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote)
+                , (', @p_new_empl_id '                   + '= ' + @v_single_quote + RTRIM(@empl_id)                                              + @v_single_quote)
+                , (', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                           + @v_single_quote)
+                , (', @p_assign_to '                     + '= ' + @v_single_quote + RTRIM(@cur_emp_asgn_assigned_to_code)                        + @v_single_quote)
+                , (', @p_job_or_pos_id '                 + '= ' + @v_single_quote + RTRIM(@job_or_pos_id)                                        + @v_single_quote)
+                , (', @p_org_grp_id '                    + '= ' + @v_single_quote + RTRIM(@organization_group_id))                               + @v_single_quote)
+                , (', @p_org_chart_name '                + '= ' + @v_single_quote + RTRIM(@organization_chart_name)                              + @v_single_quote)
+                , (', @p_org_unit_name '                 + '= ' + @v_single_quote + RTRIM(@organization_unit_name)                               + @v_single_quote)
+                , (', @p_location '                      + '= ' + @v_single_quote + RTRIM(@emp_location_code)                                    + @v_single_quote)
+                , (', @p_new_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@new_tax_entity)                                       + @v_single_quote)
+                , (', @p_old_tax_entity_id '             + '= ' + @v_single_quote + RTRIM(@cur_tax_entity_id)                                    + @v_single_quote)
+                , (', @p_eff_date '                      + '= ' + @v_single_quote + CONVERT(char(8), @cur_eempl_eff_date, 112)                   + @v_single_quote)
+                , (', @p_pay_group '                     + '= ' + @v_single_quote + RTRIM(@pay_group_id)                                         + @v_single_quote)
+                , (', @p_emp_info_change_reason '        + '= ' + @v_single_quote + RTRIM(@employment_info_chg_reason_cd)                        + @v_single_quote)
+                , (', @p_job_position_end_date '         + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_job_position_end_date, 112)   + @v_single_quote)
+                , (', @p_assignment_end_date '           + '= ' + @v_single_quote + CONVERT(char(8), @cur_emp_asgn_end_date, 112)                + @v_single_quote)
+                , (', @p_xfer_different_taxing_cntry '   + '= ' + @v_single_quote + 'N'                                                          + @v_single_quote)
+                , (', @p_new_empl_taxing_country_cd '    + '= ' + @v_single_quote + RTRIM(@new_taxing_country_code)                              + @v_single_quote)
+                , (', @p_new_empl_curr_code '            + '= ' + @v_single_quote + RTRIM(@new_curr_code)                                        + @v_single_quote)
+                , (', @p_use_policy_xfer_options '       + '= ' + @v_single_quote + 'Y'                                                          + @v_single_quote)
                 , (' ');
 */
+
+                SET @v_step_position = 'Execute DBShrpn.dbo.usp_upd_hrpn_02_trn'
 
                 EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn
                     @p_emp_id                         = @emp_id
@@ -949,7 +980,21 @@ BEGIN
                   , organization_group_id       = @organization_group_id
                   , organization_chart_name     = @organization_chart_name
                   , organization_unit_name      = @organization_unit_name
+
+                  , user_amt_1                  = @cur_ea_user_amt_1
+                  , user_amt_2                  = @cur_ea_user_amt_2
+                  , user_code_1                 = @cur_ea_user_code_1
+                  , user_code_2                 = @cur_ea_user_code_2
+                  , user_date_1                 = @cur_ea_user_date_1
+                  , user_date_2                 = @cur_ea_user_date_2
+                  , user_ind_1                  = @cur_ea_user_ind_1
+                  , user_ind_2                  = @cur_ea_user_ind_2
+                  , user_monetary_amt_1         = @cur_ea_user_monetary_amt_1
+                  , user_monetary_amt_2         = @cur_ea_user_monetary_amt_2
+                  , user_monetary_curr_code     = @cur_ea_user_monetary_curr_code
+                  , user_text_1                 = @cur_ea_user_text_1
                   , user_text_2                 = @position_title
+
                 WHERE   (emp_id           = @emp_id)
                     AND (assigned_to_code = @new_emp_asgn_assigned_to_code)
                     AND (job_or_pos_id    = @new_emp_asgn_job_or_pos_id)

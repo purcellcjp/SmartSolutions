@@ -18,7 +18,7 @@ go
    Description:  Updates SmartStream table DBShrpn..emp_assignment.
 
                  Cloned from DBShrpn..usp_hsp_upd_hasg_reassign in order to use with
-                 HCM Interface.
+                 HCM Interface position title update procedure DBShrpn..usp_ins_position_title.
 
    Parameters:
 
@@ -31,10 +31,9 @@ go
    Revision history:
       version  date        developer   SCR      description
       -------  ----------  ---------   -----    ------------------------------------
-      1.0.00   10/27/2025  CJP                  - Cloned from SmmartStream version DBShrpn..usp_hsp_upd_hasg_reassign
+      1.0.00   10/27/2025  CJP                  - Cloned from SmmartStream version DBShrpn..hsp_upd_hasg_reassign
                                                     1) Disabled authentication
                                                     2) Replaced all double quotes with single quote
-
 
 ************************************************************************************/
 

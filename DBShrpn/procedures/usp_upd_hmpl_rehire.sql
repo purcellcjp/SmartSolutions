@@ -1,14 +1,44 @@
-USE [DBShrpn]
-GO
-/****** Object:  StoredProcedure [dbo].[usp_upd_hmpl_rehire]    Script Date: 4/1/2025 4:33:00 PM ******/
-SET ANSI_NULLS OFF
-GO
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_rehire') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_upd_hmpl_rehire
+    IF OBJECT_ID(N'dbo.usp_upd_hmpl_rehire') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_upd_hmpl_rehire >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_upd_hmpl_rehire >>>'
+END
+go
+SET ANSI_NULLS ON
+go
 SET QUOTED_IDENTIFIER OFF
 GO
 
 
+/*************************************************************************************
+
+   SP Name:      usp_upd_hmpl_rehire
+
+   Description:  Executes SmartStream rehire process
+
+                 Cloned from DBShrpn..hsp_upd_hmpl_rehire in order to use with
+                 HCM Interface position title update procedure DBShrpn..usp_ins_position_title.
+
+   Parameters:
 
 
+   Tables
+
+   Example:
+      exec usp_upd_hmpl_rehire ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hmpl_rehire
+                                                    1) Disabled authentication
+
+************************************************************************************/
 
 CREATE procedure [dbo].[usp_upd_hmpl_rehire]
        (@p_emp_id					char(15),
@@ -28,7 +58,7 @@ CREATE procedure [dbo].[usp_upd_hmpl_rehire]
         @p_taxing_country              			char(2),
         @p_new_pay_elem_ctrl_grp_id			char(10), /* R6.5.03M-ALS#28859 */
         @p_allow_pay_updates_ind			char(1),  /* R6.5.03M-ALS#28859 */
-	@p_old_chgstamp					smallint															
+	@p_old_chgstamp					smallint
 )
 
 as
@@ -82,7 +112,7 @@ declare	@w_end_of_time				datetime,
 	@w_error_26249				char(200),
 	@w_employment_prior_eff_date 		datetime,
 	@w_pay_status_code			char(1),
-	@w_source_code				char(1),	
+	@w_source_code				char(1),
 	@w_new_chgstamp				smallint,
 	@w_error_26267				char(5),
 	@w_test_eff_date			datetime,
@@ -137,19 +167,19 @@ select @w_st_complete         = 'Y',
 /*R6.5M Sol.198163 Begin */
 /* Get maximum effective date to determine last job or position */
 if exists (select *                                            	/*R653M-sol#527321-added if exists else*/
-             from emp_assignment                            	/*R653M-sol#527321-added if exists else*/ 
+             from emp_assignment                            	/*R653M-sol#527321-added if exists else*/
             where emp_id = @p_emp_id                       	/*R653M-sol#527321-added if exists else*/
               and job_or_pos_id  = @p_new_job_or_pos_id       	/*R653M-sol#527321-added if exists else*/
 	      and next_eff_date  = @w_end_of_time             	/*R653M-sol#527321-added if exists else*/
               and end_date      <> @w_end_of_time)             	/*R653M-sol#527321-added if exists else*/
-   begin                                                       	/*R653M-sol#527321-added if exists else*/ 
+   begin                                                       	/*R653M-sol#527321-added if exists else*/
            select @w_max_eff_date = max(eff_date)             	/*R653M-sol#527321-added if exists else*/
-	     from emp_assignment                            	/*R653M-sol#527321-added if exists else*/ 
+	     from emp_assignment                            	/*R653M-sol#527321-added if exists else*/
             where emp_id = @p_emp_id                       	/*R653M-sol#527321-added if exists else*/
               and job_or_pos_id  = @p_new_job_or_pos_id       	/*R653M-sol#527321-added if exists else*/
 	      and next_eff_date  = @w_end_of_time             	/*R653M-sol#527321-added if exists else*/
               and end_date      <> @w_end_of_time              	/*R653M-sol#527321-added if exists else*/
-   end                                                         	/*R653M-sol#527321-added if exists else*/      
+   end                                                         	/*R653M-sol#527321-added if exists else*/
 else                                                           	/*R653M-sol#527321-added if exists else*/
    begin                                                       	/*R653M-sol#527321-added if exists else*/
      select @w_max_eff_date = @w_end_of_time                    /*R653M-sol#527321-added if exists else*/
@@ -157,19 +187,19 @@ else                                                           	/*R653M-sol#5273
 
 /* Get last job or position id that is the same as the new job or position id */
 if exists (select *                                           	/*R653M-sol#527321-added if exists else*/
-	     from emp_assignment                              	/*R653M-sol#527321-added if exists else*/  
+	     from emp_assignment                              	/*R653M-sol#527321-added if exists else*/
 	    where emp_id        = @p_emp_id                    	/*R653M-sol#527321-added if exists else*/
               and job_or_pos_id = @p_new_job_or_pos_id        	/*R653M-sol#527321-added if exists else*/
 	      and eff_date      = @w_max_eff_date)             	/*R653M-sol#527321-added if exists else*/
    begin                                                      	/*R653M-sol#527321-added if exists else*/
      select @w_same_prev_job_or_pos_id = job_or_pos_id         	/*R653M-sol#527321-added if exists else*/
-       from emp_assignment                              	/*R653M-sol#527321-added if exists else*/  
+       from emp_assignment                              	/*R653M-sol#527321-added if exists else*/
       where emp_id        = @p_emp_id                          	/*R653M-sol#527321-added if exists else*/
         and job_or_pos_id = @p_new_job_or_pos_id        	/*R653M-sol#527321-added if exists else*/
 	and eff_date      = @w_max_eff_date                  	/*R653M-sol#527321-added if exists else*/
    end                                                        	/*R653M-sol#527321-added if exists else*/
 else                                                          	/*R653M-sol#527321-added if exists else*/
-   begin                                                      	/*R653M-sol#527321-added if exists else*/ 
+   begin                                                      	/*R653M-sol#527321-added if exists else*/
      select @w_same_prev_job_or_pos_id = NULL                  	/*R653M-sol#527321-added if exists else*/
    end                                                        	/*R653M-sol#527321-added if exists else*/
 
@@ -187,12 +217,12 @@ if @p_emp_id = @p_previous_emp_id
     /**********************************************************
      Check state tax authority for completeness
     **********************************************************/
-    /* Sol#525582 beging commented out  
+    /* Sol#525582 beging commented out
     update employee
        set us_tax_auths_compl_ind   = @w_st_complete,
            last_date_for_which_paid = @w_end_of_time,
            chgstamp                 = chgstamp + 1
-     where emp_id = @p_emp_id 
+     where emp_id = @p_emp_id
     Sol#525582 end commented out  */
 
     update emp_status
@@ -204,20 +234,20 @@ if @p_emp_id = @p_previous_emp_id
 
     if @@rowcount = 0
       begin
-        if exists (select * 
+        if exists (select *
                      from emp_status
 		    where emp_id = @p_emp_id
 		      and status_change_date = @p_status_change_date)
           begin
 --SYBSQL             raiserror 20001 "Row updated by another user."
-          raiserror ('20001 Row updated by another user.',16,0) 
+          raiserror ('20001 Row updated by another user.',16,0)
             rollback transaction
             return
           end
         else
           begin
 --SYBSQL             raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
             rollback transaction
             return
           end
@@ -277,19 +307,19 @@ else
                     where emp_id = @p_emp_id)
           begin
 --SYBSQL             raiserror 20001 "Row updated by another user."
-          raiserror ('20001 Row updated by another user.',16,0) 
+          raiserror ('20001 Row updated by another user.',16,0)
             rollback transaction
             return
           end
         else
           begin
 --SYBSQL             raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
             rollback transaction
             return
           end
       end
-	
+
     insert into emp_status
       select @p_emp_id,			@p_new_hire_date,
              @w_end_of_time,		@w_end_of_time,
@@ -317,7 +347,7 @@ else
 if @p_allow_pay_updates_ind = "N"	/* R6.5.03M-ALS#28859 */
   begin					/* R6.5.03M-ALS#28859 */
     if @p_new_assigned_to_code = "J"
-      begin 
+      begin
         select @w_pay_element_ctrl_grp_id = pay_element_ctrl_grp_id
           from job
          where job_id         = @p_new_job_or_pos_id
@@ -346,10 +376,10 @@ select @w_test_eff_date       = eff_date,
  where emp_id        = @p_previous_emp_id
    and next_eff_date = @w_end_of_time
 
-if @w_test_eff_date >= @p_new_hire_date				
+if @w_test_eff_date >= @p_new_hire_date
   begin
 --SYBSQL     raiserror 26249 "Employment information corrupted."
-          raiserror ('26249 Employment information corrupted.',16,0) 
+          raiserror ('26249 Employment information corrupted.',16,0)
     rollback transaction
     return
   end
@@ -409,7 +439,7 @@ if @p_emp_id = @p_previous_emp_id
              @w_end_of_time,			@w_end_of_time,
              "N",				"N",
              @w_no_value,			@w_no_value,
-             @w_no_value,    /* R6.0M - SSA# 23771 */		
+             @w_no_value,    /* R6.0M - SSA# 23771 */
              0)
   end
 /***********************************************************/
@@ -461,27 +491,27 @@ else
   end
 
 /*******************************/
-/* Process Autopay Pay Element */	
+/* Process Autopay Pay Element */
 /*******************************/
 if @p_new_pay_group_id <> ""
   begin /* C */
     if @p_new_time_reporting_meth != "3"
       begin /* D */
-        if not exists (select * 
+        if not exists (select *
                          from pay_element pe, pay_group pg
                         where pe.pay_element_id  = pg.regular_earn_pay_element_id
                           and pg.pay_group_id    = @p_new_pay_group_id
                           and pe.eff_date       <= @p_new_hire_date
                           and pe.next_eff_date   > @p_new_hire_date)
             begin
-              if not exists (select * 
+              if not exists (select *
                               from pay_element pe, pay_group pg
                              where pe.pay_element_id = pg.regular_earn_pay_element_id
                                and pg.pay_group_id   = @p_new_pay_group_id
                                and pe.prior_eff_date = @w_end_of_time)
                   begin
 --SYBSQL                     raiserror 26266 "Information in the database is corrupt."
-          raiserror ('26266 Information in the database is corrupt.',16,0) 
+          raiserror ('26266 Information in the database is corrupt.',16,0)
                     rollback transaction
                     return
                  end
@@ -493,7 +523,7 @@ if @p_new_pay_group_id <> ""
                   goto continue_on
                 end
             end
-        else	
+        else
           begin /* E */
             /* R6.1M-SSA#28928 Begin -                                                 */
             /* Need to chain dates of previous regular pay element version to rehired  */
@@ -517,7 +547,7 @@ if @p_new_pay_group_id <> ""
                 if @w_test2_eff_date >= @p_new_hire_date /* R6.5.03M-ALS#558312: chgd test to test2 */
                   begin
 --SYBSQL                     raiserror 26266 "Information in the database is corrupt."
-          raiserror ('26266 Information in the database is corrupt.',16,0) 
+          raiserror ('26266 Information in the database is corrupt.',16,0)
                     rollback transaction
                     return
                   end
@@ -528,7 +558,7 @@ if @p_new_pay_group_id <> ""
                         select @w_pay_element_prior_eff_date = @w_test2_eff_date /* R6.5.03M-ALS#558312: chgd test to test2 */
                       end
                   end
-		
+
                 update emp_pay_element
                   set next_eff_date      = @p_new_hire_date
                       where emp_id       = @p_emp_id
@@ -560,7 +590,7 @@ if @p_new_pay_group_id <> ""
                                0,                              0,
                                0,                              @w_no_value,
                                @w_no_value,                    @w_no_value,
-                               @w_end_of_time,                 @w_end_of_time,	
+                               @w_end_of_time,                 @w_end_of_time,
                                "N",                            "N",
                                @w_no_value,                    @w_no_value,
                                "N",                            @w_no_value,
@@ -627,10 +657,10 @@ if @p_emp_id = @p_previous_emp_id
        and assigned_to_code = @p_new_assigned_to_code
        and job_or_pos_id    = @p_new_job_or_pos_id
 
-    if @w_test3_eff_date >= @p_new_hire_date	   /* R6.5.03M-ALS#558312: chgd test to test3 */			
+    if @w_test3_eff_date >= @p_new_hire_date	   /* R6.5.03M-ALS#558312: chgd test to test3 */
       begin
 --SYBSQL         raiserror 26249 "Employee assignment date information corrupted."
-          raiserror ('26249 Employee assignment date information corrupted.',16,0) 
+          raiserror ('26249 Employee assignment date information corrupted.',16,0)
         rollback transaction
         return
       end
@@ -663,7 +693,7 @@ if @p_emp_id = @p_previous_emp_id
 if @p_emp_id = @p_previous_emp_id
   if @w_same_prev_job_or_pos_id <> @p_new_job_or_pos_id	/*@w_previous_job_or_pos_id R6.53M Sol#527321*/
     Select @w_employment_prior_eff_date = @w_end_of_time
-/*R6.5M Sol.198163 End*/	 
+/*R6.5M Sol.198163 End*/
 
 if @p_new_assigned_to_code = "J"
   begin /* G */
@@ -712,7 +742,7 @@ if @p_new_assigned_to_code = "J"
              "N",					"N",
              0,						0,
              @w_empl_curr_code,				@w_no_value,
-             @w_no_value,  				@w_no_value,	
+             @w_no_value,  				@w_no_value,
              'N',					0
         from job
        where @p_new_job_or_pos_id  = job.job_id
@@ -779,17 +809,17 @@ else
 /*****************************************/
 if @p_taxing_country = "US"
   Begin /* I */
-    declare emp_tax_entity_crsr cursor 
+    declare emp_tax_entity_crsr cursor
         for Select Distinct tax_entity_id
               From emp_us_tax_authority
-             Where emp_id                         = @p_emp_id 
-               and emp_us_tax_authority_status_cd = '1' 
+             Where emp_id                         = @p_emp_id
+               and emp_us_tax_authority_status_cd = '1'
                and tax_authority_id               = 'USFED'
                and tax_entity_id = @p_new_tax_entity_id   -- KB 1601481
 
     open emp_tax_entity_crsr
 
-    Fetch emp_tax_entity_crsr 
+    Fetch emp_tax_entity_crsr
      Into @w_st_tax_entity_id
 
     if @@fetch_status <> 0
@@ -798,14 +828,14 @@ if @p_taxing_country = "US"
     else
       while @@fetch_status = 0 and @w_error = 0
         Begin /* J */
-          if Exists(Select * 
+          if Exists(Select *
                       from emp_us_tax_authority eusta, us_tax_authority usta
-                     where eusta.emp_id = @p_emp_id 
+                     where eusta.emp_id = @p_emp_id
                        and eusta.tax_entity_id = @p_new_tax_entity_id   -- KB 1601481
                        and eusta.emp_us_tax_authority_status_cd = '1'
                        and usta.tax_authority_id = eusta.tax_authority_id
                        and usta.tax_authority_type_code = "4")
-            if Exists(Select * 
+            if Exists(Select *
                         from emp_us_tax_authority eusta, us_tax_authority usta
                        where eusta.emp_id = @p_emp_id
                          and eusta.tax_entity_id = @p_new_tax_entity_id   -- KB 1601481
@@ -926,7 +956,7 @@ if @p_taxing_country = "US"
                           @w_sui_state_ind,
                           @w_time_worked_pct,
                           @w_sdi_status_code
-                  end 
+                  end
 
               close emp_st_tax_authority_crsr
               deallocate emp_st_tax_authority_crsr
@@ -993,7 +1023,7 @@ if @p_taxing_country = "CA"
 if @p_taxing_country <> "US" and @p_taxing_country <> "CA"
   BEGIN
     Update employee
-       Set last_date_for_which_paid = @w_end_of_time,        
+       Set last_date_for_which_paid = @w_end_of_time,
            chgstamp                 = chgstamp + 1
      where emp_id = @p_emp_id
   END
@@ -1027,7 +1057,7 @@ else
 select @W_ACTION_DATETIME = convert(char(10), getdate(), 111) + '-' +
                             convert(char(8), getdate(), 108) + ':' + @W_MS
 ****************************************************************
-   R6.5.03M-ALS#28859: End - moved to above                     
+   R6.5.03M-ALS#28859: End - moved to above
 ****************************************************************/
 
 insert into work_emp_status_aud
@@ -1049,7 +1079,7 @@ insert into work_emp_assignment_aud
    new_begin_date, new_end_date, new_assigned_to_code, new_job_or_pos_id,
    new_assigned_to_begin_date)
 values
-  (@W_ACTION_USER, 'REHIRE', @W_ACTION_DATETIME, 	
+  (@W_ACTION_USER, 'REHIRE', @W_ACTION_DATETIME,
    @p_emp_id, @p_new_assigned_to_code, @p_new_job_or_pos_id,
    @p_new_hire_date, '', '', '', '', '', '', '', '')
 
@@ -1097,10 +1127,16 @@ commit transaction
 --select @w_error_26267,
 --       @w_st_complete,
 --       @w_error
- 
 
 
- 
+
+
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_rehire] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON dbo.usp_upd_hmpl_rehire TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_rehire', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_upd_hmpl_rehire >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_upd_hmpl_rehire >>>'
 GO

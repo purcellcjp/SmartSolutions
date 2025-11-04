@@ -58,7 +58,6 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                    varchar(255)        = 'Begin Procedure'
-    DECLARE @v_debug							varchar(8000)       = ''
     DECLARE @v_single_quote						char(01)            = char(39)
 
     DECLARE @v_END_OF_TIME_DATE                 datetime            = '29991231'
@@ -86,7 +85,6 @@ BEGIN
 	DECLARE @v_PAY_BASIS_CODE					char(01)			= '9'    -- 9 = Not Applicable  -- 10/29/2025 looking up current value to bring forward
     DECLARE @v_POSITION_OVERTIME_STATUS_CODE    char(02)            = '99'
     DECLARE @v_EMPTY_SPACE                      char(01)            = ''
-    DECLARE @v_CR_LF                            char(02)             = CHAR(13) + CHAR(10)
 
     DECLARE @ErrorNumber                        varchar(10)
     DECLARE @ErrorMessage                       nvarchar(4000)
@@ -143,6 +141,9 @@ BEGIN
     DECLARE @w_tm_pd_hrs                        float
 	DECLARE @v_calc_fte							float
 
+    -- Error message descriptions for procedure usp_hsp_upd_hasg_reassign
+    DECLARE @w_error_number                     INT             = 0
+    DECLARE @w_em_msg                           char(50)
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                             int             = 0
@@ -152,6 +153,18 @@ BEGIN
     DECLARE @file_source                        char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
     DECLARE @position_title				        char(50)        -- DBShrpn..emp_assignment.user_text_2
     DECLARE @job_or_pos_id                      char(10)        = @v_EMPTY_SPACE
+
+    -- Table variable to store results from procedure usp_hsp_upd_hasg_reassign
+    DECLARE @tbl_sp_err TABLE
+    (
+          w_error_number                        int                 NULL
+        , w_jp_beg_date                         datetime            NULL
+        , w_jp_eff_date                         datetime            NULL
+        , w_jp_end_date                         datetime            NULL
+        , asg_new_assign_id                     char(10)            NULL
+        , asg_new_beg_date                      datetime            NULL
+        , asg_new_end_date                      datetime            NULL
+    )
 
 
     CREATE TABLE #tbl_ghr_msg
@@ -596,10 +609,10 @@ BEGIN
                 IF (@cur_ea_job_or_pos_id <> @job_or_pos_id)
                     BEGIN
 
+                        /*
                         SET @v_step_position = 'Emp Assignment - Reassign Debug'
 
                         -- Debug
-
                         INSERT DBShrpn.dbo.ghr_debug (text_line)
                         VALUES ('EXEC DBShrpn.dbo.usp_hsp_upd_hasg_reassign')
                         , ('  @asg_cur_id                  = ' + @v_single_quote + RTRIM(@emp_id)                                        + @v_single_quote)
@@ -644,10 +657,22 @@ BEGIN
                         , (', @w_new_org_group             = ' +                   CONVERT(varchar, @v_ORGANIZATION_GROUP_ID, 0)                          )
                         , (', @app_new_shift_rate_id       = ' + @v_single_quote + @v_EMPTY_SPACE                                        + @v_single_quote)
                         , (' ');
-
+                        */
 
                         SET @v_step_position = 'Emp Assignment - Reassign'
 
+                        -- Clear any previous messages
+                        DELETE FROM @tbl_sp_err
+
+                        INSERT INTO @tbl_sp_err (
+                                                  w_error_number
+                                                , w_jp_beg_date
+                                                , w_jp_eff_date
+                                                , w_jp_end_date
+                                                , asg_new_assign_id
+                                                , asg_new_beg_date
+                                                , asg_new_end_date
+                                                )
                         EXEC DBShrpn.dbo.usp_hsp_upd_hasg_reassign
                               @asg_cur_id                  = @emp_id                                    -- char(15)
                             , @asg_cur_assign_to           = @v_ASSIGNED_TO_CODE                        -- char(01)
@@ -691,6 +716,39 @@ BEGIN
                             , @w_new_org_group             = @v_ORGANIZATION_GROUP_ID                   -- int
                             , @app_new_shift_rate_id       = @v_EMPTY_SPACE                             -- char(10)
 
+                        -- Raise error if there any error number is returned by procedure
+                        -- Note: The other error codes in the procedure will be raised there
+                        SELECT @w_error_number = ISNULL(w_error_number, -1)
+                        FROM @tbl_sp_err
+
+                        IF (@w_error_number <> 0)
+                        BEGIN
+                            -- Translate error codes from procedure
+                            SELECT @w_em_msg = CASE @w_error_number
+                                                 WHEN 26177 THEN '26177 - Employee is already assigned to this job/position.'
+                                                 WHEN 26178 THEN '26178 - Employee is already assigned to this job/position.'
+                                                 WHEN 26132 THEN '26132 - Invalid job/position.'
+                                                 WHEN 26129 THEN '26129 - Job exists in the future.'
+                                                 WHEN 26130 THEN '26130 - New begin date is not within job''s end date.'
+                                                 WHEN 26131 THEN '26131 - New end date is not within job''s end date.'
+                                                 WHEN 26133 THEN '26133 - Position exists in the future.'
+                                                 WHEN 26138 THEN '26138 - New begin date is not within position''s end date.'
+                                                 WHEN 26139 THEN '26139 - New end date is not within position''s end date.'
+                                                 WHEN 26082 THEN '26082 - Assignments to this position are not allowed.'
+                                                 WHEN 26007 THEN '26007 - Position incumbent''s exceeded but you may continue.'
+                                                 WHEN 26008 THEN '26008 - Position incumbent''s exceeded but you not may continue.'
+                                                 WHEN 26005 THEN '26005 - Position FTE''s exceeded but you may continue.'
+                                                 WHEN 26006 THEN '26006 - Position FTE''s exceeded but you not may continue.'
+                                                 ELSE 'Unidentified error'
+                                              END
+                            -- Return error back to catch block
+                            RAISERROR (
+                                       @w_em_msg
+                                      , 16
+                                      , 1
+                                      )
+                        END
+
 
                         ---------------------------------------------------------------------------
                         -- Update position title
@@ -724,7 +782,7 @@ BEGIN
 
                 ELSE
                     BEGIN
-
+                        /*
                         SET @v_step_position = 'Emp Assignment - Update Assignment Debug'
 
                         -- DEBUG
@@ -842,7 +900,7 @@ BEGIN
                         , (', @w_asg_life_end_date           = ' + @v_single_quote + CONVERT(varchar, @v_END_OF_TIME_DATE, 112)                              + @v_single_quote)         -- datetime
                         , (', @emp_chgstamp                  = ' +                   CONVERT(varchar, @cur_ea_chgstamp, 0)                                                    )         -- smallint
                         , (' ');
-
+                        */
 
 
                         SET @v_step_position = 'Emp Assignment - Update Assignment'
@@ -854,7 +912,7 @@ BEGIN
                             , @employee_identifier           = @emp_id                                        -- char(15)
                             , @emp_asgmt_assigned_to_code    = @v_ASSIGNED_TO_CODE                            -- char(01)
                             , @emp_asgmt_job_or_pos_id       = @job_or_pos_id                                 -- char(10)
-                            , @emp_asgmt_eff_date            = @cur_ea_eff_date                                    -- datetime
+                            , @emp_asgmt_eff_date            = @cur_ea_eff_date                               -- datetime
                             , @emp_asgmt_next_eff_date       = @v_END_OF_TIME_DATE                            -- datetime
                             , @emp_asgmt_prior_eff_dt        = @cur_ea_eff_date                               -- datetime
                             , @emp_asgmt_begin_date          = @cur_ea_begin_date                             -- datetime ** since assignment didn't change then get original begin date

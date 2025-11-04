@@ -1,15 +1,44 @@
-USE [DBShrpn]
-GO
-/****** Object:  StoredProcedure [dbo].[usp_upd_hmpl_inactivate]    Script Date: 4/1/2025 4:33:00 PM ******/
-SET ANSI_NULLS OFF
-GO
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_inactivate') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_upd_hmpl_inactivate
+    IF OBJECT_ID(N'dbo.usp_upd_hmpl_inactivate') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_upd_hmpl_inactivate >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_upd_hmpl_inactivate >>>'
+END
+go
+SET ANSI_NULLS ON
+go
 SET QUOTED_IDENTIFIER OFF
 GO
 
 
+/*************************************************************************************
+
+   SP Name:      usp_upd_hmpl_inactivate
+
+   Description:  Executes SmartStream rehire process
+
+                 Cloned from DBShrpn..hsp_upd_hmpl_inactivate in order to use with
+                 HCM Interface position title update procedure DBShrpn..usp_ins_position_title.
+
+   Parameters:
 
 
+   Tables
 
+   Example:
+      exec usp_upd_hmpl_inactivate ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hmpl_inactivate
+                                                    1) Disabled authentication
+
+************************************************************************************/
 
 CREATE procedure [dbo].[usp_upd_hmpl_inactivate]
 
@@ -23,7 +52,7 @@ CREATE procedure [dbo].[usp_upd_hmpl_inactivate]
 		@p_pay_status_code				char(1),
         @p_last_day_paid                datetime,
 		@p_old_chgstamp					smallint
-)		
+)
 
 as
 
@@ -61,7 +90,7 @@ if @p_last_day_paid <> "" and @p_last_day_paid <> @w_end_of_time
     End
 
 update emp_status
-		set	next_change_date 		= @p_inactivate_date,		
+		set	next_change_date 		= @p_inactivate_date,
 			chgstamp				= @w_new_chgstamp
 		where	emp_id = @p_emp_id
 		and	status_change_date = @p_status_change_date
@@ -73,10 +102,10 @@ if @@rowcount = 0
 			where emp_id = @p_emp_id
 			and status_change_date = @p_status_change_date)
 --SYBSQL 				raiserror 20001 "Row updated by another user."
-          raiserror ('20001 Row updated by another user.',16,0) 
+          raiserror ('20001 Row updated by another user.',16,0)
 		else
 --SYBSQL 			raiserror 20002 "Row does not exist."
-          raiserror ('20002 Row does not exist.',16,0) 
+          raiserror ('20002 Row does not exist.',16,0)
 			rollback transaction
 			return
 	end
@@ -114,11 +143,11 @@ if @p_allow_emp_pay_updates_ind = "Y"
 			@p_inactivate_date,
 			@p_emp_id,
 			@p_pay_status_code
-		
+
 		if @w_return_status = -1
 			begin
 --SYBSQL 				raiserror 26097 "Employee has corrupt Employee Employment info."
-          raiserror ('26097 Employee has corrupt Employee Employment info.',16,0) 
+          raiserror ('26097 Employee has corrupt Employee Employment info.',16,0)
 				rollback transaction
 				return
 			end
@@ -174,10 +203,13 @@ declare @W_MS             char(3)
 
 
 commit transaction
- 
 
 
- 
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_inactivate] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON [dbo].[usp_upd_hmpl_inactivate] TO  SCHEMA OWNER
+GO
+IF OBJECT_ID(N'dbo.usp_upd_hmpl_inactivate', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_upd_hmpl_inactivate >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_upd_hmpl_inactivate >>>'
 GO

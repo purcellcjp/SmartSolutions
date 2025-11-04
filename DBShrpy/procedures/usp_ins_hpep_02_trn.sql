@@ -1,17 +1,48 @@
-USE [DBShrpy]
-GO
-
-/****** Object:  StoredProcedure [dbo].[usp_ins_hpep_02_trn]    Script Date: 6/10/2025 11:52:47 AM ******/
-SET ANSI_NULLS OFF
-GO
-
+USE DBShrpy
+go
+IF OBJECT_ID(N'dbo.usp_ins_hpep_02_trn') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_ins_hpep_02_trn
+    IF OBJECT_ID(N'dbo.usp_ins_hpep_02_trn') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_hpep_02_trn >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_hpep_02_trn >>>'
+END
+go
+SET ANSI_NULLS ON
+go
 SET QUOTED_IDENTIFIER OFF
 GO
 
+/*************************************************************************************
+
+   SP Name:      usp_ins_hpep_02_trn
+
+   Description:  Processes trasnfers from one tax employer to another.
+
+                 (THIS SP PERFORMS ALL PROCESSING NECESSARY TO TABLES WITHIN 'HRPY')
+
+                 Cloned from SmartStream procedure DBShrpy..hsp_ins_hpep_02
+                 in order to use with HCM Interface.
+
+   Parameters:
 
 
+   Tables
 
-CREATE PROCEDURE [dbo].[usp_ins_hpep_02_trn]
+   Example:
+      exec usp_ins_hpep_02_trn ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpy..hsp_ins_hpep_02
+                                                    1) Disabled authentication
+                                                    2) Replaced all double quotes with single quote
+
+************************************************************************************/
+
+CREATE OR ALTER PROCEDURE [dbo].[usp_ins_hpep_02_trn]
        (@p_emp_id			char(15),
 	@p_old_empl_id			char(10),
 	@p_new_empl_id			char(10),
@@ -82,7 +113,7 @@ AND	empl_id	= @p_old_empl_id
 AND	cal_yr	= @p_calendar_year
 
 OPEN cursor1
-	
+
 FETCH	cursor1
 INTO	@w_pay_element_id,
 	@w_yr_to_date_monetary_amt,
@@ -98,7 +129,7 @@ INTO	@w_pay_element_id,
 WHILE @@fetch_status = 0
    BEGIN
 	select @w_pmt_detail_type_code = '1'
-	
+
 	SELECT	@w_empl_xfer_opt_code		= empl_xfer_opt_code,
 		@w_pay_element_type_code	= pay_element_type_code
 	  FROM	DBShrpn..pay_element
@@ -117,9 +148,9 @@ WHILE @@fetch_status = 0
 		if @@rowcount = 0
 		   BEGIN
 --SYBSQL 			raiserror 30000 'Pay Element or Aggregate missing'
-          raiserror ('30000 Pay Element or Aggregate missing',16,0) 
+          raiserror ('30000 Pay Element or Aggregate missing',16,0)
 			CLOSE cursor1
-			deallocate cursor1			
+			deallocate cursor1
 			return
 		   END
 	   END
@@ -136,7 +167,7 @@ WHILE @@fetch_status = 0
 			WHERE	emp_id		= @p_emp_id
 			AND	pmt_type_code	= '06'
 			AND	pay_pd_id	=
-			-- R6.5.02m - Solution#412371 Begin                            
+			-- R6.5.02m - Solution#412371 Begin
 			--		          (SELECT max(pay_pd_id)
                 				  (SELECT convert (char,max(convert(int, pay_pd_id)))
 			-- R6.5.02m - Solution#412371 End
@@ -162,7 +193,7 @@ WHILE @@fetch_status = 0
 						  (SELECT max(seq_ctrl_nbr)
 			 			   FROM	  emp_pmt
 			 			   WHERE  emp_id	= @p_emp_id
-						   AND	  seq_ctrl_yr	= @p_calendar_year)		
+						   AND	  seq_ctrl_yr	= @p_calendar_year)
 
 			if @w_seq_control_nbr is null
 		  	   BEGIN
@@ -373,8 +404,14 @@ select	@w_emp_adj_pmt_created,
 	@w_new_pay_period_id
 */
 
- 
+
 GO
 
-ALTER AUTHORIZATION ON [dbo].[usp_ins_hpep_02_trn] TO  SCHEMA OWNER 
+ALTER AUTHORIZATION ON dbo.usp_ins_hpep_02_trn TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_ins_hpep_02_trn', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_hpep_02_trn >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_hpep_02_trn >>>'
 GO

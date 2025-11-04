@@ -1,10 +1,42 @@
-USE [DBShrpn]
-GO
+USE DBShrpn
+go
+IF OBJECT_ID(N'dbo.usp_ins_hpcg_hepy') IS NOT NULL
+BEGIN
+    DROP PROCEDURE dbo.usp_ins_hpcg_hepy
+    IF OBJECT_ID(N'dbo.usp_ins_hpcg_hepy') IS NOT NULL
+        PRINT N'<<< FAILED DROPPING PROCEDURE dbo.usp_ins_hpcg_hepy >>>'
+    ELSE
+        PRINT N'<<< DROPPED PROCEDURE dbo.usp_ins_hpcg_hepy >>>'
+END
+go
+SET ANSI_NULLS ON
+go
+/*************************************************************************************
 
-SET ANSI_NULLS OFF
-GO
-SET QUOTED_IDENTIFIER OFF
-GO
+   SP Name:      usp_ins_hpcg_hepy
+
+   Description:  Builds pay elements for an associate in the status update process
+                 executed in procedure DBShrpn..usp_ins_status_change.
+
+                 Cloned from SmartStream procedure DBShrpn..hsp_ins_hpcg_hepy
+                 in order to use with HCM Interface.
+
+   Parameters:
+
+
+   Tables
+
+   Example:
+      exec usp_ins_hpcg_hepy ....
+
+   Revision history:
+      version  date        developer   SCR      description
+      -------  ----------  ---------   -----    ------------------------------------
+      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_ins_hpcg_hepy
+                                                    1) Disabled authentication
+                                                    2) Replaced all double quotes with single quote
+
+************************************************************************************/
 
 
 CREATE procedure [dbo].[usp_ins_hpcg_hepy]
@@ -82,8 +114,8 @@ select @W_ACTION_DATETIME = convert(char(10), getdate(), 111) + '-' +
 /* ==================================================================== */
 /* Initialize variables                                                 */
 /* ==================================================================== */
-select @w_eot = "12/31/2999"
-select @w_error_return_code = ""
+select @w_eot = '12/31/2999'
+select @w_error_return_code = ''
 select @w_pe_count = 0
 
 
@@ -205,8 +237,8 @@ While @@fetch_status = 0
              If employee has the PE and eff date < hire date,
              update next_eff_date on prior row, set prior_eff_date for new row.
              Only want to reestablish PEs which are stopped before @p_as_of_date.
-             [R6.5.03M-ALS#563565: corrected comment-removed "(stop_date <> @w_eot)"
-              and replaced with "before @p_as_of_date"]
+             [R6.5.03M-ALS#563565: corrected comment-removed '(stop_date <> @w_eot)'
+              and replaced with 'before @p_as_of_date']
             ***********************************************************************/
             if exists (select * from emp_pay_element
                        where emp_id         = @p_emp_id
@@ -362,9 +394,9 @@ While @@fetch_status = 0
                    @w_epe_prior_eff_date,
                    @w_eot,
                    @w_inact_by_pay_element_ind,
-                   "",
+                   '',
                    @w_schedule_code,
-                   "",
+                   '',
                    0,
                    0,
                    0,
@@ -372,21 +404,21 @@ While @@fetch_status = 0
                    0,
                    0,
                    @w_rt_tbl_id,
-                   "",
-                   "",
-                   "",
-                   "",
-                   "",
-                   "",
-                   "",
-                   "",
+                   '',
+                   '',
+                   '',
+                   '',
+                   '',
+                   '',
+                   '',
+                   '',
                    @w_limit_amt,
                    0,
-                   "",
-                   "",
-                   "",
-                   "",
-                   "",
+                   '',
+                   '',
+                   '',
+                   '',
+                   '',
                    0,
                    0,
                    0,
@@ -394,23 +426,23 @@ While @@fetch_status = 0
                    0,
                    0,
                    0,
-                   "",
-                   "",
-                   "",
+                   '',
+                   '',
+                   '',
                    @w_eot,
                    @w_eot,
-                   "N",
-                   "N",
-                   "",
-                   "",
-                   "N",
-                   "",
-                   "",
-                   "0",
+                   'N',
+                   'N',
+                   '',
+                   '',
+                   'N',
+                   '',
+                   '',
+                   '0',
                    0,
                    @w_eot,      /* r71m - 578919 in 2006 reg pack 576240 */
-                   "N",         /* r71m - 581591 in 582025 */
-                   "N")         /* r71m - 581591 in 582025 */
+                   'N',         /* r71m - 581591 in 582025 */
+                   'N')         /* r71m - 581591 in 582025 */
 
         if @@error <> 0
           begin
@@ -532,10 +564,10 @@ deallocate est_pecg_pe_cursor
 /* deposit pay element was established on hire, notify the user.            */
 if @w_direct_deposit_ind  = 'Y'
   begin
-    if @w_error_return_code = ""
-        select @w_error_return_code = "50436" + "/" + @p_new_pecg_id /* warning */
+    if @w_error_return_code = ''
+        select @w_error_return_code = '50436' + '/' + @p_new_pecg_id /* warning */
     else
-        select @w_error_return_code = @w_error_return_code + "/" + "50436" + "/" + @p_new_pecg_id /* warning */
+        select @w_error_return_code = @w_error_return_code + '/' + '50436' + '/' + @p_new_pecg_id /* warning */
   end
 
 /* If there are future active pay elements that the user has indicated to   */
@@ -548,10 +580,10 @@ if exists (select a.pay_element_id
               and a.establish_on_hire_ind   = 'Y'
               and b.start_date              > @p_as_of_date)
   begin
-    if @w_error_return_code = ""
-	select @w_error_return_code = "50433" + "/" + @p_new_pecg_id /* warning */
+    if @w_error_return_code = ''
+	select @w_error_return_code = '50433' + '/' + @p_new_pecg_id /* warning */
     else
-	select @w_error_return_code = @w_error_return_code + "/" + "50433" + "/" + @p_new_pecg_id /* warning */
+	select @w_error_return_code = @w_error_return_code + '/' + '50433' + '/' + @p_new_pecg_id /* warning */
   end
 
 /* If there are stopped pay elements that the user has indicated to */
@@ -566,10 +598,10 @@ if exists (select a.pay_element_id
               and b.next_eff_date           > @p_as_of_date
               and b.stop_date               < @p_as_of_date)
   begin
-    if @w_error_return_code = ""
-	select @w_error_return_code = "520106" + "/" + @p_new_pecg_id /* warning */
+    if @w_error_return_code = ''
+	select @w_error_return_code = '520106' + '/' + @p_new_pecg_id /* warning */
     else
-	select @w_error_return_code = @w_error_return_code + "/" + "520106" + "/" + @p_new_pecg_id /* warning */
+	select @w_error_return_code = @w_error_return_code + '/' + '520106' + '/' + @p_new_pecg_id /* warning */
   end
 
 /* If the employee being hired is designated as a pensioner in the U.S., */
@@ -587,10 +619,10 @@ if @w_employer_taxing_ctry_code = 'US'
                     and b.pay_element_type_code   = '1'
                     and b.earn_type_code          = '6')
         begin
-          if @w_error_return_code = ""
-	    select @w_error_return_code = "50435" + "/" + @p_new_pecg_id /* warning */
+          if @w_error_return_code = ''
+	    select @w_error_return_code = '50435' + '/' + @p_new_pecg_id /* warning */
           else
-            select @w_error_return_code = @w_error_return_code + "/" + "50435" + "/" + @p_new_pecg_id /* warning */
+            select @w_error_return_code = @w_error_return_code + '/' + '50435' + '/' + @p_new_pecg_id /* warning */
         end
   end
 
@@ -603,17 +635,20 @@ end_proc:
 
 if @w_error = 'Y'
   begin
---SYBSQL    raiserror 520100  "Auto Setup Failed"
+--SYBSQL    raiserror 520100  'Auto Setup Failed'
           raiserror ('520100  Auto Setup Failed',16,0)
    rollback transaction
   end
 else
    commit transaction
 
-
-
-
-
 GO
-ALTER AUTHORIZATION ON [dbo].[usp_ins_hpcg_hepy] TO  SCHEMA OWNER
+
+ALTER AUTHORIZATION ON dbo.usp_ins_hpcg_hepy TO  SCHEMA OWNER
+GO
+
+IF OBJECT_ID(N'dbo.usp_ins_hpcg_hepy', N'P') IS NOT NULL
+    PRINT N'<<< CREATED PROCEDURE dbo.usp_ins_hpcg_hepy >>>'
+ELSE
+    PRINT N'<<< FAILED CREATING PROCEDURE dbo.usp_ins_hpcg_hepy >>>'
 GO

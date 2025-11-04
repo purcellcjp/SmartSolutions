@@ -19,7 +19,20 @@ GO
 /*************************************************************************************
     SP Name:       usp_ins_status_change
 
-    Description:
+    Description:    Updates the SmartStream associate status utilizing the applicable SmartStream procedures.
+
+                    Status is updated based on the code from HCM #ghr_employee_events_temp.emp_status_code:
+
+                    Code    Description     SmartStream Procedure
+                    ----    -----------     ---------------------
+                    RH      Rehire          DBShrpn.dbo.usp_upd_hmpl_rehire
+                                            DBShrpn.dbo.usp_ins_hpcg_hepy
+
+                    RA      Reactivate      DBShrpn.dbo.usp_upd_hmpl_reactivate
+
+                    I       Inactivate      DBShrpn.dbo.usp_upd_hmpl_inactivate
+
+                    T       Terminate       DBShrpn.dbo.usp_upd_hmpl_terminate
 
 
     Parameters:
@@ -58,13 +71,12 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                    varchar(255)        = 'Begin Procedure'
-    DECLARE @v_debug                            varchar(4000)       = ''    -- used to save SQL statements to table
     DECLARE @v_single_quote                     char(01)            = char(39)
-    declare @v_cr_lf                            char(4)             = char(10) + char(13)
 
     DECLARE @v_EVENT_ID_STATUS_CHANGE           char(2)             = '05'
     DECLARE @v_END_OF_TIME_DATE                 datetime            = '29991231'
     DECLARE @v_BEG_OF_TIME_DATE                 datetime            = '19000101'
+    DECLARE @v_EMPTY_SPACE                      char(01)            = ''
 
     DECLARE @v_ACTIVITY_STATUS_GOOD             char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_WARNING          char(2)             = '01'
@@ -103,7 +115,7 @@ BEGIN
     DECLARE @w_pd_salary_tm_pd_id       	    char(05)
     DECLARE @old_eff_date               	    datetime
 
-    DECLARE @pay_frequency_code         	    char(05) = ''
+    DECLARE @pay_frequency_code         	    char(05) = @v_EMPTY_SPACE
     DECLARE @rehire_override            	    CHAR(01)
 
     DECLARE @i_empl_id                  	    char(10)
@@ -145,7 +157,7 @@ BEGIN
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                 int             = 0
-    DECLARE @emp_id                                 char(15)        = ''
+    DECLARE @emp_id                                 char(15)        = @v_EMPTY_SPACE
     DECLARE @eff_date                               char(10)        = '29991231'
     DECLARE @first_name                      	char(25)
     DECLARE @first_middle_name               	char(25)
@@ -293,8 +305,8 @@ BEGIN
              , t.national_id_type_code
              , t.national_id
              , t.organization_group_id
-             , ''       -- t.organization_chart_name
-             , ''       -- t.organization_unit_name
+             , @v_EMPTY_SPACE       -- t.organization_chart_name
+             , @v_EMPTY_SPACE       -- t.organization_unit_name
              , t.emp_status_classn_code
              , t.position_title
              , t.employment_type_code
@@ -391,7 +403,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Validate Effective Date
                 ---------------------------------------------------------------------------
-                -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
+                -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
                 IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
@@ -414,9 +426,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Invalid Effective Date'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -444,17 +456,15 @@ BEGIN
                                                 WHEN 'A' THEN 'Active'
                                                 WHEN 'I' THEN 'Inactive'
                                                 WHEN 'T' THEN 'Terminated'
-                                                ELSE ''
+                                                ELSE @v_EMPTY_SPACE
                                             END
                     , @w_ee_eff_date = eempl.eff_date
                     , @individual_id = emp.individual_id
-
                 FROM DBShrpn.dbo.employee emp
                 JOIN DBShrpn.dbo.uvu_emp_status_most_rec stat ON
                     (emp.emp_id = stat.emp_id)
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
                     (emp.emp_id = eempl.emp_id)
-
                 WHERE (emp.emp_id = @emp_id)
 
                 IF (@@ROWCOUNT = 0)
@@ -473,9 +483,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Employee does not exist'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -511,7 +521,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @emp_id
                             , @p_msg_p2             = @empl_id
                             , @p_msg_desc           = 'Invalid Employer ID - bypassing record.'
@@ -552,7 +562,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @eff_date
                             , @p_msg_p2             = @w_msg_text_2
                             , @p_msg_desc           = 'New Status Effective date must be greater than current effective date.'
@@ -592,7 +602,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @eff_date
                             , @p_msg_p2             = @w_msg_text_2
                             , @p_msg_desc           = 'Transfer date must be greater than default position effective date.'
@@ -629,7 +639,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @eff_date
                             , @p_msg_p2             = @w_msg_text_2
                             , @p_msg_desc           = 'Rehire date must be greater than current employee employment effective date.'
@@ -668,7 +678,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @emp_id
                             , @p_msg_p2             = @pay_group_id
                             , @p_msg_desc           = 'Invalid pay group id.'
@@ -715,7 +725,7 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
                                     , @p_msg_p2             = @w_msg_text_2
                                     , @p_msg_desc           = 'The rehire date must be greater than the termination date - By passing the employee.'
@@ -756,7 +766,7 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
                                     , @p_msg_p2             = @w_msg_text_2
                                     , @p_msg_desc           = 'The Reactivation date must be greater than the inactivation date - By passing the employee.'
@@ -829,45 +839,33 @@ BEGIN
                         IF (@w_curr_status = 'T')
                             BEGIN
 
-                                SET @v_step_position = 'Rehire RH ' + @w_curr_status
-
-                                SELECT   @i_eff_date = ea.eff_date
-                                FROM DBShrpn.dbo.emp_assignment   ea
-                                WHERE emp_id  = @emp_id
-                                AND  prime_assignment_ind   =   'Y'
-                                AND  eff_date = (
-                                                    SELECT MAX(eff_date)
-                                                    FROM DBShrpn.dbo.emp_assignment t
-                                                    WHERE (t.emp_id =   ea.emp_id)
-                                                    AND (prime_assignment_ind = 'Y')
-                                                )
                                 /*
                                 -- Debug
-                                SET @v_debug = 'EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire'
-                                                                +  ' @p_emp_id =                 = ' + @v_single_quote + RTRIM(@emp_id) + @v_single_quote
-                                                                + ', @p_previous_emp_id          = ' + @v_single_quote + RTRIM(@w_previous_emp_id) + @v_single_quote
-                                                                + ', @p_status_change_date       = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112) + @v_single_quote
-                                                                + ', @p_new_empl_id              = ' + @v_single_quote + RTRIM(@empl_id) + @v_single_quote
-                                                                + ', @p_new_tax_entity_id        = ' + @v_single_quote + RTRIM(@tax_entity_id) + @v_single_quote
-                                                                + ', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112) + @v_single_quote
-                                                                + ', @p_new_classn_cd            = ' + @v_single_quote + RTRIM(@emp_status_classn_code) + @v_single_quote
-                                                                + ', @p_new_reason_cd            = ' + @v_single_quote + ' ' + @v_single_quote
-                                                                + ', @p_new_assigned_to_code     = ' + @v_single_quote + RTRIM(@w_assigned_to_code) + @v_single_quote
-                                                                + ', @p_new_job_or_pos_id        = ' + @v_single_quote + RTRIM(@w_job_or_pos_id) + @v_single_quote
-                                                                + ', @p_new_pay_group_id         = ' + @v_single_quote + RTRIM(@pay_group_id) + @v_single_quote
-                                                                + ', @p_new_time_reporting_meth  = ' + @v_single_quote + RTRIM(@time_reporting_meth_code) + @v_single_quote
-                                                                + ', @p_job_end_date             = ' + @v_single_quote + CONVERT(char(8), @w_job_end_date, 112) + @v_single_quote
-                                                                + ', @p_position_end_date        = ' + @v_single_quote + CONVERT(char(8), @w_position_end_date, 112) + @v_single_quote
-                                                                + ', @p_taxing_country           = ' + @v_single_quote + RTRIM(@w_taxing_country_code) + @v_single_quote
-                                                                + ', @p_new_pay_elem_ctrl_grp_id = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id) + @v_single_quote
-                                                                + ', @p_allow_pay_updates_ind    = ' + @v_single_quote + 'Y' + @v_single_quote
-                                                                + ', @p_old_chgstamp             = ' + @v_single_quote + CONVERT(varchar(10), @w_old_chgstamp) + @v_single_quote
-
+                                SET @v_step_position = 'Rehire RH ' + @w_curr_status + ' DEBUG'
                                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES (@v_debug)
+                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire')
+                                , ( ' @p_emp_id =                 = ' + @v_single_quote + RTRIM(@emp_id)                                + @v_single_quote)
+                                , (', @p_previous_emp_id          = ' + @v_single_quote + RTRIM(@w_previous_emp_id)                     + @v_single_quote)
+                                , (', @p_status_change_date       = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)  + @v_single_quote)
+                                , (', @p_new_empl_id              = ' + @v_single_quote + RTRIM(@empl_id)                               + @v_single_quote)
+                                , (', @p_new_tax_entity_id        = ' + @v_single_quote + RTRIM(@tax_entity_id)                         + @v_single_quote)
+                                , (', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)            + @v_single_quote)
+                                , (', @p_new_classn_cd            = ' + @v_single_quote + RTRIM(@emp_status_classn_code)                + @v_single_quote)
+                                , (', @p_new_reason_cd            = ' + @v_single_quote + @v_EMPTY_SPACE                                + @v_single_quote)
+                                , (', @p_new_assigned_to_code     = ' + @v_single_quote + RTRIM(@w_assigned_to_code)                    + @v_single_quote)
+                                , (', @p_new_job_or_pos_id        = ' + @v_single_quote + RTRIM(@w_job_or_pos_id)                       + @v_single_quote)
+                                , (', @p_new_pay_group_id         = ' + @v_single_quote + RTRIM(@pay_group_id)                          + @v_single_quote)
+                                , (', @p_new_time_reporting_meth  = ' + @v_single_quote + RTRIM(@time_reporting_meth_code)              + @v_single_quote)
+                                , (', @p_job_end_date             = ' + @v_single_quote + CONVERT(char(8), @w_job_end_date, 112)        + @v_single_quote)
+                                , (', @p_position_end_date        = ' + @v_single_quote + CONVERT(char(8), @w_position_end_date, 112)   + @v_single_quote)
+                                , (', @p_taxing_country           = ' + @v_single_quote + RTRIM(@w_taxing_country_code)                 + @v_single_quote)
+                                , (', @p_new_pay_elem_ctrl_grp_id = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id)               + @v_single_quote)
+                                , (', @p_allow_pay_updates_ind    = ' + @v_single_quote + 'Y'                                           + @v_single_quote)
+                                , (', @p_old_chgstamp             = ' + @v_single_quote + CONVERT(varchar, @w_old_chgstamp, 0)         + @v_single_quote)
                                 , (' ');
                                 */
 
+                                SET @v_step_position = 'Rehire RH ' + @w_curr_status
 
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire
                                       @p_emp_id                   = @emp_id
@@ -877,7 +875,7 @@ BEGIN
                                     , @p_new_tax_entity_id        = @tax_entity_id
                                     , @p_new_hire_date            = @w_eff_date
                                     , @p_new_classn_cd            = @emp_status_classn_code
-                                    , @p_new_reason_cd            = ' '
+                                    , @p_new_reason_cd            = @v_EMPTY_SPACE
                                     , @p_new_assigned_to_code     = @w_assigned_to_code             -- Hardcoded to 'P'
                                     , @p_new_job_or_pos_id        = @w_job_or_pos_id
                                     , @p_new_pay_group_id         = @pay_group_id
@@ -889,23 +887,24 @@ BEGIN
                                     , @p_allow_pay_updates_ind    = 'Y'
                                     , @p_old_chgstamp             = @w_old_chgstamp                 --   0
 
-                                /*
-                                set @v_debug = 'EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy '
-                                                                + '@p_emp_id             = ' + @v_single_quote + RTRIM(@emp_id) + @v_single_quote
-                                                                + ', @p_empl_id          = ' + @v_single_quote + RTRIM(@empl_id) + @v_single_quote
-                                                                + ', @p_new_pay_group_id = ' + @v_single_quote + RTRIM(@pay_group_id) + @v_single_quote
-                                                                + ', @p_new_pecg_id      = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id) + @v_single_quote
-                                                                + ', @p_as_of_date       = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112) + @v_single_quote
 
-                                INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES (@v_debug)
-                                , (' ');
-                                */
 
 
                                 ---------------------------------------------------------------------------
                                 -- Updates associate's pay elements
                                 ---------------------------------------------------------------------------
+                                /*
+                                INSERT DBShrpn.dbo.ghr_debug (text_line)
+                                VALUES()'EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy')
+                                , ('@p_emp_id             = ' + @v_single_quote + RTRIM(@emp_id)                        + @v_single_quote)
+                                , (', @p_empl_id          = ' + @v_single_quote + RTRIM(@empl_id)                       + @v_single_quote)
+                                , (', @p_new_pay_group_id = ' + @v_single_quote + RTRIM(@pay_group_id)                  + @v_single_quote)
+                                , (', @p_new_pecg_id      = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id)       + @v_single_quote)
+                                , (', @p_as_of_date       = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)    + @v_single_quote)
+                                , (' ');
+                                */
+
+                                -- Builds pay elements for rehired associate
                                 EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy
                                       @p_emp_id           = @emp_id
                                     , @p_empl_id          = @empl_id
@@ -917,21 +916,13 @@ BEGIN
                                 ---------------------------------------------------------------------------
                                 --   Update the Salary and Position Title in the Assignment Record
                                 ---------------------------------------------------------------------------
-                                SELECT @i_emp_id           = emp_id
-                                     , @i_assigned_to_code = assigned_to_code
-                                     , @i_job_or_pos_id    = job_or_pos_id
-                                     , @i_eff_date         = eff_date
-                                     , @i_next_eff_date    = next_eff_date
-                                     , @i_prior_eff_date   = prior_eff_date
-                                FROM DBShrpn.dbo.emp_assignment   ea
-                                WHERE (ea.emp_id             = @emp_id)
-                                AND (ea.prime_assignment_ind = 'Y')
-                                AND (ea.eff_date = (
-                                                    SELECT MAX(ea2.eff_date)
-                                                    FROM DBShrpn.dbo.emp_assignment ea2
-                                                    WHERE (ea2.emp_id               = ea.emp_id)
-                                                      AND (ea2.prime_assignment_ind = ea.prime_assignment_ind)
-                                                   ))
+                                SELECT @i_assigned_to_code = ea.assigned_to_code
+                                     , @i_job_or_pos_id    = ea.job_or_pos_id
+                                     , @i_eff_date         = ea.eff_date
+                                     , @i_next_eff_date    = ea.next_eff_date
+                                     , @i_prior_eff_date   = ea.prior_eff_date
+                                FROM DBShrpn.dbo.uvu_emp_assignment_most_rec ea
+                                WHERE (ea.emp_id = @emp_id)
 
 
                                 -- GOSL: HCM Salary data will not be extracted to SS
@@ -939,18 +930,18 @@ BEGIN
                                 SELECT @annual_salary               = 0.00
                                     , @i_hourly_rate_amt            = 0.00
                                     , @i_period_amt                 = 0.00
-                                    , @i_salary_change_type_code    = ''
-                                    , @i_work_tm_code               = ''
-                                    , @i_base_rate_tbl_id           = ''
-                                    , @i_base_rate_tbl_entry_code   = ''
-                                    , @i_standard_work_pd_id        = ''
+                                    , @i_salary_change_type_code    = @v_EMPTY_SPACE
+                                    , @i_work_tm_code               = @v_EMPTY_SPACE
+                                    , @i_base_rate_tbl_id           = @v_EMPTY_SPACE
+                                    , @i_base_rate_tbl_entry_code   = @v_EMPTY_SPACE
+                                    , @i_standard_work_pd_id        = @v_EMPTY_SPACE
                                     , @i_standard_work_hrs          = 0.00
-                                    , @i_pd_salary_tm_pd_id         = ''
+                                    , @i_pd_salary_tm_pd_id         = @v_EMPTY_SPACE
 
 
-
+                                -- Update Employee Assignemnt record post Rehire
                                 UPDATE DBShrpn.dbo.emp_assignment
-                                SET   annual_salary_amt        = CAST(@annual_salary_amt AS MONEY)
+                                SET   annual_salary_amt        = CAST(@annual_salary_amt AS money)
                                     , hourly_pay_rate          = @i_hourly_rate_amt
                                     , pd_salary_amt            = @i_period_amt
                                     , salary_change_type_code  = @i_salary_change_type_code
@@ -960,16 +951,16 @@ BEGIN
                                     , pd_salary_tm_pd_id       = @pay_frequency_code
                                     , standard_work_pd_id      = @i_standard_work_pd_id
                                     , standard_work_hrs        = @i_standard_work_hrs
-                                    , organization_group_id    = CAST(@organization_group_id AS INT)
+                                    , organization_group_id    = CAST(@organization_group_id AS int)
                                     , organization_chart_name  = @organization_chart_name
                                     , organization_unit_name   = @organization_unit_name
                                     , user_text_2              = @position_title
-                                WHERE emp_id         = @i_emp_id
-                                AND assigned_to_code = @i_assigned_to_code
-                                AND job_or_pos_id    = @i_job_or_pos_id
-                                AND eff_date         = @i_eff_date
-                                AND next_eff_date    = @i_next_eff_date
-                                AND prior_eff_date   = @i_prior_eff_date
+                                WHERE (emp_id           = @emp_id)
+                                  AND (assigned_to_code = @i_assigned_to_code)
+                                  AND (job_or_pos_id    = @i_job_or_pos_id)
+                                  AND (eff_date         = @i_eff_date)
+                                  AND (next_eff_date    = @i_next_eff_date)
+                                  AND (prior_eff_date   = @i_prior_eff_date)
 
 
                             END
@@ -990,9 +981,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
-                                    , @p_msg_p2             = ''
+                                    , @p_msg_p2             = @v_EMPTY_SPACE
                                     , @p_msg_desc           = 'Cannot rehire an employee if the current status is not terminated.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
@@ -1012,13 +1003,30 @@ BEGIN
                         IF (@w_curr_status = 'A')
                             BEGIN
 
+                                /*
+                                SET @v_step_position = @v_step_position + ' - Active DEBUG'
+                                INSERT DBShrpn.dbo.ghr_debug (text_line)
+                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate')
+                                , ('@p_emp_id                           = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
+                                , (', @p_status_change_date             = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
+                                , (', @p_inactivate_date                = ' + @v_single_quote + CONVERT(char(8), @w_eff_date)                       + @v_single_quote)
+                                , (', @p_new_reason                     = ' + @v_single_quote + @v_EMPTY_SPACE                                      + @v_single_quote)
+                                , (', @p_new_loa_expd_date              = ' + @v_single_quote + CONVERT(char(8), @v_END_OF_TIME_DATE, 112)          + @v_single_quote)
+                                , (', @p_new_classification_cd          = ' + @v_single_quote + RTRIM(@emp_status_classn_code)                      + @v_single_quote)
+                                , (', @p_allow_emp_pay_updates_ind      = ' + @v_single_quote + 'Y'                                                 + @v_single_quote)
+                                , (', @p_pay_status_code                = ' + @v_single_quote + @pay_status_code                                    + @v_single_quote)
+                                , (', @p_last_day_paid                  = ' + @v_single_quote + CONVERT(char(8), @v_BEG_OF_TIME_DATE, 112)          + @v_single_quote)
+                                , (', @p_old_chgstamp                   = ' + @v_single_quote + CONVERT(varchar, @w_old_chgstamp, 0)                + @v_single_quote)
+                                , (' ');
+                                */
+
                                 SET @v_step_position = @v_step_position + ' - Active'
 
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate
                                     @p_emp_id                    = @emp_id
                                     , @p_status_change_date        = @w_status_change_date
                                     , @p_inactivate_date           = @w_eff_date
-                                    , @p_new_reason                = ' '
+                                    , @p_new_reason                = @v_EMPTY_SPACE
                                     , @p_new_loa_expd_date         = @v_END_OF_TIME_DATE
                                     , @p_new_classification_cd     = @emp_status_classn_code
                                     , @p_allow_emp_pay_updates_ind = 'Y'
@@ -1045,7 +1053,7 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
                                     , @p_msg_p2             = @w_msg_text_2
                                     , @p_msg_desc           = 'Cannot inactivate associate if the current status is not active.'
@@ -1069,13 +1077,32 @@ BEGIN
                         IF (@w_curr_status IN ('A','I'))
                             BEGIN
 
-                                SET @v_step_position = @v_step_position + ' (''A'') or (''I'')'
+
 
                                 SELECT @pay_status_code = eempl.pay_status_code
                                     , @old_eff_date     = eempl.eff_date
                                 FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
                                 WHERE (emp_id = @emp_id)
 
+                                /*
+                                SET @v_step_position = @v_step_position + ' (''A'' or ''I'') - DEBUG'
+                                INSERT DBShrpn.dbo.ghr_debug (text_line)
+                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate')
+                                , ('@p_emp_id                       = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
+                                , (', @p_status_change_date         = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
+                                , (', @p_termination_date           = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                  + @v_single_quote)
+                                , (', @p_new_classn_cd              = ' + @v_single_quote + @emp_status_classn_code                             + @v_single_quote)
+                                , (', @p_date_of_death              = ' + @v_single_quote + CONVERT(char(8), @v_END_OF_TIME_DATE, 112)          + @v_single_quote)
+                                , (', @p_new_reason_code            = ' + @v_single_quote + RTRIM(@reason_code)                                 + @v_single_quote)
+                                , (', @p_new_pay_through_date       = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                  + @v_single_quote)
+                                , (', @p_new_rehire_conson          = ' + @v_single_quote + @consider_for_rehire_ind                            + @v_single_quote)
+                                , (', @p_pay_status_code            = ' + @v_single_quote + RTRIM(pay_status_code)                              + @v_single_quote)
+                                , (', @p_last_day_paid              = ' + @v_single_quote + CONVERT(char(8), @v_BEG_OF_TIME_DATE, 112)          + @v_single_quote)
+                                , (', @p_old_chgstamp               = ' + @v_single_quote + CONVERT(varchar, @w_old_chgstamp, 0)                + @v_single_quote)
+                                , (' ');
+                                */
+
+                                SET @v_step_position = @v_step_position + ' (''A'' or ''I'')'
 
                                 -- Note: proc needs temp tables #temp1 and #temp2 to work
                                 -- No transaction committ/rollbacks in this procedure
@@ -1111,7 +1138,7 @@ BEGIN
                         ELSE
                             BEGIN
                                 SET @msg_id = 'U00042'
-                                SET @v_step_position = @v_step_position + ' (''T'') ' + @msg_id
+                                SET @v_step_position = @v_step_position + ' (@v_EMPTY_SPACET@v_EMPTY_SPACE) ' + @msg_id
 
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id                  As msg_id
@@ -1125,9 +1152,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
-                                    , @p_msg_p2             = ''
+                                    , @p_msg_p2             = @v_EMPTY_SPACE
                                     , @p_msg_desc           = 'Cannot terminate an employee if the current status is not active or inactive.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
@@ -1164,7 +1191,7 @@ BEGIN
                             SELECT 1
                             FROM #ghr_employee_events_temp t
                             WHERE (t.event_id = @v_EVENT_ID_STATUS_CHANGE)
-                            AND (t.aud_id <> @aud_id)   -- 
+                            AND (t.aud_id <> @aud_id)   --
                             AND (t.emp_id = @emp_id)
                             AND (t.emp_status_code = 'RH')
                         )
@@ -1186,7 +1213,7 @@ BEGIN
                             BEGIN  --2
                                 SET @v_step_position = 'Rehire RA Inactive'
 
-                                -- Note: This proceure does not create a new employee assignment record
+                                -- Note: This procedure does not create a new employee assignment record
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate
                                       @p_emp_id                    = @emp_id
                                     , @p_status_change_date        = @w_status_change_date
@@ -1206,7 +1233,7 @@ BEGIN
                                     BEGIN  --4
 
                                         SET @msg_id = 'U00025'
-                                        SET @v_step_position = 'Rehire Overide - ''0'' - ' + @msg_id
+                                        SET @v_step_position = 'Rehire Overide - @v_EMPTY_SPACE0@v_EMPTY_SPACE - ' + @msg_id
 
                                         INSERT INTO #tbl_ghr_msg
                                         SELECT @msg_id As msg_id
@@ -1220,9 +1247,9 @@ BEGIN
                                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                             , @p_emp_id             = @emp_id
                                             , @p_eff_date           = @eff_date
-                                            , @p_pay_element_id     = ''
+                                            , @p_pay_element_id     = @v_EMPTY_SPACE
                                             , @p_msg_p1             = @w_curr_status
-                                            , @p_msg_p2             = ''
+                                            , @p_msg_p2             = @v_EMPTY_SPACE
                                             , @p_msg_desc           = 'Cannot Reactivate an employee if the current status is not inactive.'
                                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                             , @p_activity_date      = @p_activity_date
@@ -1233,7 +1260,7 @@ BEGIN
                                     BEGIN --5
                                         -- RH record present in extract
                                         -- RH transaction record will process status update
-                                        SET @v_step_position = 'Rehire RA - ' + @w_curr_status + ' - ' + 'Activity Status ''' + @v_ACTIVITY_STATUS_WARNING + ''''
+                                        SET @v_step_position = 'Rehire RA - ' + @w_curr_status + ' - ' + 'Activity Status ' + @v_ACTIVITY_STATUS_WARNING
 
                                         SET @w_msg_text = 'RH record transaction record present in current extract. '
                                                         + 'Re-activiation will occur on that transaction '
@@ -1244,9 +1271,9 @@ BEGIN
                                             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                                             , @p_emp_id             = @emp_id
                                             , @p_eff_date           = @eff_date
-                                            , @p_pay_element_id     = ''
+                                            , @p_pay_element_id     = @v_EMPTY_SPACE
                                             , @p_msg_p1             = @w_curr_status
-                                            , @p_msg_p2             = ''
+                                            , @p_msg_p2             = @v_EMPTY_SPACE
                                             , @p_msg_desc           = @w_msg_text
                                             , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                             , @p_activity_date      = @p_activity_date
@@ -1322,9 +1349,9 @@ BEGIN
                     , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @ErrorMessage
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
@@ -1660,9 +1687,9 @@ VALUES (@ErrorMessage)
             , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
             , @p_emp_id             = @emp_id
             , @p_eff_date           = @eff_date
-            , @p_pay_element_id     = ''
-            , @p_msg_p1             = ''
-            , @p_msg_p2             = ''
+            , @p_pay_element_id     = @v_EMPTY_SPACE
+            , @p_msg_p1             = @v_EMPTY_SPACE
+            , @p_msg_p2             = @v_EMPTY_SPACE
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date
