@@ -80,7 +80,7 @@ BEGIN
     DECLARE @v_PSC_BATCHNAME                char(08)            = 'GHR'
     DECLARE @w_PSC_QUALIFIER                char(30)            = 'INTERFACES'
     DECLARE @w_PSC_PSC_PGM_PARMS            varchar(255)        = 'GHR_EMPLOYEE_EVENTS'
-    DECLARE @w_user_id                      char(30)			= 'DBS'
+    DECLARE @w_user_id                      char(30)			--= 'DBS'
     DECLARE @w_activity_date                datetime
     DECLARE @w_activity_date_char           varchar(25)
 
@@ -107,6 +107,12 @@ BEGIN
     , msg_id                                varchar(255)            NOT NULL
     , msg_desc                              varchar(255)            NOT NULL
     )
+
+
+    ---------------------------------------------------------------------------
+    -- Get the user id executing the job
+    ---------------------------------------------------------------------------
+    SET @w_userid = SYSTEM_USER
 
 
     ---------------------------------------------------------------------------

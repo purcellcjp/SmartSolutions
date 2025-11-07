@@ -453,10 +453,8 @@ BEGIN
                 SET @v_step_position = 'Validation'
 
                 ---------------------------------------------------------------------------
-                -- Check to see if the employee exists
+                -- Check to see if the employee id already exists
                 ---------------------------------------------------------------------------
-
-
                 IF  EXISTS (
                             SELECT 1
                             FROM DBShrpn.dbo.employee
@@ -541,7 +539,7 @@ BEGIN
                             END
                     END
 
-
+/*
                 ---------------------------------------------------------------------------
                 -- Check for the exists of the national id
                 ---------------------------------------------------------------------------
@@ -566,7 +564,7 @@ BEGIN
                             , @p_pay_element_id     = ''
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                            , @p_msg_desc           = 'National ID is blank - defaulting to 99999'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -609,7 +607,7 @@ BEGIN
                                     SET @national_id = '99999'
                                 END
                         END
-
+*/
                 ---------------------------------------------------------------------------
                 -- Check to see if the national id is blank
                 ---------------------------------------------------------------------------
@@ -634,7 +632,7 @@ BEGIN
                             , @p_pay_element_id     = ''
                             , @p_msg_p1             = ''
                             , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'NIS number is blank - defaulting to 99999'
+                            , @p_msg_desc           = 'National ID is blank - defaulting to ''99999'''
                             , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -1087,7 +1085,7 @@ BEGIN
             END CATCH
 
 BYPASS_EMPLOYEE:
-            -- committ records before next record in order to maintain log entries
+            -- Commit records before next record in order to maintain log entries
             IF (@@TRANCOUNT > 0)
                 COMMIT TRAN
 

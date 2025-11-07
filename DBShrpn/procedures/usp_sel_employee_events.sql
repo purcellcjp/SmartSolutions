@@ -41,8 +41,8 @@ GO
     The records are then copied to the audit table DBShrpn.dbo.ghr_employee_events_aud. This table
     is used to track the extracts whether or not the record was processed.
 
-    Salary change transactions (Event ID '02') will be excluded from the interface. The transactions are sill included in theSalaries in HCM
-    cloud suite are not compatible with salary setup in SmartStream.
+    Salary change transactions (Event ID '02') will be excluded from the interface. The transactions are sill included in the interface import file.
+    Salaries in HCM cloud suite are not compatible with salary setup in SmartStream.
 
 
     Parameters:
@@ -101,7 +101,8 @@ BEGIN
     DECLARE @w_activity_date	            datetime
     DECLARE @w_status			            int
     DECLARE @w_userid			            varchar(30)
-
+    DECLARE @v_time_stamp                   char(17)
+    DECLARE @v_vhcmrpt_file_name            varchar(255)
 
 
     CREATE TABLE #ghr_employee_events_temp
@@ -165,6 +166,19 @@ BEGIN
             AND (psc_pgm_parms = @w_PSC_PSC_PGM_PARMS)     -- bulkcopy step
 
 
+        -- TEST
+        -- Create timestamp for verification report file name
+        SET @v_vhcmrpt_file_name = 'C:\Reports\vhcmrpt_fortrd_'
+                                 + REPLACE(CONVERT(varchar, GETDATE(), 111), '/', '')
+                                 + REPLACE(CONVERT(varchar, GETDATE(), 114), ':', '')
+                                 + '.csv'
+
+        UPDATE DBSpiqd.dbo.piq_storedproc
+        SET piq_answer_name = @v_vhcmrpt_file_name
+        WHERE piq_request_name = 'USP_VERIFICATION_RPT_CSV'
+          AND piq_userid = 'DBS'
+
+
         --SET @w_activity_status	= '00'
         -- Use date on bulkcopy step    SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
 
@@ -192,7 +206,7 @@ BEGIN
             , t.national_id_type_code
             , t.national_id
             , t.organization_group_id
-            , ''    -- organization_chart_name
+            , ''    -- organization_chart_name  -- wrong value
             , ''    -- organization_unit_name
             , t.emp_status_classn_code
             , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
@@ -254,13 +268,17 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Ganymede Employee ID - Replace leading '4' to 'D'
         ---------------------------------------------------------------------------
+        SET @v_step_position = 'GANYMEDE Employee ID - Replace Leading ''4'' with ''D'''
+
         UPDATE #ghr_employee_events_temp
         SET emp_id = STUFF(emp_id, 1, 1, 'D')
         WHERE (file_source = 'SS GANYMEDE')
           AND (CHARINDEX('4', emp_id, 1) = 1)
 
 
-
+        ---------------------------------------------------------------------------
+        -- Populate Audit Table
+        ---------------------------------------------------------------------------
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
 
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud

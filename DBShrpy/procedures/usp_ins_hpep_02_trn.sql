@@ -1,5 +1,6 @@
 USE DBShrpy
 go
+
 IF OBJECT_ID(N'dbo.usp_ins_hpep_02_trn') IS NOT NULL
 BEGIN
     DROP PROCEDURE dbo.usp_ins_hpep_02_trn
