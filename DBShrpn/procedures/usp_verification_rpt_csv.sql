@@ -42,6 +42,9 @@ GO
     Parameters:
         None
 
+    Tables:
+        DBShrpn.dbo.ghr_historical_message
+        DBShrpn.dbo.ghr_employee_events_aud
 
 
     Example:
@@ -112,7 +115,7 @@ BEGIN
     ---------------------------------------------------------------------------
     -- Get the user id executing the job
     ---------------------------------------------------------------------------
-    SET @w_userid = SYSTEM_USER
+    SET @w_user_id = SYSTEM_USER
 
 
     ---------------------------------------------------------------------------
@@ -134,24 +137,24 @@ BEGIN
     ---------------------------------------------------------------------------
     INSERT INTO #tbl_vhcmrpt
     VALUES (
-             'Activity Date'
-           , 'Event ID'
-           , 'Event Description'
-           , 'Activity Status'
-           , 'Activity Status Description'
-           , 'Emp ID'
-           , 'Effective Date'
-           , 'First Name'
-           , 'Last Name'
-           , 'Employer ID'
-           , 'Pay Group ID'
-           , 'Job/Position ID'
-           , 'Position Title'
-           , 'Pay Element ID'
-           , 'Pay Element Amount'
-           , 'Process Flag'
-           , 'Error Message ID'
-           , 'Error Message Description'
+             'Activity Date'                                            -- activity_date
+           , 'Event ID'                                                 -- event_id
+           , 'Event Description'                                        -- event_desc
+           , 'Activity Status'                                          -- activity_status
+           , 'Activity Status Description'                              -- activity_status_desc
+           , 'Emp ID'                                                   -- emp_id
+           , 'Effective Date'                                           -- eff_date
+           , 'First Name'                                               -- first_name
+           , 'Last Name'                                                -- last_name
+           , 'Employer ID'                                              -- empl_id
+           , 'Pay Group ID'                                             -- pay_group_id
+           , 'Job/Position ID'                                          -- job_or_pos_id
+           , 'Position Title'                                           -- position_title
+           , 'Pay Element ID'                                           -- pay_element_id
+           , 'Pay Element Amount'                                       -- emp_calculation
+           , 'Process Flag'                                             -- proc_flag
+           , 'Error Message ID'                                         -- msg_id
+           , 'Error Message Description'                                -- msg_desc
            )
 
 
@@ -159,24 +162,24 @@ BEGIN
     -- Retrieve records from error log that do not have a matching record in audit table
     ---------------------------------------------------------------------------
     INSERT INTO #tbl_vhcmrpt
-    SELECT CONVERT(char, msg.activity_date, 121) AS activity_date
-         , msg.event_id
-         , '' AS event_desc
-         , msg.activity_status
-         , ''
-         , msg.emp_id
-         , msg.eff_date
-         , ''
-         , ''
-         , ''
-         , ''
-         , ''
-         , ''
-         , ''
-         , '0.00'
-         , ''
-         , msg.msg_id
-         , msg.msg_desc
+    SELECT CONVERT(char, msg.activity_date, 121) AS activity_date       -- activity_date
+         , msg.event_id                                                 -- event_id
+         , '' AS event_desc                                             -- event_desc
+         , msg.activity_status                                          -- activity_status
+         , ''                                                           -- activity_status_desc
+         , msg.emp_id                                                   -- emp_id
+         , msg.eff_date                                                 -- eff_date
+         , ''                                                           -- first_name
+         , ''                                                           -- last_name
+         , ''                                                           -- empl_id
+         , ''                                                           -- pay_group_id
+         , ''                                                           -- job_or_pos_id
+         , ''                                                           -- position_title
+         , ''                                                           -- pay_element_id
+         , '0.00'                                                       -- emp_calculation
+         , ''                                                           -- proc_flag
+         , msg.msg_id                                                   -- msg_id
+         , msg.msg_desc                                                 -- msg_desc
     FROM DBShrpn.dbo.ghr_historical_message msg
     LEFT JOIN DBShrpn.dbo.ghr_employee_events_aud aud ON
             (msg.activity_date = aud.activity_date) AND

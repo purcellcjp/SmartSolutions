@@ -166,18 +166,6 @@ BEGIN
             AND (psc_pgm_parms = @w_PSC_PSC_PGM_PARMS)     -- bulkcopy step
 
 
-        -- TEST
-        -- Create timestamp for verification report file name
-        SET @v_vhcmrpt_file_name = 'C:\Reports\vhcmrpt_fortrd_'
-                                 + REPLACE(CONVERT(varchar, GETDATE(), 111), '/', '')
-                                 + REPLACE(CONVERT(varchar, GETDATE(), 114), ':', '')
-                                 + '.csv'
-
-        UPDATE DBSpiqd.dbo.piq_storedproc
-        SET piq_answer_name = @v_vhcmrpt_file_name
-        WHERE piq_request_name = 'USP_VERIFICATION_RPT_CSV'
-          AND piq_userid = 'DBS'
-
 
         --SET @w_activity_status	= '00'
         -- Use date on bulkcopy step    SET @w_activity_date = CAST(CONVERT(CHAR(20),GETDATE(),120) as DATETIME)
