@@ -319,7 +319,6 @@ BEGIN
         SET loop_flag = 'Y'
         WHERE (msg_id IN (
                          'U00029'
-                        ,'U00011'
                         ,'U00012'
                         ,'U00027'
                         ,'U00030'
@@ -1249,7 +1248,7 @@ BYPASS_EMPLOYEE:
 
 
         ---------------------------------------------------------------------------
-        -- Send notification of warning message U00003 - Total nbr of employees that already exist: @1
+        -- Send notification of warning message U00029 - Total nbr of employees that already exist: @1
         ---------------------------------------------------------------------------
         SET @msg_id = 'U00029'
         SET @v_step_position = 'Log ' + @msg_id
@@ -1264,8 +1263,9 @@ BYPASS_EMPLOYEE:
 
         -- Get total new hire records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
-        FROM #tbl_ghr_msg
-        WHERE (msg_id = @msg_id)
+        FROM #ghr_employee_events_temp
+        WHERE (event_id = @v_EVENT_ID_PAY_ELE)
+
 
         SET @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)
 

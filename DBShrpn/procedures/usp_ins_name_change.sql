@@ -278,11 +278,11 @@ BEGIN
                 SET @v_step_position = 'Update Name Fields'
 
                 UPDATE DBShrpn.dbo.individual
-                SET first_name        = RTRIM(@first_name)
-                , first_middle_name = RTRIM(@first_middle_name)
-                , last_name         = RTRIM(@last_name)
-                , prior_last_name   = RTRIM(@prior_last_name)
-                , pay_to_name       = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
+                SET first_name        = @first_name
+                  , first_middle_name = @first_middle_name
+                  , last_name         = @last_name
+                  , prior_last_name   = @prior_last_name
+                  , pay_to_name       = RTRIM(@last_name) + ', ' + RTRIM(@first_name) + RTRIM(' ' + RTRIM(@first_middle_name))
                 WHERE (individual_id = @individual_id)
 
 
@@ -305,7 +305,7 @@ BEGIN
 
                 UPDATE DBShrpn.dbo.individual_personal
                 SET user_ind_1 = @nic_flag
-                , user_ind_2 = @tax_flag
+                  , user_ind_2 = @tax_flag
                 WHERE (individual_id = @individual_id)
 
 

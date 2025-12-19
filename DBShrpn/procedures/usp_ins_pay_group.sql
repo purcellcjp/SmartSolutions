@@ -239,7 +239,6 @@ BEGIN
                         ,'U00102'
                         ,'U00105'
                         ,'U00106'
-                        ,'U00117'
                         ,'U00119'
                         ,'U00120'
                         ))
@@ -253,7 +252,6 @@ BEGIN
                          ,'U00027'
                          ,'U00102'
                          ,'U00106'
-                         ,'U00117'
                          ,'U00119'
                          ,'U00120'
                         ))
@@ -488,7 +486,7 @@ BEGIN
                     BEGIN
 
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id      As msg_id
+                        SELECT @msg_id As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
                         FROM #tbl_msg_master t
                         WHERE (msg_id = @msg_id)
@@ -936,7 +934,7 @@ BYPASS_EMPLOYEE:
         ---------------------------------------------------------------------------
         -- Send notification of warning message U00105 - Total nbr of employees pay group changes
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U00016'
+        SET @msg_id = 'U00105'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @msg_id        = msg_id

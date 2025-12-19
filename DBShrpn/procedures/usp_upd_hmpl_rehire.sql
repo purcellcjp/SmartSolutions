@@ -35,7 +35,7 @@ GO
    Revision history:
       version  date        developer   SCR      description
       -------  ----------  ---------   -----    ------------------------------------
-      1.0.00                                    - Cloned from SmmartStream version DBShrpn..hsp_upd_hmpl_rehire
+      1.0.00                                    - Cloned from SmartStream version DBShrpn..hsp_upd_hmpl_rehire
                                                     1) Disabled authentication
 
 ************************************************************************************/

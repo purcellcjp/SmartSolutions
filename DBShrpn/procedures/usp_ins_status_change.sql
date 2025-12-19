@@ -803,7 +803,7 @@ BEGIN
                 --   Find the Job_position end date and Assignment end date
                 ---------------------------------------------------------------------------
                 SELECT @w_position_end_date = @v_END_OF_TIME_DATE
-                SELECT @w_job_end_date      = @v_END_OF_TIME_DATE
+                     , @w_job_end_date      = @v_END_OF_TIME_DATE
 
 
 
@@ -1072,7 +1072,7 @@ BEGIN
                 IF (@emp_status_code = 'T')
                     BEGIN
 
-                        SET @v_step_position = 'Terminate Assocaite'
+                        SET @v_step_position = 'Terminate Associate'
 
                         IF (@w_curr_status IN ('A','I'))
                             BEGIN
@@ -1138,10 +1138,10 @@ BEGIN
                         ELSE
                             BEGIN
                                 SET @msg_id = 'U00042'
-                                SET @v_step_position = @v_step_position + ' (@v_EMPTY_SPACET@v_EMPTY_SPACE) ' + @msg_id
+                                SET @v_step_position = @v_step_position + ' - ' + @msg_id + ' Associate Already Terminated'
 
                                 INSERT INTO #tbl_ghr_msg
-                                SELECT @msg_id                  As msg_id
+                                SELECT @msg_id AS msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                                 FROM #tbl_msg_master t
                                 WHERE (msg_id = @msg_id)
@@ -1155,7 +1155,7 @@ BEGIN
                                     , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @w_curr_status
                                     , @p_msg_p2             = @v_EMPTY_SPACE
-                                    , @p_msg_desc           = 'Cannot terminate an employee if the current status is not active or inactive.'
+                                    , @p_msg_desc           = 'Associate is already terminated in SmartStream.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
                                     , @p_audit_id           = @aud_id

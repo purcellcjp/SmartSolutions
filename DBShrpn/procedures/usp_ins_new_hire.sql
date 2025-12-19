@@ -138,7 +138,7 @@ BEGIN
     DECLARE @w_active_reason_code                   char(05)        = ''
     -- DECLARE @w_employment_type_code                 char(05)        = ''
     DECLARE @w_professional_cat_code                char(05)        = ''
-    DECLARE @w_labor_grp_code                       char(05)        = ''
+    --DECLARE @w_labor_grp_code                       char(05)        = ''
     DECLARE @w_non_employee_indicator               char(01)        = 'N'
     DECLARE @w_excluded_from_payroll_ind            char(01)        = 'N'
     DECLARE @w_pensioner_indicator                  char(01)        = 'N'
@@ -160,7 +160,7 @@ BEGIN
     DECLARE @w_overtime_status_code                 char(02)        = '99'
     DECLARE @w_pay_on_reported_hrs_ind              char(01)        = 'N'
     DECLARE @w_work_shift_code                      char(05)        = ''
-    DECLARE @w_tax_entity_id                        char(10)        = 'TE1-C01'
+    DECLARE @w_tax_entity_id                        char(10)        = ''
     -- DECLARE @w_time_reporting_meth_code             char(01)        = '1'
     -- DECLARE @w_pay_group_id                         char(10)        = 'ADMP'
     DECLARE @w_clock_nbr                            char(10)        = ''
@@ -611,7 +611,8 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Check to see if the national id is blank
                 ---------------------------------------------------------------------------
-                IF  (@national_id = '' or @national_id = NULL)
+                IF  (@national_id = '') OR
+                    (@national_id = NULL)
                     BEGIN
 
                         SET @msg_id = 'U00007'
@@ -908,12 +909,10 @@ BEGIN
                     , @p_base_rate_tbl_id                  = @w_base_rate_tbl_id
                     , @p_base_rate_tbl_entry_code          = @w_base_rate_tbl_entry_code
                     , @p_exception_rate_ind                = @w_exception_rate_ind
-
                     , @p_hourly_pay_rate                   = @w_hourly_pay_rate
                     , @p_pd_salary_amt                     = @w_pd_salary_amt
                     , @p_pd_salary_tm_pd_id                = @w_pd_salary_tm_pd_id
                     , @p_annual_salary_amt                 = @w_annual_salary_amt
-
                     , @p_pay_basis_code                    = @w_pay_basis_code
                     , @p_curr_code                         = @w_curr_code
                     , @p_work_tm_code                      = @w_work_tm_code

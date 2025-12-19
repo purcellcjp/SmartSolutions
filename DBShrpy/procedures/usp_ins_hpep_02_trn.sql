@@ -37,7 +37,7 @@ GO
    Revision history:
       version  date        developer   SCR      description
       -------  ----------  ---------   -----    ------------------------------------
-      1.0.00                                    - Cloned from SmmartStream version DBShrpy..hsp_ins_hpep_02
+      1.0.00                                    - Cloned from SmartStream version DBShrpy.dbo.hsp_ins_hpep_02
                                                     1) Disabled authentication
                                                     2) Replaced all double quotes with single quote
 

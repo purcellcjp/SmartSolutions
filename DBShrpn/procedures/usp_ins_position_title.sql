@@ -21,6 +21,9 @@ GO
 
     Description:
 
+        Position title is a value from Infor Cloud Suite that is stored on the SmartStream
+        table employee assignment - DBShrpn.dbo.emp_assignment. A new effective dated row
+        is created in the table.
 
     Parameters:
         @p_user_id       =  User ID (i.e. 'DBS')
@@ -31,7 +34,7 @@ GO
 
     Example:
         EXEC DBShrpn.dbo.usp_ins_position_title
-              @p_user_id          = @w_userid
+              @p_user_id         = @w_userid
             , @p_batchname       = @v_PSC_BATCHNAME
             , @p_qualifier       = @w_PSC_QUALIFIER
             , @p_activity_date   = @w_activity_date
@@ -313,7 +316,7 @@ BEGIN
                     AND (event_id IN (
                                         @v_EVENT_ID_NEW_HIRE
                                     , @v_EVENT_ID_TRANSFER
-                                    --, @v_EVENT_ID_STATUS_CHANGE
+                                    , @v_EVENT_ID_STATUS_CHANGE
                                     ))
                 )
                 BEGIN
@@ -610,7 +613,7 @@ BEGIN
                     BEGIN
 
                         /*
-                        SET @v_step_position = 'Emp Assignment - Reassign Debug'
+                        SET @v_step_position = 'Emp Assignment - EXEC DBShrpn.dbo.usp_hsp_upd_hasg_reassign Debug'
 
                         -- Debug
                         INSERT DBShrpn.dbo.ghr_debug (text_line)
@@ -659,7 +662,7 @@ BEGIN
                         , (' ');
                         */
 
-                        SET @v_step_position = 'Emp Assignment - Reassign'
+                        SET @v_step_position = 'Emp Assignment - EXEC DBShrpn.dbo.usp_hsp_upd_hasg_reassign'
 
                         -- Clear any previous messages
                         DELETE FROM @tbl_sp_err
@@ -1181,7 +1184,7 @@ BYPASS_EMPLOYEE:
         -- Get total name records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM #ghr_employee_events_temp
-        WHERE (event_id =   @v_EVENT_ID_PAY_GROUP)
+        WHERE (event_id =   @v_EVENT_ID_POSITION_TITLE)
 
         IF (CHARINDEX('@1', @w_msg_text,1) > 0)
             SELECT @w_msg_text = REPLACE(@w_msg_text, '@1', @maxx)

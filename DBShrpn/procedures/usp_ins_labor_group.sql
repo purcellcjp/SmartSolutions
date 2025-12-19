@@ -19,7 +19,8 @@ GO
 /*************************************************************************************
     SP Name:       usp_ins_labor_group
 
-    Description:    Populates labor group on Employee Employment by creating a new effective dated record.
+    Description:    Populates labor group on Employee Employment record by creating
+                    a new effective dated record.
 
                     Table: DBShrpn.dbo.emp_employment
 
@@ -989,9 +990,9 @@ BYPASS_EMPLOYEE:
 
 
         ---------------------------------------------------------------------------
-        -- Send notification of warning message U00105 - Total nbr of employees pay group changes
+        -- Send notification of warning message U00105 - Total nbr of employees labor group changes
         ---------------------------------------------------------------------------
-        SET @msg_id = 'U00016'
+        SET @msg_id = 'U00108'
         SET @v_step_position = 'Log ' + @msg_id
 
         SELECT @msg_id       = msg_id
@@ -1002,7 +1003,7 @@ BYPASS_EMPLOYEE:
         FROM #tbl_msg_master
         WHERE (msg_id = @msg_id)
 
-        -- Get total name records from HCM
+        -- Get total labor group records from HCM
         SELECT @maxx = CAST(COUNT(*) AS varchar(6))
         FROM #ghr_employee_events_temp
         WHERE (event_id =   @v_EVENT_ID_LABOR_GROUP)

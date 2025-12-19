@@ -878,7 +878,7 @@ BEGIN
 
                 INSERT DBShrpn.dbo.ghr_debug (text_line)
                 VALUES('EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn')
-                , (' @p_emp_id '                        + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote)
+                , (' @p_emp_id '                         + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote)
                 , (', @p_new_empl_id '                   + '= ' + @v_single_quote + RTRIM(@empl_id)                                              + @v_single_quote)
                 , (', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                           + @v_single_quote)
                 , (', @p_assign_to '                     + '= ' + @v_single_quote + RTRIM(@cur_emp_asgn_assigned_to_code)                        + @v_single_quote)
@@ -926,6 +926,24 @@ BEGIN
                     , @p_new_empl_curr_code             = @new_curr_code
                     , @p_use_policy_xfer_options        = 'Y'                            --   'Y' As policy_xfer_options
 
+
+/*
+                -- Debug
+                SET @v_step_position = 'Execute DBShrpn.dbo.usp_ins_hpep_02_trn DEBUG'
+
+                INSERT DBShrpn.dbo.ghr_debug (text_line)
+                VALUES('EXECUTE DBShrpn.dbo.usp_ins_hpep_02_trn')
+                , (' @p_emp_id '                    + '= ' + @v_single_quote + RTRIM(@emp_id)                     + @v_single_quote)
+                , (', @p_old_empl_id '              + '= ' + @v_single_quote + RTRIM(@cur_empl_id)                + @v_single_quote)
+                , (', @p_new_empl_id '              + '= ' + @v_single_quote + RTRIM(@empl_id)                    + @v_single_quote)
+                , (', @p_transfer_date '            + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112) + @v_single_quote)
+                , (', @p_calendar_year '            + '= ' + @v_single_quote + CONVERT(char(4), @v_cal_year)      + @v_single_quote)
+                , (', @p_curr_code '                + '= ' + @v_single_quote + RTRIM(@new_curr_code)              + @v_single_quote)
+                , (', @p_return_to_prior_empl '     + '= ' + @v_single_quote + 'N'                                + @v_single_quote)
+                , (', @p_empl_adj_paymnt_run_type ' + '= ' + @v_single_quote + '#ADJUSTMENT'                      + @v_single_quote)
+                , (', @p_system_user_id '           + '= ' + @v_single_quote + 'DBS'                              + @v_single_quote)
+                , (', @p_pay_group_id '             + '= ' + @v_single_quote + RTRIM(@pay_group_id)               + @v_single_quote)
+*/
 
                 -- Executes transfer updates in DBShrpy (emp_pmt* tables)
                 SET @v_step_position = 'Execute DBShrpn.dbo.usp_ins_hpep_02_trn'

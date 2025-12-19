@@ -223,7 +223,7 @@ BEGIN
             , t.file_source
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
         FROM DBShrpn.dbo.ghr_employee_events t
-        WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
+        --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
 
         ---------------------------------------------------------------------------
