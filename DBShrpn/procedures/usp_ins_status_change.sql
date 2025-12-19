@@ -211,7 +211,6 @@ BEGIN
         , msg_text                              varchar(255)        NOT NULL
         , msg_text_2                            varchar(255)        NOT NULL
         , msg_text_3                            varchar(255)        NOT NULL
-        , loop_flag                             char(1)             NOT NULL
         )
 
 
@@ -237,7 +236,7 @@ BEGIN
 
 
     BEGIN TRY
-
+/*
         SET @v_step_position = '#tbl_msg_master'
 
         ---------------------------------------------------------------------------
@@ -249,7 +248,6 @@ BEGIN
             , msg_text
             , msg_text_2
             , msg_text_3
-            , 'N' AS loop_flag
         FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id IN ('U00023'
                         ,'U00009'
@@ -289,7 +287,7 @@ BEGIN
                         ,'U00042'
                         ,'U00043'
                         ))
-
+*/
 
        SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -416,8 +414,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id      AS msg_id
                             , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_STATUS_CHANGE) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
 
                         -- Historical Message for reporting purpose
@@ -473,8 +471,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
 
                         -- Historical Message for reporting purpose
@@ -512,8 +510,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id                   As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @empl_id), '@2', @emp_id) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -553,8 +551,8 @@ BEGIN
                             INSERT INTO #tbl_ghr_msg
                             SELECT @msg_id As msg_id
                                 , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                            FROM #tbl_msg_master t
-                            WHERE (msg_id = @msg_id)
+                            FROM DBSCOMMON.dbo.message_master t
+                            WHERE (t.msg_id = @msg_id)
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -593,8 +591,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id                   As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -630,8 +628,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -668,8 +666,8 @@ BEGIN
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
                             , REPLACE(REPLACE(t.msg_text, '@1', @pay_group_id), '@2', @emp_id) AS msg_desc
-                        FROM #tbl_msg_master t
-                        WHERE (msg_id = @msg_id)
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (t.msg_id = @msg_id)
 
 
                         -- Historical Message for reporting purpose
@@ -716,8 +714,8 @@ BEGIN
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id      As msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                                FROM #tbl_msg_master t
-                                WHERE (msg_id = @msg_id)
+                                FROM DBSCOMMON.dbo.message_master t
+                                WHERE (t.msg_id = @msg_id)
 
                                 -- Historical Message for reporting purpose
                                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -757,8 +755,8 @@ BEGIN
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id As msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                                FROM #tbl_msg_master t
-                                WHERE (msg_id = @msg_id)
+                                FROM DBSCOMMON.dbo.message_master t
+                                WHERE (t.msg_id = @msg_id)
 
                                 -- Historical Message for reporting purpose
                                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -972,8 +970,8 @@ BEGIN
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id As msg_id
                                     , REPLACE(REPLACE(t.msg_text, '@1', RTRIM(@w_curr_status_value)), '@2', @emp_id) AS msg_desc
-                                FROM #tbl_msg_master t
-                                WHERE (msg_id = @msg_id)
+                                FROM DBSCOMMON.dbo.message_master t
+                                WHERE (t.msg_id = @msg_id)
 
                                 -- Historical Message for reporting purpose
                                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -1043,8 +1041,8 @@ BEGIN
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id      As msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                                FROM #tbl_msg_master t
-                                WHERE (msg_id = @msg_id)
+                                FROM DBSCOMMON.dbo.message_master t
+                                WHERE (t.msg_id = @msg_id)
 
 
                                 -- Historical Message for reporting purpose
@@ -1143,8 +1141,8 @@ BEGIN
                                 INSERT INTO #tbl_ghr_msg
                                 SELECT @msg_id AS msg_id
                                     , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                                FROM #tbl_msg_master t
-                                WHERE (msg_id = @msg_id)
+                                FROM DBSCOMMON.dbo.message_master t
+                                WHERE (t.msg_id = @msg_id)
 
                                 -- Historical Message for reporting purpose
                                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -1238,8 +1236,8 @@ BEGIN
                                         INSERT INTO #tbl_ghr_msg
                                         SELECT @msg_id As msg_id
                                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                                        FROM #tbl_msg_master t
-                                        WHERE (msg_id = @msg_id)
+                                        FROM DBSCOMMON.dbo.message_master t
+                                        WHERE (t.msg_id = @msg_id)
 
                                         -- Historical Message for reporting purpose
                                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -1434,7 +1432,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1458,7 +1456,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1482,7 +1480,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1506,7 +1504,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         -- Get total new hire records from HCM
@@ -1541,9 +1539,9 @@ BYPASS_EMPLOYEE:
             , msg.msg_text_2
             , msg.msg_text_3
         FROM #tbl_ghr_msg ghr
-        JOIN #tbl_msg_master msg ON
+        JOIN DBSCOMMON.dbo.message_master msg ON
             (ghr.msg_id = msg.msg_id)
-        WHERE (msg.loop_flag = 'Y')
+        WHERE (msg.msg_text_2 = 'Y')
 
         OPEN crsrLog
 
@@ -1590,7 +1588,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1614,7 +1612,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1638,7 +1636,7 @@ BYPASS_EMPLOYEE:
             , @w_msg_text_2  = msg_text_2
             , @w_msg_text_3  = msg_text_3
             , @w_severity_cd = severity_cd
-        FROM #tbl_msg_master
+        FROM DBSCOMMON.dbo.message_master
         WHERE (msg_id = @msg_id)
 
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2
@@ -1709,7 +1707,7 @@ VALUES (@ErrorMessage)
     DROP TABLE #temp1
     DROP TABLE #temp2
     DROP TABLE #tbl_ghr_msg
-    DROP TABLE #tbl_msg_master
+
 
     RETURN @v_ret_val
 

@@ -1,12 +1,12 @@
-USE [DBSCOMMON]
+USE DBSCOMMON
 GO
 
-DELETE FROM [dbo].[message_master]
+DELETE FROM dbo.message_master
 WHERE (msg_id LIKE 'U%')
 GO
 
 
-INSERT [dbo].[message_master] ([msg_id], [severity_cd], [user_def], [msg_text], [msg_text_2], [msg_text_3], [help_context], [help_file_id], [pscm_flag], [CHGSTAMP])
+INSERT dbo.message_master (msg_id, severity_cd, user_def, msg_text, msg_text_2, msg_text_3, help_context, help_file_id, pscm_flag, CHGSTAMP)
 VALUES
   (N'U00000', 1, 0, N'< NEW HIRE SECTION (1) >', N' ', N' ', 0, N'', 0, 0)
 , (N'U00001', 1, 0, N'Total Global HR New Hire: @1', N' ', N' ', 0, N'', 0, 0)
@@ -82,7 +82,7 @@ VALUES
 , (N'U00115', 1, 0, N'<POSITION TITLE SECTION (10)>', N'', N'', 0, N'', 0, 0)
 , (N'U00116', 1, 0, N'Total Position Title Changes: @1', N'', N'', 0, N'', 0, 0)
 , (N'U00117', 1, 0, N'New position title, (@1) is same as current position title, for employee @2 - bypassing record.', N'Y', N'', 0, N'', 0, 0)
-, (N'U00118', 1, 0, N'New position title is blank, for employee @2 - bypassing record.', N'Y', N'', 0, N'', 0, 0)
+, (N'U00118', 1, 0, N'New position title is blank, for employee @1 - bypassing record.', N'Y', N'', 0, N'', 0, 0)
 -- U00119 @1 = 'position title' or 'pay group' or 'labor group'
 , (N'U00119', 1, 0, N'@1 update, employee @1: New hire, transfer, or rehire status change event is present in this extract. Bypassing record since update would have occurred in one of those events.', N'Y', N'', 0, N'', 0, 0)
 

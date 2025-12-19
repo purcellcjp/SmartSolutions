@@ -18,7 +18,7 @@ BEGIN
    --
    --   Create the Header Record
    --
-   SELECT 
+   SELECT
           'HDR'  AS HROrganization
         , 'HDR1' AS CheckDate
         , 'HDR2' AS CheckID
