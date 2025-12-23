@@ -196,6 +196,7 @@ BEGIN
           , aud.event_id
           , CASE aud.event_id
                 WHEN @v_EVENT_ID_NEW_HIRE       THEN 'New Hire'
+                WHEN @v_EVENT_ID_SALARY_CHANGE  THEN 'Salary Change'
                 WHEN @v_EVENT_ID_TRANSFER       THEN 'Transfer'
                 WHEN @v_EVENT_ID_NAME_CHANGE    THEN 'Name Change'
                 WHEN @v_EVENT_ID_STATUS_CHANGE  THEN 'Status Change'
@@ -223,7 +224,6 @@ BEGIN
                     ELSE 'None'
                   END
            END activity_status_desc
-
          , DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) AS emp_id
          , CONVERT(char, aud.eff_date, 121) AS eff_date
          , aud.first_name

@@ -1278,7 +1278,7 @@ BYPASS_EMPLOYEE:
             , msg.msg_text_2
             , msg.msg_text_3
         FROM #tbl_ghr_msg ghr
-        FROM DBSCOMMON.dbo.message_master msg ON
+        JOIN DBSCOMMON.dbo.message_master msg ON
             (ghr.msg_id = msg.msg_id)
         WHERE (msg.msg_text_2 = 'Y')
 

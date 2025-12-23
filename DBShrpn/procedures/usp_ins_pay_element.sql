@@ -311,7 +311,7 @@ BEGIN
                         ,'U00101'
                         ,'U00102'
                         ))
-/*
+
         -- ID Message templates that need to loop through errors to add to log table
         UPDATE #tbl_msg_master
         SET loop_flag = 'Y'
