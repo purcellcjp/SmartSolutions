@@ -146,7 +146,23 @@ BEGIN
     , labor_grp_code                        char(50)            NULL    -- DBShrpn..emp_employment.labor_grp_code   char(5)
     , file_source                           char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
 
-    , job_or_pos_id                        char(10)             NULL    -- derived value based on file_source
+    , annual_hrs_per_fte                    varchar(255)        NULL
+    , annual_rate                           varchar(255)        NULL
+    , birth_date                            varchar(255)        NULL
+    , gender                                varchar(255)        NULL
+    , addr_fmt_code                         char(06)            NULL
+    , country_code                          varchar(255)        NULL
+    , addr_line_1                           varchar(255)        NULL
+    , addr_line_2                           varchar(255)        NULL
+    , addr_line_3                           varchar(255)        NULL
+    , addr_line_4                           varchar(255)        NULL
+    , city_name                             varchar(255)        NULL
+    , state_prov                            varchar(255)        NULL
+    , postal_code                           varchar(255)        NULL
+    , county_name                           varchar(255)        NULL
+    , region_name                           varchar(255)        NULL
+
+    , job_or_pos_id                         char(10)            NULL    -- derived value based on file_source
     )
 
 
@@ -216,12 +232,35 @@ BEGIN
             , t.consider_for_rehire_ind
             , UPPER(t.pay_element_id)
             , t.emp_calculation
-            , CASE t.tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
-            , CASE t.nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
+            , t.tax_flag        -- CASE t.tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
+            , t.nic_flag        -- CASE t.nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
             , t.tax_ceiling_amt
             , t.labor_grp_code
             , t.file_source
+
+            , t.annual_hrs_per_fte
+            , t.annual_rate
+            , t.birth_date
+            , t.gender
+            , t.country_code
+            , t.addr_line_1
+            , t.addr_line_2
+            , CASE t.country_code   -- combine line 3 and 4 if St Lucia
+                WHEN 'SLA' THEN t.addr_line_3 + ' ' + t.addr_line_4
+                ELSE t.addr_line_3
+              END addr_line_3
+            , CASE t.country_code
+                WHEN 'SLA' THEN ''
+                ELSE t.addr_line_4
+              END addr_line_4
+            , t.city_name
+            , t.state_prov
+            , t.postal_code
+            , t.county_name
+            , t.region_name
+
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
+
         FROM DBShrpn.dbo.ghr_employee_events t
         --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
@@ -270,49 +309,66 @@ BEGIN
         SET @v_step_position = 'INSERT INTO DBShrpn.dbo.ghr_employee_events_aud'
 
         INSERT INTO DBShrpn.dbo.ghr_employee_events_aud
-        SELECT ee.event_id
-            , ee.emp_id
-            , ee.eff_date
-            , ee.first_name
-            , ee.first_middle_name
-            , ee.last_name
-            , ee.empl_id
-            , ee.national_id_type_code
-            , ee.national_id
-            , ee.organization_group_id
-            , ee.organization_chart_name
-            , ee.organization_unit_name
-            , ee.emp_status_classn_code
-            , LEFT(ee.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
-            , ee.employment_type_code
-            , ee.annual_salary_amt
-            , ee.begin_date
-            , ee.end_date
-            , ee.pay_status_code
-            , ee.pay_group_id
-            , ee.pay_element_ctrl_grp_id
-            , ee.time_reporting_meth_code
-            , ee.employment_info_chg_reason_cd
-            , ee.emp_location_code
-            , ee.emp_status_code
-            , ee.reason_code
-            , ee.emp_expected_return_date
-            , ee.pay_through_date
-            , ee.emp_death_date
-            , ee.consider_for_rehire_ind
-            , ee.pay_element_id
-            , ee.emp_calculation
-            , ee.tax_flag
-            , ee.nic_flag
-            , ee.tax_ceiling_amt
-            , ee.labor_grp_code
-            , ee.file_source
-            , DBShrpn.dbo.ufn_ret_job_or_pos_id(ee.file_source, ee.empl_id) AS job_or_pos_id
+        SELECT t.event_id
+            , t.emp_id
+            , t.eff_date
+            , t.first_name
+            , t.first_middle_name
+            , t.last_name
+            , t.empl_id
+            , t.national_id_type_code
+            , t.national_id
+            , t.organization_group_id
+            , t.organization_chart_name
+            , t.organization_unit_name
+            , t.emp_status_classn_code
+            , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
+            , t.employment_type_code
+            , t.annual_salary_amt
+            , t.begin_date
+            , t.end_date
+            , t.pay_status_code
+            , t.pay_group_id
+            , t.pay_element_ctrl_grp_id
+            , t.time_reporting_meth_code
+            , t.employment_info_chg_reason_cd
+            , t.emp_location_code
+            , t.emp_status_code
+            , t.reason_code
+            , t.emp_expected_return_date
+            , t.pay_through_date
+            , t.emp_death_date
+            , t.consider_for_rehire_ind
+            , t.pay_element_id
+            , t.emp_calculation
+            , t.tax_flag
+            , t.nic_flag
+            , t.tax_ceiling_amt
+            , t.labor_grp_code
+            , t.file_source
+
+            , t.annual_hrs_per_fte
+            , t.annual_rate
+            , t.birth_date
+            , t.gender
+            , CASE t.country_code WHEN 'SLA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code
+            , t.country_code
+            , t.addr_line_1
+            , t.addr_line_2
+            , t.addr_line_3
+            , t.addr_line_4
+            , t.city_name
+            , t.state_prov
+            , t.postal_code
+            , t.county_name
+            , t.region_name
+
+            , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
             , @w_activity_date                                              AS activity_date
-            , ee.aud_id
+            , t.aud_id
             , @w_userid                                                     AS activity_user
             , 'N'                                                           AS proc_flag
-        FROM #ghr_employee_events_temp ee
+        FROM #ghr_employee_events_temp t
 
 
         ---------------------------------------------------------------------------
@@ -685,11 +741,11 @@ END_EXECUTION:
            , @ErrorState    = ERROR_STATE()
            , @v_ret_val     = -1
 
-        /*
-        SELECT @ErrorMessage  AS err_msg
-            , @ErrorSeverity AS err_sev
-            , @ErrorState    AS err_state
-        */
+    SELECT @ErrorNumber  AS ErrorNumber
+        , @ErrorMessage  AS ErrorMessage
+        , @ErrorSeverity AS ErrorSeverity
+        , @ErrorState    AS ErrorState
+        , @v_ret_val     AS v_ret_val
 
         -- Log error to message queue
         EXEC DBSpscb.dbo.psp_ins_psc_putmsg_2

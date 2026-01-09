@@ -111,25 +111,25 @@ BEGIN
     DECLARE @w_preferred_name                       char(25)        = ''
     DECLARE @w_name_suffix                          char(10)        = ''
     DECLARE @w_emp_display_name                     char(45)        = ''
-    DECLARE @w_birth_date                           datetime        = @v_END_OF_TIME_DATE
-    DECLARE @w_sex_code                             char(01)        = ''
+    --DECLARE @w_birth_date                           datetime        = @v_END_OF_TIME_DATE
+    --DECLARE @w_sex_code                             char(01)        = ''
     DECLARE @w_marital_status_code_1                char(05)        = ''
     -- DECLARE @w_national_id_1_type_code              char(05)        = 'NIS'--'SSN'
     -- DECLARE @w_national_id_1                        char(20)        = ''
-    DECLARE @w_addr_1_type_code                     char(05)        = ''
-    DECLARE @w_addr_1_fmt_code                      char(06)        = 'EC1'--'US1'
-    DECLARE @w_addr_1_line_1                        char(35)        = ''
-    DECLARE @w_addr_1_line_2                        char(35)        = ''
-    DECLARE @w_addr_1_line_3                        char(35)        = ''
-    DECLARE @w_addr_1_line_4                        char(35)        = ''
-    DECLARE @w_addr_1_line_5                        char(35)        = ''
-    DECLARE @w_addr_1_street_or_pob_1               char(35)        = ''
-    DECLARE @w_addr_1_street_or_pob_2               char(35)        = ''
-    DECLARE @w_addr_1_street_or_pob_3               char(35)        = ''
-    DECLARE @w_addr_1_city_name                     char(35)        = ''
-    DECLARE @w_addr_1_ctry_sub_entity_code          char(09)        = ''
-    DECLARE @w_addr_1_postal_code                   char(09)        = ''
-    DECLARE @w_addr_1_country_code                  char(02)        = ''
+    DECLARE @w_addr_1_type_code                     char(05)        = '1'   -- Home
+    --DECLARE @w_addr_1_fmt_code                      char(06)        = 'EC1'--'US1'
+    --DECLARE @w_addr_1_line_1                        char(35)        = ''
+    --DECLARE @w_addr_1_line_2                        char(35)        = ''
+    --DECLARE @w_addr_1_line_3                        char(35)        = ''
+    --DECLARE @w_addr_1_line_4                        char(35)        = ''
+    --DECLARE @w_addr_1_line_5                        char(35)        = ''
+    --DECLARE @w_addr_1_street_or_pob_1               char(35)        = ''
+    --DECLARE @w_addr_1_street_or_pob_2               char(35)        = ''
+    --DECLARE @w_addr_1_street_or_pob_3               char(35)        = ''
+    --DECLARE @w_addr_1_city_name                     char(35)        = ''
+    --DECLARE @w_addr_1_ctry_sub_entity_code          char(09)        = ''
+    --DECLARE @w_addr_1_postal_code                   char(09)        = ''
+    --DECLARE @w_addr_1_country_code                  char(02)        = ''
     DECLARE @w_assigned_to_code                     char(01)        = 'P'
     DECLARE @w_job_or_pos_id                        char(10)        = ''
     DECLARE @w_organization_chart_name              char(64)        = 'HRGOSL'  -- not currently being used
@@ -276,6 +276,22 @@ BEGIN
     DECLARE @labor_grp_code                         char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
+    DECLARE @annual_hrs_per_fte                     varchar(255)
+    DECLARE @annual_rate                            varchar(255)
+    DECLARE @birth_date                             varchar(255)
+    DECLARE @gender                                 varchar(255)
+    DECLARE @addr_fmt_code                          char(06)
+    DECLARE @country_code                           varchar(255)
+    DECLARE @addr_line_1                            varchar(255)
+    DECLARE @addr_line_2                            varchar(255)
+    DECLARE @addr_line_3                            varchar(255)
+    DECLARE @addr_line_4                            varchar(255)
+    DECLARE @city_name                              varchar(255)
+    DECLARE @state_prov                             varchar(255)
+    DECLARE @postal_code                            varchar(255)
+    DECLARE @county_name                            varchar(255)
+    DECLARE @region_name                            varchar(255)
+
 
 
     CREATE TABLE #tbl_ghr_msg
@@ -373,6 +389,23 @@ BEGIN
              , t.tax_ceiling_amt
              , LEFT(t.labor_grp_code, 5) AS labor_grp_code
              , t.file_source
+
+             , t.annual_hrs_per_fte
+             , t.annual_rate
+             , t.birth_date
+             , t.gender
+             , t.addr_fmt_code
+             , t.country_code
+             , t.addr_line_1
+             , t.addr_line_2
+             , t.addr_line_3
+             , t.addr_line_4
+             , t.city_name
+             , t.state_prov
+             , t.postal_code
+             , t.county_name
+             , t.region_name
+
              , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
@@ -419,6 +452,23 @@ BEGIN
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
+
+            , @annual_hrs_per_fte
+            , @annual_rate
+            , @birth_date
+            , @gender
+            , @addr_fmt_code
+            , @country_code
+            , @addr_line_1
+            , @addr_line_2
+            , @addr_line_3
+            , @addr_line_4
+            , @city_name
+            , @state_prov
+            , @postal_code
+            , @county_name
+            , @region_name
+
             , @w_job_or_pos_id
 
 
@@ -528,75 +578,6 @@ BEGIN
                             END
                     END
 
-/*
-                ---------------------------------------------------------------------------
-                -- Check for the exists of the national id
-                ---------------------------------------------------------------------------
-                IF (@national_id = '')
-                    BEGIN
-
-                        SET @msg_id = 'U00046'
-                        SET @v_step_position = 'Validation - ' + @msg_id
-
-                        INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id      As msg_id
-                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
-                        FROM DBSCOMMON.dbo.message_master t     --#tbl_msg_master t
-                        WHERE (t.msg_id = @msg_id)
-
-                        -- Historical Message for reporting purpose
-                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                            @p_msg_id             = @msg_id
-                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
-                            , @p_emp_id             = @emp_id
-                            , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'National ID is blank - defaulting to 99999'
-                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
-                            , @p_activity_date      = @p_activity_date
-                            , @p_audit_id           = @aud_id
-
-                        SET  @national_id = '99999'
-                    END
-                ELSE
-                    IF (@national_id <> '99999')
-                        BEGIN
-                            IF  EXISTS (
-                                        SELECT *
-                                        FROM DBShrpn.dbo.individual_personal e
-                                        WHERE e.national_id_1 = @national_id
-                                    )
-                                BEGIN
-
-                                    SET @msg_id = 'U00006'
-                                    SET @v_step_position = 'Begin ' + @msg_id
-
-                                    INSERT INTO #tbl_ghr_msg
-                                    SELECT @msg_id      As msg_id
-                                        , REPLACE(REPLACE(t.msg_text, '@1', @emp_id), '@2', @national_id) AS msg_desc
-                                    FROM DBSCOMMON.dbo.message_master t     --#tbl_msg_master t
-                                    WHERE (t.msg_id = @msg_id)
-
-                                    -- Historical Message for reporting purpose
-                                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                                        @p_msg_id             = @msg_id
-                                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
-                                        , @p_emp_id             = @emp_id
-                                        , @p_eff_date           = @eff_date
-                                        , @p_pay_element_id     = ''
-                                        , @p_msg_p1             = @national_id
-                                        , @p_msg_p2             = ''
-                                        , @p_msg_desc           = 'NIS number already in use - defaulting to 99999'
-                                        , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
-                                        , @p_activity_date      = @p_activity_date
-                                        , @p_audit_id           = @aud_id
-
-                                    SET @national_id = '99999'
-                                END
-                        END
-*/
                 ---------------------------------------------------------------------------
                 -- Check to see if the national id is blank
                 ---------------------------------------------------------------------------
@@ -792,7 +773,6 @@ BEGIN
                 SET @w_emp_display_name = RTRIM(@last_name) + ', ' + RTRIM(@first_name)
 
 
-
                 ---------------------------------------------------------------------------
                 -- Calculate Annual Salary from Pay rate
                 ---------------------------------------------------------------------------
@@ -863,25 +843,27 @@ BEGIN
                     , @p_preferred_name                    = @w_preferred_name
                     , @p_name_suffix                       = @w_name_suffix
                     , @p_emp_display_name                  = @w_emp_display_name
-                    , @p_birth_date                        = @w_birth_date
-                    , @p_sex_code                          = @w_sex_code
+                    , @p_birth_date                        = @birth_date
+                    , @p_sex_code                          = @gender
                     , @p_marital_status_code_1             = @w_marital_status_code_1
                     , @p_national_id_1_type_code           = @national_id_type_code
                     , @p_national_id_1                     = @national_id
+
                     , @p_addr_1_type_code                  = @w_addr_1_type_code
-                    , @p_addr_1_fmt_code                   = @w_addr_1_fmt_code
-                    , @p_addr_1_line_1                     = @w_addr_1_line_1
-                    , @p_addr_1_line_2                     = @w_addr_1_line_2
-                    , @p_addr_1_line_3                     = @w_addr_1_line_3
-                    , @p_addr_1_line_4                     = @w_addr_1_line_4
-                    , @p_addr_1_line_5                     = @w_addr_1_line_5
-                    , @p_addr_1_street_or_pob_1            = @w_addr_1_street_or_pob_1
-                    , @p_addr_1_street_or_pob_2            = @w_addr_1_street_or_pob_2
-                    , @p_addr_1_street_or_pob_3            = @w_addr_1_street_or_pob_3
-                    , @p_addr_1_city_name                  = @w_addr_1_city_name
-                    , @p_addr_1_ctry_sub_entity_code       = @w_addr_1_ctry_sub_entity_code
-                    , @p_addr_1_postal_code                = @w_addr_1_postal_code
-                    , @p_addr_1_country_code               = @w_addr_1_country_code
+                    , @p_addr_1_fmt_code                   = @addr_fmt_code
+                    , @p_addr_1_line_1                     = @addr_line_1
+                    , @p_addr_1_line_2                     = @addr_line_2
+                    , @p_addr_1_line_3                     = ''
+                    , @p_addr_1_line_4                     = ''
+                    , @p_addr_1_line_5                     = ''
+                    , @p_addr_1_street_or_pob_1            = @addr_line_3
+                    , @p_addr_1_street_or_pob_2            = @addr_line_4
+                    , @p_addr_1_street_or_pob_3            = ''
+                    , @p_addr_1_city_name                  = @city_name
+                    , @p_addr_1_ctry_sub_entity_code       = @state_prov
+                    , @p_addr_1_postal_code                = @postal_code
+                    , @p_addr_1_country_code               = @country_code
+
                     , @p_assigned_to_code                  = @w_assigned_to_code
                     , @p_job_or_pos_id                     = @w_job_or_pos_id       -- need real value
                     , @p_organization_chart_name           = @organization_chart_name
@@ -1115,6 +1097,23 @@ BYPASS_EMPLOYEE:
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
+
+                , @annual_hrs_per_fte
+                , @annual_rate
+                , @birth_date
+                , @gender
+                , @addr_fmt_code
+                , @country_code
+                , @addr_line_1
+                , @addr_line_2
+                , @addr_line_3
+                , @addr_line_4
+                , @city_name
+                , @state_prov
+                , @postal_code
+                , @county_name
+                , @region_name
+
                 , @w_job_or_pos_id
 
         END  -- Error Loop

@@ -96,6 +96,8 @@ BEGIN
     DECLARE @w_fatal_error              	    bit     = 0         --char(01)
     DECLARE @w_curr_status_value        	    char(10)
 
+    DECLARE @w_addr_1_type_code                     char(05)        = '1'   -- Home
+
     DECLARE @special_value_exists       	    int
     DECLARE @individual_id              	    char(10)
     DECLARE @prior_last_name            	    char(30)
@@ -193,6 +195,19 @@ BEGIN
     DECLARE @tax_ceiling_amt                 	char(15)        -- employee.user_monetary_amt_1
     DECLARE @labor_grp_code                  	char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                     	char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+    DECLARE @annual_hrs_per_fte                     varchar(255)
+    DECLARE @annual_rate                            varchar(255)
+    DECLARE @addr_fmt_code                          char(06)
+    DECLARE @country_code                           varchar(255)
+    DECLARE @addr_line_1                            varchar(255)
+    DECLARE @addr_line_2                            varchar(255)
+    DECLARE @addr_line_3                            varchar(255)
+    DECLARE @addr_line_4                            varchar(255)
+    DECLARE @city_name                              varchar(255)
+    DECLARE @state_prov                             varchar(255)
+    DECLARE @postal_code                            varchar(255)
+    DECLARE @county_name                            varchar(255)
+    DECLARE @region_name                            varchar(255)
 
 
     -- Temp table stores message master error templates in use for this procedure
@@ -330,6 +345,21 @@ BEGIN
              , t.tax_ceiling_amt
              , t.labor_grp_code
              , t.file_source
+
+             , t.annual_hrs_per_fte
+             , t.annual_rate
+             , t.addr_fmt_code
+             , t.country_code
+             , t.addr_line_1
+             , t.addr_line_2
+             , t.addr_line_3
+             , t.addr_line_4
+             , t.city_name
+             , t.state_prov
+             , t.postal_code
+             , t.county_name
+             , t.region_name
+
              , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
       WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
@@ -376,6 +406,21 @@ BEGIN
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
+
+            , @annual_hrs_per_fte
+            , @annual_rate
+            , @addr_fmt_code
+            , @country_code
+            , @addr_line_1
+            , @addr_line_2
+            , @addr_line_3
+            , @addr_line_4
+            , @city_name
+            , @state_prov
+            , @postal_code
+            , @county_name
+            , @region_name
+
             , @w_job_or_pos_id
 
 
@@ -459,6 +504,8 @@ BEGIN
                     , @w_ee_eff_date = eempl.eff_date
                     , @individual_id = emp.individual_id
                 FROM DBShrpn.dbo.employee emp
+                JOIN DBShrpn.dbo.individual ind ON
+                     (emp.individual_id = ind.individual_id)
                 JOIN DBShrpn.dbo.uvu_emp_status_most_rec stat ON
                     (emp.emp_id = stat.emp_id)
                 JOIN DBShrpn.dbo.uvu_emp_employment_most_rec eempl ON
@@ -960,6 +1007,24 @@ BEGIN
                                   AND (next_eff_date    = @i_next_eff_date)
                                   AND (prior_eff_date   = @i_prior_eff_date)
 
+                                -- Update home address
+                                UPDATE DBShrpn.individual
+                                SET addr_1_line_1                  = @addr_line_1
+                                  , addr_1_line_2                  = @addr_line_2
+                                  , addr_1_line_3                  = ''
+                                  , addr_1_line_4                  = ''
+                                  , addr_1_line_5                  = ''
+                                  , addr_1_street_or_pob_1         = @addr_line_3
+                                  , addr_1_street_or_pob_2         = @addr_line_4
+                                  , addr_1_street_or_pob_3         = ''
+                                  , addr_1_city_name               = @city_name
+                                  , addr_1_country_sub_entity_code = @state_prov
+                                  , addr_1_postal_code             = @postal_code
+                                  , addr_1_country_code            = @country
+                                  , addr_1_fmt_code                = @addr_fmt_code
+                                  , addr_1_type_code               = @w_addr_1_type_code
+
+
 
                             END
                         ELSE    -- Associate Not terminated
@@ -1402,6 +1467,21 @@ BYPASS_EMPLOYEE:
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
+
+                , @annual_hrs_per_fte
+                , @annual_rate
+                , @addr_fmt_code
+                , @country_code
+                , @addr_line_1
+                , @addr_line_2
+                , @addr_line_3
+                , @addr_line_4
+                , @city_name
+                , @state_prov
+                , @postal_code
+                , @county_name
+                , @region_name
+
                 , @w_job_or_pos_id
 
         END  -- While Loop
