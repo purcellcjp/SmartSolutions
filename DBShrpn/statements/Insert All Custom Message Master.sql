@@ -92,7 +92,9 @@ VALUES
 
 , (N'U00122', 1, 0, N'No records were imported in the bulkcopy step - ending job execution.', N'', N'', 0, N'', 0, 0)
 
-, (N'U00123', 1, 0, N'Invalid annual salary amount, ''@1'', for employee, @2.', N'', N'', 0, N'', 0, 0)
+--, (N'U00123', 1, 0, N'Invalid annual salary amount, ''@1'', for employee, @2.', N'', N'', 0, N'', 0, 0)
+, (N'U00124', 1, 0, N'Invalid annual hours per FTE value for employee, @1.', N'', N'', 0, N'', 0, 0)
+, (N'U00125', 1, 0, N'Invalid annual rate value, for employee, @1.', N'', N'', 0, N'', 0, 0)
 GO
 
 select *

@@ -57,212 +57,164 @@ BEGIN
 
     SET NOCOUNT ON
 
-    DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
+    DECLARE @v_step_position                    varchar(255)            = 'Begin Procedure'
 
-    DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
-    DECLARE @v_EVENT_ID_TRANSFER            char(2)             = '03'
-    DECLARE @v_EVENT_ID_STATUS_CHANGE       char(2)             = '05'
-    DECLARE @v_EVENT_ID_PAY_ELE             char(2)             = '06'
+    DECLARE @v_EVENT_ID_SALARY_CHANGE           char(2)                 = '02'
+    DECLARE @v_EVENT_ID_TRANSFER                char(2)                 = '03'
+    DECLARE @v_EVENT_ID_STATUS_CHANGE           char(2)                 = '05'
+    DECLARE @v_EVENT_ID_PAY_ELE                 char(2)                 = '06'
 
-    DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
-    DECLARE @v_ACTIVITY_STATUS_WARNING      char(2)             = '01'
-    DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
+    DECLARE @v_ACTIVITY_STATUS_GOOD             char(2)                 = '00'
+    DECLARE @v_ACTIVITY_STATUS_WARNING          char(2)                 = '01'
+    DECLARE @v_ACTIVITY_STATUS_BAD              char(2)                 = '02'
 
-    DECLARE @v_BEG_OF_TIME_DATE             datetime            = '19000101'
-    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_BEG_OF_TIME_DATE                 datetime                = '19000101'
+    DECLARE @v_END_OF_TIME_DATE                 datetime                = '29991231'
 
-    DECLARE @ErrorNumber                    varchar(10)
-    DECLARE @ErrorMessage                   nvarchar(4000)
-    DECLARE @ErrorSeverity                  int
-    DECLARE @ErrorState                     int
+    DECLARE @ErrorNumber                        varchar(10)
+    DECLARE @ErrorMessage                       nvarchar(4000)
+    DECLARE @ErrorSeverity                      int
+    DECLARE @ErrorState                         int
 
-    DECLARE @v_ret_val                      int                 = 0
-    DECLARE @v_ret_val_usp_ins_hepy_insert  INT                 = 0
-
-
-    DECLARE @w_msg_text                  varchar(255)
-    DECLARE @w_msg_text_2               varchar(255)
-    DECLARE @w_msg_text_3               varchar(255)
-    DECLARE @w_severity_cd               tinyint
-    DECLARE @w_fatal_error               bit     = 0         --char(01)
+    DECLARE @v_ret_val                          int                     = 0
+    DECLARE @v_ret_val_usp_ins_hepy_insert      int                     = 0
 
 
+    DECLARE @w_msg_text                         varchar(255)
+    DECLARE @w_msg_text_2                       varchar(255)
+    DECLARE @w_msg_text_3                       varchar(255)
+    DECLARE @w_severity_cd                      tinyint
+    DECLARE @w_fatal_error                      bit                     = 0         --char(01)
 
+    DECLARE @maxx                               char(06)
+    DECLARE @msg_id                             char(10)
 
-
-    --DECLARE @max         INT
-    DECLARE @maxx         CHAR(06)
-    --DECLARE @cnt         INT
-    --DECLARE @ind_id         INT
-    --DECLARE @ind_idx      CHAR(10)
-    --DECLARE @annual_salary   MONEY
-    --DECLARE @tax_entity_id   CHAR(10)
-    --DECLARE @display_name   CHAR(45)
-    DECLARE @msg_id         CHAR(10)
-    --DECLARE @msg_p1         CHAR(15)
-    --DECLARE @msg_p2         CHAR(15)
-    --DECLARE @msg_cnt      INT
-
-    DECLARE         @i_stop_date_1                  char(12),
-                    @i_emp_id                          char(15),
-                    @i_empl_id                         char(10),
-                    @i_pay_element_id                  char(10),
-                    @i_eff_date                        datetime,
-                    @i_stop_date                  datetime,
-                    @i_pay_element_exists            char(01),
-                    @i_calc_meth_code                  char(02)     -- cjp 8/12/2025
+    DECLARE @i_stop_date_1                      char(12)
+    DECLARE @i_emp_id                           char(15)
+    DECLARE @i_empl_id                          char(10)
+    DECLARE @i_pay_element_id                   char(10)
+    DECLARE @i_eff_date                         datetime
+    DECLARE @i_stop_date                        datetime
+    DECLARE @i_pay_element_exists               char(01)
+    DECLARE @i_calc_meth_code                   char(02)
 
     -- Declare
     DECLARE @w_emp_id                           char(15)                = '000325'
-          , @w_empl_id                          char(10)                = '5001'
-          , @w_pay_element_id                   char(10)                = 'ACTI'
-          , @w_eff_date                         datetime                = '20210801'
-          , @w_prior_eff_date                   datetime                = '19000101'
-          , @w_next_eff_date                    datetime                = '19000101'
-          , @w_inact_by_pay_element_ind         char(1)                 = 'N'
-          , @w_start_date                       datetime                = '20210801'
-          , @w_stop_date_1                      datetime                = '29991231'
-          , @w_change_reason_code               char(5)                 = ''
-          , @w_pay_ele_pay_pd_sched_code        char(2)                 = '01'
-          , @w_calc_meth_code                   char(2)                 = '01'
-          , @w_standard_calc_factor_1           money                   = 0.00
-          , @w_standard_calc_factor_2           money                   = 0.00
-          , @w_special_calc_factor_1            money                   = 0.00
-          , @w_special_calc_factor_2            money                   = 0.00
-          , @w_special_calc_factor_3            money                   = 0.00
-          , @w_special_calc_factor_4            money                   = 0.00
-          , @w_rate_tbl_id                      char(10)                = ''
-          , @w_rate_code                        char(8)                 = ''
-          , @w_payee_name                       char(35)                = ''
-          , @w_payee_pmt_sched_code             char(5)                 = ''
-          , @w_payee_bank_transit_nbr           char(17)                = ''
-          , @w_payee_bank_acct_nbr              char(17)                = ''
-          , @w_pmt_ref_nbr                      char(20)                = ''
-          , @w_pmt_ref_name                     char(35)                = ''
-          , @w_vendor_id                        char(10)                = ''
-          , @w_limit_amt                        money                   = 0
-          , @w_guaranteed_net_pay_amt           money                   = 0
-          , @w_start_after_pay_element_id       char(10)                = ''
-          , @w_indiv_addr_typ_to_prt_code       char(5)                 = ''
-          , @w_bank_id                          char(11)                = ''
-          , @w_dir_dep_bank_acct_nbr            char(17)                = ''
-          , @w_bank_acct_type_code              char(1)                 = ' '
-          , @w_pay_pd_arrs_rec_fixed_amt        money                   = 0
-          , @w_pay_pd_arrs_rec_fixed_pct        money                   = 0
-          , @w_min_pay_pd_recovery_amt          money                   = 0
-          , @w_user_amt_1                       float                   = 0
-          , @w_user_amt_2                       float                   = 0
-          , @w_user_monetary_amt_1              money                   = 0
-          , @w_user_monetary_amt_2              money                   = 0
-          , @w_user_monetary_curr_code          char(3)                 = ''
-          , @w_user_code_1                      char(5)                 = ''
-          , @w_user_code_2                      char(5)                 = ''
-          , @w_user_date_1                      datetime                = '19000101'
-          , @w_user_date_2                      datetime                = '19000101'
-          , @w_user_ind_1                       char(1)                 = 'N'
-          , @w_user_ind_2                       char(1)                 = 'N'
-          , @w_user_text_1                      char(50)                = ''
-          , @w_user_text_2                      char(50)                = ''
-          , @w_chgstamp                         smallint                = 0
-          , @w_epend_emp_id                     char(15)                = ''
-          , @w_epend_empl_id                    char(10)                = ''
-          , @w_epend_pay_element_id             char(10)                = ''
-          , @w_epend_arrears_bal_amt            money                   = 0
-          , @w_epend_rec_ovr_nbr_pay_pds        tinyint                 = 0
-          , @w_epend_wh_status_code             char(1)                 = '9'
-          , @w_epend_calc_last_pay_pd_ind       char(1)                 = 'N'
-          , @w_epend_prenotif_chk_date          datetime                = '19000101'
-          , @w_epend_prenotification_code        char(1)                = ''
-          , @w_epend_chgstamp                   smallint                = 0
-          , @w_epec_emp_id                      char(15)                = ''
-          , @w_epec_empl_id                     char(10)                = ''
-          , @w_epec_pay_element_id              char(10)                = ''
-          , @w_epec_start_date                  datetime                = '19000101'
-          , @w_epec_comnt_type_code             char(1)                 = ''
-          , @w_epec_seq_nbr                     smallint                = 0
-          , @w_epec_comnt_text                  varchar(255)            = ''
-          , @w_epec_chgstamp                    smallint                = 0
-          , @w_pe_descp                         char(35)                = 'Acting Salary'
-          , @w_pe_type                          char(1)                 = '1'
-          , @w_pe_earning_type                  char(1)                 = '1'
-          , @w_pe_deduction_type                char(1)                 = ''
-          , @w_pe_pay_pd_sched                  char(2)                 = '01'
-          , @w_pe_calc_meth                     char(2)                 = '01'
-          , @w_pe_stndrd_calc_fac_1             money                   = 0
-          , @w_pe_stndrd_calc_fac_2             money                   = 0
-          , @w_pe_spec_calc_fac_1               money                   = 0
-          , @w_pe_spec_calc_fac_2               money                   = 0
-          , @w_pe_spec_calc_fac_3               money                   = 0
-          , @w_pe_spec_calc_fac_4               money                   = 0
-          , @w_pe_limit_amt                     money                   = 0
-          , @w_pe_limit_cyc_type                char(1)                 = '0'
-          , @w_pe_ded_rec_meth                  char(1)                 = ''
-          , @w_pe_rec_fixed_amt                 money                   = 0
-          , @w_pe_rec_fixed_pct                 float                   = 0
-          , @w_pe_min_pay_pd_rec_amt            money                   = 0
-          , @w_pe_rate_tbl_id                   char(10)                = ''
-          , @w_pe_ben_plan_id                   char(15)                = ''
-          , @w_rt_descp                         char(35)                = ''
-          , @w_rte_descp                        char(35)                = ''
-          , @w_epel_towards_lmt_amt             money                   = 0
-          , @w_tpp_descp                        char(15)                = ''
-          , @w_comments_flag                    char(1)                 = ''
-          , @w_current_ver_eff_date             datetime                = '19000101'
-          , @w_pe_curr_code                     char(3)                 = 'XCD'
-          , @w_scrty_cat_code                   char(3)                 = 'NA'
-          , @w_original_stop_date               datetime                = '19000101'
-          , @w_pension_tot_distn_ind            char(1)                 = 'N'
-          , @w_pension_distn_code_1             char(1)                 = '0'
-          , @w_pension_distn_code_2             char(1)                 = '0'
-          , @w_pre_1990_rpp_ctrb_type           char(1)                 = '0'
-          , @w_first_roth_ctrb                  datetime                = '29991231'
-          , @w_ira_sep_simple_ind               char(1)                 = 'N'
-          , @w_txbl_amt_not_det_ind             char(1)                 = 'N'
-          , @w_result_set_ind                   char(1)                 = 'N'
+    DECLARE @w_empl_id                          char(10)                = '5001'
+    DECLARE @w_pay_element_id                   char(10)                = 'ACTI'
+    DECLARE @w_prior_eff_date                   datetime                = '19000101'
+    DECLARE @w_next_eff_date                    datetime                = '19000101'
+    DECLARE @w_inact_by_pay_element_ind         char(1)                 = 'N'
+    DECLARE @w_change_reason_code               char(5)                 = ''
+    DECLARE @w_pay_ele_pay_pd_sched_code        char(2)                 = '01'
+    DECLARE @w_calc_meth_code                   char(2)                 = '01'
+    DECLARE @w_standard_calc_factor_2           money                   = 0.00
+    DECLARE @w_special_calc_factor_1            money                   = 0.00
+    DECLARE @w_special_calc_factor_2            money                   = 0.00
+    DECLARE @w_special_calc_factor_3            money                   = 0.00
+    DECLARE @w_special_calc_factor_4            money                   = 0.00
+    DECLARE @w_rate_tbl_id                      char(10)                = ''
+    DECLARE @w_rate_code                        char(8)                 = ''
+    DECLARE @w_payee_name                       char(35)                = ''
+    DECLARE @w_payee_pmt_sched_code             char(5)                 = ''
+    DECLARE @w_payee_bank_transit_nbr           char(17)                = ''
+    DECLARE @w_payee_bank_acct_nbr              char(17)                = ''
+    DECLARE @w_pmt_ref_nbr                      char(20)                = ''
+    DECLARE @w_pmt_ref_name                     char(35)                = ''
+    DECLARE @w_vendor_id                        char(10)                = ''
+    DECLARE @w_limit_amt                        money                   = 0
+    DECLARE @w_guaranteed_net_pay_amt           money                   = 0
+    DECLARE @w_start_after_pay_element_id       char(10)                = ''
+    DECLARE @w_indiv_addr_typ_to_prt_code       char(5)                 = ''
+    DECLARE @w_bank_id                          char(11)                = ''
+    DECLARE @w_dir_dep_bank_acct_nbr            char(17)                = ''
+    DECLARE @w_bank_acct_type_code              char(1)                 = ' '
+    DECLARE @w_pay_pd_arrs_rec_fixed_amt        money                   = 0
+    DECLARE @w_pay_pd_arrs_rec_fixed_pct        money                   = 0
+    DECLARE @w_min_pay_pd_recovery_amt          money                   = 0
+    DECLARE @w_user_amt_1                       float                   = 0
+    DECLARE @w_user_amt_2                       float                   = 0
+    DECLARE @w_user_monetary_amt_1              money                   = 0
+    DECLARE @w_user_monetary_amt_2              money                   = 0
+    DECLARE @w_user_monetary_curr_code          char(3)                 = ''
+    DECLARE @w_user_code_1                      char(5)                 = ''
+    DECLARE @w_user_code_2                      char(5)                 = ''
+    DECLARE @w_user_date_1                      datetime                = '19000101'
+    DECLARE @w_user_date_2                      datetime                = '19000101'
+    DECLARE @w_user_ind_1                       char(1)                 = 'N'
+    DECLARE @w_user_ind_2                       char(1)                 = 'N'
+    DECLARE @w_user_text_1                      char(50)                = ''
+    DECLARE @w_user_text_2                      char(50)                = ''
+    DECLARE @w_chgstamp                         smallint                = 0
+    DECLARE @w_epend_emp_id                     char(15)                = ''
+    DECLARE @w_epend_empl_id                    char(10)                = ''
+    DECLARE @w_epend_pay_element_id             char(10)                = ''
+    DECLARE @w_epend_arrears_bal_amt            money                   = 0
+    DECLARE @w_epend_rec_ovr_nbr_pay_pds        tinyint                 = 0
+    DECLARE @w_epend_wh_status_code             char(1)                 = '9'
+    DECLARE @w_epend_calc_last_pay_pd_ind       char(1)                 = 'N'
+    DECLARE @w_epend_prenotif_chk_date          datetime                = '19000101'
+    DECLARE @w_epend_prenotification_code        char(1)                = ''
+    DECLARE @w_epend_chgstamp                   smallint                = 0
+    DECLARE @w_epec_emp_id                      char(15)                = ''
+    DECLARE @w_epec_empl_id                     char(10)                = ''
+    DECLARE @w_epec_pay_element_id              char(10)                = ''
+    DECLARE @w_epec_start_date                  datetime                = '19000101'
+    DECLARE @w_epec_comnt_type_code             char(1)                 = ''
+    DECLARE @w_epec_seq_nbr                     smallint                = 0
+    DECLARE @w_epec_comnt_text                  varchar(255)            = ''
+    DECLARE @w_epec_chgstamp                    smallint                = 0
+    DECLARE @w_pe_descp                         char(35)                = 'Acting Salary'
+    DECLARE @w_pe_type                          char(1)                 = '1'
+    DECLARE @w_pe_earning_type                  char(1)                 = '1'
+    DECLARE @w_pe_deduction_type                char(1)                 = ''
+    DECLARE @w_pe_pay_pd_sched                  char(2)                 = '01'
+    DECLARE @w_pe_calc_meth                     char(2)                 = '01'
+    DECLARE @w_pe_stndrd_calc_fac_1             money                   = 0
+    DECLARE @w_pe_stndrd_calc_fac_2             money                   = 0
+    DECLARE @w_pe_spec_calc_fac_1               money                   = 0
+    DECLARE @w_pe_spec_calc_fac_2               money                   = 0
+    DECLARE @w_pe_spec_calc_fac_3               money                   = 0
+    DECLARE @w_pe_spec_calc_fac_4               money                   = 0
+    DECLARE @w_pe_limit_amt                     money                   = 0
+    DECLARE @w_pe_limit_cyc_type                char(1)                 = '0'
+    DECLARE @w_pe_ded_rec_meth                  char(1)                 = ''
+    DECLARE @w_pe_rec_fixed_amt                 money                   = 0
+    DECLARE @w_pe_rec_fixed_pct                 float                   = 0
+    DECLARE @w_pe_min_pay_pd_rec_amt            money                   = 0
+    DECLARE @w_pe_rate_tbl_id                   char(10)                = ''
+    DECLARE @w_pe_ben_plan_id                   char(15)                = ''
+    DECLARE @w_rt_descp                         char(35)                = ''
+    DECLARE @w_rte_descp                        char(35)                = ''
+    DECLARE @w_epel_towards_lmt_amt             money                   = 0
+    DECLARE @w_tpp_descp                        char(15)                = ''
+    DECLARE @w_comments_flag                    char(1)                 = ''
+    DECLARE @w_current_ver_eff_date             datetime                = '19000101'
+    DECLARE @w_pe_curr_code                     char(3)                 = 'XCD'
+    DECLARE @w_scrty_cat_code                   char(3)                 = 'NA'
+    DECLARE @w_original_stop_date               datetime                = '19000101'
+    DECLARE @w_pension_tot_distn_ind            char(1)                 = 'N'
+    DECLARE @w_pension_distn_code_1             char(1)                 = '0'
+    DECLARE @w_pension_distn_code_2             char(1)                 = '0'
+    DECLARE @w_pre_1990_rpp_ctrb_type           char(1)                 = '0'
+    DECLARE @w_first_roth_ctrb                  datetime                = '29991231'
+    DECLARE @w_ira_sep_simple_ind               char(1)                 = 'N'
+    DECLARE @w_txbl_amt_not_det_ind             char(1)                 = 'N'
+    DECLARE @w_result_set_ind                   char(1)                 = 'N'
 
 
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                 int             = 0
     DECLARE @emp_id                                 char(15)        = ''
-    DECLARE @eff_date                               char(10)        = '29991231'
-    DECLARE @first_name                             char(25)
-    DECLARE @first_middle_name                      char(25)
-    DECLARE @last_name                              char(30)
+    DECLARE @eff_date                               datetime
     DECLARE @empl_id                                char(10)
-    DECLARE @national_id_type_code                  char(05)
-    DECLARE @national_id                            char(20)
-    DECLARE @organization_group_id                  char(05)
-    DECLARE @organization_chart_name                char(64)
-    DECLARE @organization_unit_name                 char(240)
-    DECLARE @emp_status_classn_code                 char(02)
-    DECLARE @position_title                         char(50)        -- DBShrpn..emp_assignment.user_text
-    DECLARE @employment_type_code                   varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt                      char(15)
-    DECLARE @begin_date                             char(10)
-    DECLARE @end_date                               char(10)
-    DECLARE @pay_status_code                        char(01)
-    DECLARE @pay_group_id                           char(10)
-    DECLARE @pay_element_ctrl_grp_id                char(10)
-    DECLARE @time_reporting_meth_code               char(01)
-    DECLARE @employment_info_chg_reason_cd          char(05)
-    DECLARE @emp_location_code                      char(10)
-    DECLARE @emp_status_code                        char(02)
-    DECLARE @reason_code                            char(02)
-    DECLARE @emp_expected_return_date               char(10)
-    DECLARE @pay_through_date                       char(10)
-    DECLARE @emp_death_date                         char(10)
-    DECLARE @consider_for_rehire_ind                char(01)
+    DECLARE @begin_date                             datetime
+    DECLARE @end_date                               datetime
     DECLARE @pay_element_id                         char(10)
-    DECLARE @emp_calculation                        char(15)
-    DECLARE @tax_flag                               char(01)        -- individual_personal.ind_2
-    DECLARE @nic_flag                               char(01)        -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
-    DECLARE @labor_grp_code                         char(05)        -- DBShrpn..emp_employment.labor_grp_code
+    DECLARE @emp_calculation                        money
     DECLARE @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
-    DECLARE @w_begin_date                           datetime
-    DECLARE @w_end_date                             datetime
     DECLARE @cur_eempl_pay_through_date             datetime
 
 
@@ -273,59 +225,7 @@ BEGIN
         )
 
 
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id            char(15)        NOT NULL
-        , severity_cd       tinyint         NOT NULL
-        , msg_text          varchar(255)    NOT NULL
-        , msg_text_2        varchar(255)    NOT NULL
-        , msg_text_3        varchar(255)    NOT NULL
-        )
-
-
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
-
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN (
-                         'U00028'
-                        ,'U00009'
-                        ,'U00029'
-                        ,'U00011'
-                        ,'U00012'
-                        ,'U00027'
-                        ,'U00030'
-                        ,'U00039'
-                        ,'U00047'
-                        ,'U00010'
-                        ,'U00101'
-                        ,'U00102'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN (
-                         'U00029'
-                        ,'U00012'
-                        ,'U00027'
-                        ,'U00030'
-                        ,'U00039'
-                        ,'U00047'
-                        ,'U00101'
-                        ,'U00102'
-                        ))
-*/
 
 
         SET @v_step_position = 'Declaring cursor crsrHR'
@@ -335,39 +235,11 @@ BEGIN
         SELECT t.aud_id
              , t.emp_id
              , t.eff_date
-             , t.first_name
-             , t.first_middle_name
-             , t.last_name
              , t.empl_id
-             , t.national_id_type_code
-             , t.national_id
-             , t.organization_group_id
-             , ''       -- t.organization_chart_name
-             , ''       -- t.organization_unit_name
-             , t.emp_status_classn_code
-             , t.position_title
-             , t.employment_type_code
-             , t.annual_salary_amt
              , t.begin_date
              , t.end_date
-             , t.pay_status_code
-             , t.pay_group_id
-             , t.pay_element_ctrl_grp_id
-             , t.time_reporting_meth_code
-             , t.employment_info_chg_reason_cd
-             , t.emp_location_code
-             , t.emp_status_code
-             , t.reason_code
-             , t.emp_expected_return_date
-             , t.pay_through_date
-             , t.emp_death_date
-             , t.consider_for_rehire_ind
              , t.pay_element_id
              , t.emp_calculation
-             , t.tax_flag
-             , t.nic_flag
-             , t.tax_ceiling_amt
-             , t.labor_grp_code
              , t.file_source
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_PAY_ELE)
@@ -380,39 +252,11 @@ BEGIN
         INTO  @aud_id
             , @emp_id
             , @eff_date
-            , @first_name
-            , @first_middle_name
-            , @last_name
             , @empl_id
-            , @national_id_type_code
-            , @national_id
-            , @organization_group_id
-            , @organization_chart_name
-            , @organization_unit_name
-            , @emp_status_classn_code
-            , @position_title
-            , @employment_type_code
-            , @annual_salary_amt
             , @begin_date
             , @end_date
-            , @pay_status_code
-            , @pay_group_id
-            , @pay_element_ctrl_grp_id
-            , @time_reporting_meth_code
-            , @employment_info_chg_reason_cd
-            , @emp_location_code
-            , @emp_status_code
-            , @reason_code
-            , @emp_expected_return_date
-            , @pay_through_date
-            , @emp_death_date
-            , @consider_for_rehire_ind
             , @pay_element_id
             , @emp_calculation
-            , @tax_flag
-            , @nic_flag
-            , @tax_ceiling_amt
-            , @labor_grp_code
             , @file_source
 
 
@@ -431,7 +275,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Validate Pay Element Amount'
 
-                IF (TRY_CONVERT(money, @emp_calculation   ) IS NULL)
+                IF (@emp_calculation = 0.00)
                     BEGIN
 
                         SET @msg_id = 'U00101'  -- New code
@@ -460,9 +304,7 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_standard_calc_factor_1 = CONVERT(money, @emp_calculation   )
+
 
 
                 ---------------------------------------------------------------------------
@@ -471,7 +313,7 @@ BEGIN
                 -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (TRY_CONVERT(datetime, @eff_date   ) IS NULL)
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -500,13 +342,10 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_eff_date = CONVERT(datetime, @eff_date   )
 
 
                 -- Begin Date
-                IF (TRY_CONVERT(datetime, @begin_date   ) IS NULL)
+                IF (@begin_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -535,12 +374,10 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert date string to datetime
-                    SELECT @w_start_date = CONVERT(datetime, @begin_date   )
+
 
                 -- End Date
-                IF (TRY_CONVERT(datetime, @end_date   ) IS NULL)
+                IF (@end_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -548,7 +385,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id AS msg_id
-                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @begin_date   ), '@2', @emp_id   ), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
+                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @end_date ), '@2', @emp_id ), '@3', @v_EVENT_ID_PAY_ELE) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (msg_id = @msg_id)
 
@@ -569,9 +406,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert date string to datetime
-                    SELECT @w_stop_date_1 = CONVERT(datetime, @end_date   )
 
 
                 ---------------------------------------------------------------------------
@@ -671,7 +505,7 @@ BEGIN
                 FROM DBShrpn.dbo.pay_element pe
                 WHERE (pe.pay_element_id = @pay_element_id)
                 AND (pe.next_eff_date  = @v_END_OF_TIME_DATE)
-                AND (pe.stop_date      > @w_eff_date)
+                AND (pe.stop_date      > @eff_date)
 
                 IF (@@ROWCOUNT = 0) -- record not found
                 BEGIN
@@ -737,7 +571,7 @@ BEGIN
                 --   Check to see that the new effective date is greater than the current effective date
                 ---------------------------------------------------------------------------
                 IF (@i_pay_element_exists = 'Y') AND
-                (@i_eff_date           > @w_eff_date)
+                (@i_eff_date           > @eff_date)
                     BEGIN
 
                         SET @msg_id = 'U00027'
@@ -783,7 +617,7 @@ BEGIN
 
 
 
-                IF (@w_start_date > @cur_eempl_pay_through_date)
+                IF (@begin_date > @cur_eempl_pay_through_date)
                     BEGIN
 
                         SET @msg_id = 'U00030'
@@ -821,7 +655,7 @@ BEGIN
                 --- Validate the stop date against the effective date
                 ---------------------------------------------------------------------------
                 -- If stop date less than eff date then set eff date = stop date
-                IF (@w_stop_date_1 < @w_eff_date)
+                IF (@end_date < @eff_date)
                 --IF CONVERT(date, @end_date   ) < CONVERT(date, @eff_date   )
                     BEGIN
 
@@ -848,7 +682,7 @@ BEGIN
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
 
-                        SET @w_eff_date = @w_stop_date_1
+                        SET @eff_date = @end_date
                         --SELECT @eff_date    = @end_date
 
                     END
@@ -869,12 +703,12 @@ BEGIN
                                 WHERE emp_id = @emp_id
                                 AND empl_id = @empl_id
                                 AND pay_element_id = @pay_element_id
-                                AND eff_date = @w_eff_date
+                                AND eff_date = @eff_date
                             )
                     BEGIN
 
                         -- IF (@i_pay_element_exists = 'Y') AND  -- record exists but <> eff date
-                        --    --(CONVERT(date, @i_stop_date) < CONVERT(date, @w_stop_date_1))    -- compare old stop date with eot date. @w_stop_date_1 hardcoded to 12/31/2999
+                        --    --(CONVERT(date, @i_stop_date) < CONVERT(date, @end_date))    -- compare old stop date with eot date. @end_date hardcoded to 12/31/2999
                         --    (@i_stop_date < @v_END_OF_TIME_DATE)
                         --     BEGIN
                         --         SET @v_step_position = 'Pay Element Setup - Pay Element Exists'
@@ -892,7 +726,7 @@ BEGIN
 
                         -- Create new pay element record
                         EXEC DBShrpn.dbo.usp_ins_hepy_insert
-                            @w_stop_date                   = @w_stop_date_1                  -- used in insert statement
+                            @w_stop_date                   = @end_date                  -- used in insert statement
                             , @p_emp_id                      = @emp_id
                             , @p_empl_id                     = @empl_id
                             , @p_pay_element_id              = @pay_element_id
@@ -900,12 +734,12 @@ BEGIN
                             , @p_prior_eff_date              = @w_prior_eff_date
                             , @p_next_eff_date               = @w_next_eff_date
                             , @p_inact_by_pay_element_ind    = @w_inact_by_pay_element_ind
-                            , @p_start_date                  = @w_start_date                   -- not used in insert statement
-                            , @p_stop_date                   = @w_stop_date_1
+                            , @p_start_date                  = @begin_date                   -- not used in insert statement
+                            , @p_stop_date                   = @end_date
                             , @p_change_reason_code          = @w_change_reason_code
                             , @p_pay_ele_pay_pd_sched_code   = @w_pay_ele_pay_pd_sched_code
                             , @p_calc_meth_code              = @w_calc_meth_code
-                            , @p_standard_calc_factor_1      = @w_standard_calc_factor_1
+                            , @p_standard_calc_factor_1      = @emp_calculation
                             , @p_standard_calc_factor_2      = @w_standard_calc_factor_2
                             , @p_special_calc_factor_1       = @w_special_calc_factor_1
                             , @p_special_calc_factor_2       = @w_special_calc_factor_1
@@ -1023,8 +857,8 @@ BEGIN
 
 
 
-                        -- IF (@w_stop_date_1 < @v_END_OF_TIME_DATE) -- not sure why not comparing to previous record's stop date -- Are all new records stop date = 12/31/2999?
-                        -- --IF (CONVERT(date, @end_date   ) < CONVERT(date, @w_stop_date_1))
+                        -- IF (@end_date < @v_END_OF_TIME_DATE) -- not sure why not comparing to previous record's stop date -- Are all new records stop date = 12/31/2999?
+                        -- --IF (CONVERT(date, @end_date   ) < CONVERT(date, @end_date))
                         --     BEGIN
 
                         --         SET @v_step_position = 'Pay Element Setup - Stop Date < 12/31/2999'
@@ -1032,13 +866,13 @@ BEGIN
                         --         UPDATE DBShrpn.dbo.emp_pay_element
                         --         SET  stop_date = CASE
                         --                            --WHEN CONVERT(date, @end_date   ) < CONVERT(date, @i_eff_date) THEN @i_eff_date
-                        --                            WHEN @w_stop_date_1 < @i_eff_date THEN @i_eff_date
+                        --                            WHEN @end_date < @i_eff_date THEN @i_eff_date
                         --                            ELSE CONVERT(date, @end_date   )
                         --                          END
                         --         WHERE emp_id         = @emp_id
                         --           AND empl_id        = @empl_id
                         --           AND pay_element_id = @pay_element_id
-                        --           AND eff_date       = @w_eff_date  --@eff_date
+                        --           AND eff_date       = @eff_date  --@eff_date
                         --     END
 
 
@@ -1053,11 +887,11 @@ BEGIN
                                 WHERE emp_id         = @emp_id
                                 AND empl_id        = @empl_id
                                 AND pay_element_id = @pay_element_id
-                                AND eff_date       = @w_eff_date     --@eff_date
+                                AND eff_date       = @eff_date     --@eff_date
 
                                 -- Prior Record
                                 UPDATE DBShrpn.dbo.emp_pay_element
-                                SET next_eff_date =   @w_eff_date     --@eff_date
+                                SET next_eff_date =   @eff_date     --@eff_date
                                 WHERE emp_id         = @emp_id
                                 AND empl_id        = @empl_id
                                 AND pay_element_id = @pay_element_id
@@ -1071,15 +905,15 @@ BEGIN
 
                         UPDATE   DBShrpn.dbo.emp_pay_element
                         SET start_date             = @begin_date
-                        , stop_date              = @w_stop_date_1                  -- @end_date   ,
-                        , standard_calc_factor_1 = @w_standard_calc_factor_1      -- @emp_calculation   ,
+                        , stop_date              = @end_date                  -- @end_date   ,
+                        , standard_calc_factor_1 = @emp_calculation      -- @emp_calculation   ,
                         , calc_meth_code         = @w_calc_meth_code
                         , rate_tbl_id            = @w_rate_tbl_id
                         , rate_code              = @w_rate_code
                         WHERE emp_id         = @emp_id
                         AND empl_id        = @empl_id
                         AND pay_element_id = @pay_element_id
-                        AND eff_date       = @w_eff_date      --@eff_date
+                        AND eff_date       = @eff_date      --@eff_date
 
                     END
 
@@ -1129,39 +963,11 @@ BYPASS_EMPLOYEE:
             INTO  @aud_id
                 , @emp_id
                 , @eff_date
-                , @first_name
-                , @first_middle_name
-                , @last_name
                 , @empl_id
-                , @national_id_type_code
-                , @national_id
-                , @organization_group_id
-                , @organization_chart_name
-                , @organization_unit_name
-                , @emp_status_classn_code
-                , @position_title
-                , @employment_type_code
-                , @annual_salary_amt
                 , @begin_date
                 , @end_date
-                , @pay_status_code
-                , @pay_group_id
-                , @pay_element_ctrl_grp_id
-                , @time_reporting_meth_code
-                , @employment_info_chg_reason_cd
-                , @emp_location_code
-                , @emp_status_code
-                , @reason_code
-                , @emp_expected_return_date
-                , @pay_through_date
-                , @emp_death_date
-                , @consider_for_rehire_ind
                 , @pay_element_id
                 , @emp_calculation
-                , @tax_flag
-                , @nic_flag
-                , @tax_ceiling_amt
-                , @labor_grp_code
                 , @file_source
 
         END  -- Error Loop

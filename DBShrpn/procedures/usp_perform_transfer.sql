@@ -118,22 +118,22 @@ BEGIN
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                     int             = 0
     DECLARE @emp_id                                     char(15)        = ''
-    DECLARE @eff_date                                   char(10)        = '29991231'
+    DECLARE @eff_date                                   datetime
     DECLARE @first_name                                 char(25)
     DECLARE @first_middle_name                          char(25)
     DECLARE @last_name                                  char(30)
     DECLARE @empl_id                                    char(10)
     DECLARE @national_id_type_code                      char(05)
     DECLARE @national_id                                char(20)
-    DECLARE @organization_group_id                      char(05)
+    DECLARE @organization_group_id                      int
     DECLARE @organization_chart_name                    char(64)
     DECLARE @organization_unit_name                     char(240)
     DECLARE @emp_status_classn_code                     char(02)
     DECLARE @position_title                             char(50)        -- DBShrpn..emp_assignment.user_text
     DECLARE @employment_type_code                       varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt                          char(15)
-    DECLARE @begin_date                                 char(10)
-    DECLARE @end_date                                   char(10)
+    DECLARE @annual_salary_amt                          money
+    DECLARE @begin_date                                 datetime
+    DECLARE @end_date                                   datetime
     DECLARE @pay_status_code                            char(01)
     DECLARE @pay_group_id                               char(10)
     DECLARE @pay_element_ctrl_grp_id                    char(10)
@@ -144,18 +144,18 @@ BEGIN
     DECLARE @reason_code                                char(02)
     DECLARE @emp_expected_return_date                   char(10)
     DECLARE @pay_through_date                           char(10)
-    DECLARE @emp_death_date                             char(10)
+    DECLARE @emp_death_date                             datetime
     DECLARE @consider_for_rehire_ind                    char(01)
     DECLARE @pay_element_id                             char(10)
-    DECLARE @emp_calculation                            char(15)
+    DECLARE @emp_calculation                            money
     DECLARE @tax_flag                                   char(1)         -- individual_personal.ind_2
     DECLARE @nic_flag                                   char(1)         -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                            char(15)        -- employee.user_monetary_amt_1
+    DECLARE @tax_ceiling_amt                            money        -- employee.user_monetary_amt_1
     DECLARE @labor_grp_code                             char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                                char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
     DECLARE @job_or_pos_id                              char(10)        = ''
 
-    DECLARE @w_eff_date                                 datetime
+    --DECLARE @w_eff_date                                 datetime
     DECLARE @v_cal_year                                 smallint
 
     -- Transfer Varaibles
@@ -194,60 +194,8 @@ BEGIN
         )
 
 
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id            char(15)        NOT NULL
-        , severity_cd       tinyint         NOT NULL
-        , msg_text          varchar(255)    NOT NULL
-        , msg_text_2        varchar(255)    NOT NULL
-        , msg_text_3        varchar(255)    NOT NULL
-        )
-
-
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
 
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00017'
-                         ,'U00009'
-                         ,'U00011'
-                         ,'U00018'
-                         ,'U00012'
-                         ,'U00027'
-                         ,'U00036'  -- do we need?
-                         ,'U00034'
-                         ,'U00038'
-                         ,'U00039'
-                         ,'U00044'
-                         ,'U00045'
-                         ,'U00010'
-                         ,'U00121'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN ('U00012'
-                         ,'U00027'
-                         ,'U00036'  -- do we need
-                         ,'U00034'
-                         ,'U00038'
-                         ,'U00039'
-                         ,'U00044'
-                         ,'U00045'
-                         ,'U00121'
-                        ))
-*/
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -256,35 +204,35 @@ BEGIN
         SELECT t.aud_id
              , t.emp_id
              , t.eff_date
-             , t.first_name
-             , t.first_middle_name
-             , t.last_name
+             --, t.first_name
+             --, t.first_middle_name
+             --, t.last_name
              , t.empl_id
-             , t.national_id_type_code
-             , t.national_id
+             --, t.national_id_type_code
+             --, t.national_id
              , t.organization_group_id
              , t.organization_chart_name
              , t.organization_unit_name
-             , t.emp_status_classn_code
+             --, t.emp_status_classn_code
              , t.position_title
-             , t.employment_type_code
+             --, t.employment_type_code
              , t.annual_salary_amt
-             , t.begin_date
-             , t.end_date
-             , t.pay_status_code
+             --, t.begin_date
+             --, t.end_date
+             --, t.pay_status_code
              , t.pay_group_id
-             , t.pay_element_ctrl_grp_id
-             , t.time_reporting_meth_code
+             --, t.pay_element_ctrl_grp_id
+             --, t.time_reporting_meth_code
              , t.employment_info_chg_reason_cd
              , t.emp_location_code
-             , t.emp_status_code
-             , t.reason_code
-             , t.emp_expected_return_date
-             , t.pay_through_date
-             , t.emp_death_date
-             , t.consider_for_rehire_ind
-             , t.pay_element_id
-             , t.emp_calculation
+            --  , t.emp_status_code
+            --  , t.reason_code
+            --  , t.emp_expected_return_date
+            --  , t.pay_through_date
+            --  , t.emp_death_date
+            --  , t.consider_for_rehire_ind
+            --  , t.pay_element_id
+            --  , t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
@@ -302,35 +250,35 @@ BEGIN
         INTO  @aud_id
             , @emp_id
             , @eff_date
-            , @first_name
-            , @first_middle_name
-            , @last_name
+            --, @first_name
+            --, @first_middle_name
+            --, @last_name
             , @empl_id
-            , @national_id_type_code
-            , @national_id
+            --, @national_id_type_code
+            --, @national_id
             , @organization_group_id
             , @organization_chart_name
             , @organization_unit_name
-            , @emp_status_classn_code
+            --, @emp_status_classn_code
             , @position_title
-            , @employment_type_code
+            --, @employment_type_code
             , @annual_salary_amt
-            , @begin_date
-            , @end_date
-            , @pay_status_code
+            --, @begin_date
+            --, @end_date
+            --, @pay_status_code
             , @pay_group_id
-            , @pay_element_ctrl_grp_id
-            , @time_reporting_meth_code
+            --, @pay_element_ctrl_grp_id
+            --, @time_reporting_meth_code
             , @employment_info_chg_reason_cd
             , @emp_location_code
-            , @emp_status_code
-            , @reason_code
-            , @emp_expected_return_date
-            , @pay_through_date
-            , @emp_death_date
-            , @consider_for_rehire_ind
-            , @pay_element_id
-            , @emp_calculation
+            --, @emp_status_code
+            --, @reason_code
+            --, @emp_expected_return_date
+            --, @pay_through_date
+            --, @emp_death_date
+            --, @consider_for_rehire_ind
+            --, @pay_element_id
+            --, @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
@@ -378,7 +326,7 @@ BEGIN
                 -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -407,9 +355,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_eff_date = CONVERT(datetime, @eff_date)
 
 
                 ---------------------------------------------------------------------------
@@ -540,7 +485,7 @@ BEGIN
                 SET @v_step_position = 'Validation'
 
 
-                IF (@w_eff_date <= @cur_eempl_eff_date)
+                IF (@eff_date <= @cur_eempl_eff_date)
                     BEGIN
 
                         SET @msg_id = 'U00027'
@@ -835,7 +780,7 @@ BEGIN
                     GOTO BYPASS_EMPLOYEE
 
 
-                SET @v_cal_year = YEAR(@w_eff_date)
+                SET @v_cal_year = YEAR(@eff_date)
 
 
 
@@ -865,7 +810,7 @@ BEGIN
                 VALUES('EXECUTE DBShrpn.dbo.usp_upd_hrpn_02_trn')
                 , (' @p_emp_id '                         + '= ' + @v_single_quote + RTRIM(@emp_id)                                               + @v_single_quote)
                 , (', @p_new_empl_id '                   + '= ' + @v_single_quote + RTRIM(@empl_id)                                              + @v_single_quote)
-                , (', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                           + @v_single_quote)
+                , (', @p_transfer_date '                 + '= ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)                           + @v_single_quote)
                 , (', @p_assign_to '                     + '= ' + @v_single_quote + RTRIM(@cur_emp_asgn_assigned_to_code)                        + @v_single_quote)
                 , (', @p_job_or_pos_id '                 + '= ' + @v_single_quote + RTRIM(@job_or_pos_id)                                        + @v_single_quote)
                 , (', @p_org_grp_id '                    + '= ' + @v_single_quote + RTRIM(@organization_group_id))                               + @v_single_quote)
@@ -892,7 +837,7 @@ BEGIN
                     @p_emp_id                         = @emp_id
                     , @p_empl_id                        = @cur_empl_id
                     , @p_new_empl_id                    = @empl_id
-                    , @p_transfer_date                  = @w_eff_date      --CAST(@eff_date AS datetime)
+                    , @p_transfer_date                  = @eff_date
                     , @p_assign_to                      = @cur_emp_asgn_assigned_to_code
                     , @p_job_or_pos_id                  = @job_or_pos_id       --'99999' -- Default Position
                     , @p_org_grp_id                     = @organization_group_id		--CAST(@organization_group_id AS int)
@@ -921,7 +866,7 @@ BEGIN
                 , (' @p_emp_id '                    + '= ' + @v_single_quote + RTRIM(@emp_id)                     + @v_single_quote)
                 , (', @p_old_empl_id '              + '= ' + @v_single_quote + RTRIM(@cur_empl_id)                + @v_single_quote)
                 , (', @p_new_empl_id '              + '= ' + @v_single_quote + RTRIM(@empl_id)                    + @v_single_quote)
-                , (', @p_transfer_date '            + '= ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112) + @v_single_quote)
+                , (', @p_transfer_date '            + '= ' + @v_single_quote + CONVERT(char(8), @eff_date, 112) + @v_single_quote)
                 , (', @p_calendar_year '            + '= ' + @v_single_quote + CONVERT(char(4), @v_cal_year)      + @v_single_quote)
                 , (', @p_curr_code '                + '= ' + @v_single_quote + RTRIM(@new_curr_code)              + @v_single_quote)
                 , (', @p_return_to_prior_empl '     + '= ' + @v_single_quote + 'N'                                + @v_single_quote)
@@ -937,7 +882,7 @@ BEGIN
                       @p_emp_id                     = @emp_id
                     , @p_old_empl_id                = @cur_empl_id
                     , @p_new_empl_id                = @empl_id
-                    , @p_transfer_date              = @w_eff_date      --CAST(@eff_date AS datetime)
+                    , @p_transfer_date              = @eff_date      --CAST(@eff_date AS datetime)
                     , @p_calendar_year              = @v_cal_year      --LEFT(convert(varchar(10),@p_transfer_date,112),4)
                     , @p_curr_code                  = @new_curr_code
                     , @p_return_to_prior_empl       = 'N'
@@ -1076,35 +1021,35 @@ BYPASS_EMPLOYEE:
             INTO  @aud_id
                 , @emp_id
                 , @eff_date
-                , @first_name
-                , @first_middle_name
-                , @last_name
+                --, @first_name
+                --, @first_middle_name
+                --, @last_name
                 , @empl_id
-                , @national_id_type_code
-                , @national_id
+                --, @national_id_type_code
+                --, @national_id
                 , @organization_group_id
                 , @organization_chart_name
                 , @organization_unit_name
-                , @emp_status_classn_code
+                --, @emp_status_classn_code
                 , @position_title
-                , @employment_type_code
+                --, @employment_type_code
                 , @annual_salary_amt
-                , @begin_date
-                , @end_date
-                , @pay_status_code
+                --, @begin_date
+                --, @end_date
+                --, @pay_status_code
                 , @pay_group_id
-                , @pay_element_ctrl_grp_id
-                , @time_reporting_meth_code
+                --, @pay_element_ctrl_grp_id
+                --, @time_reporting_meth_code
                 , @employment_info_chg_reason_cd
                 , @emp_location_code
-                , @emp_status_code
-                , @reason_code
-                , @emp_expected_return_date
-                , @pay_through_date
-                , @emp_death_date
-                , @consider_for_rehire_ind
-                , @pay_element_id
-                , @emp_calculation
+                --, @emp_status_code
+                --, @reason_code
+                --, @emp_expected_return_date
+                --, @pay_through_date
+                --, @emp_death_date
+                --, @consider_for_rehire_ind
+                --, @pay_element_id
+                --, @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt

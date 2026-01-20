@@ -109,9 +109,9 @@ BEGIN
 
     -- This section declares the interface values from Global HR
 
-    DECLARE @aud_id                                 int             = 0
-    DECLARE @emp_id                                 char(15)        = ''
-    DECLARE @eff_date                               char(10)        = '29991231'
+    DECLARE @aud_id                         int             = 0
+    DECLARE @emp_id                         char(15)        = ''
+    DECLARE @eff_date                       datetime
 
     DECLARE @first_name                     char(25)
     DECLARE @first_middle_name              char(25)
@@ -119,7 +119,7 @@ BEGIN
     DECLARE @empl_id                        char(10)
     DECLARE @tax_flag                       char(1)         -- individual_personal.ind_2
     DECLARE @nic_flag                       char(1)         -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                char(15)        -- employee.user_monetary_amt_1
+    DECLARE @tax_ceiling_amt                money        -- employee.user_monetary_amt_1
     DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
 
@@ -130,44 +130,7 @@ BEGIN
         )
 
 
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id                            char(15)        NOT NULL
-        , severity_cd                       tinyint         NOT NULL
-        , msg_text                          varchar(255)    NOT NULL
-        , msg_text_2                        varchar(255)    NOT NULL
-        , msg_text_3                        varchar(255)    NOT NULL
-        )
-
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
-
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00013'
-                        ,'U00009'
-                        ,'U00010'
-                        ,'U00011'
-                        ,'U00016'
-                        ,'U00012'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN (
-                          'U00012'
-                        ))
-*/
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 

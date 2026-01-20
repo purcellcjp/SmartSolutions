@@ -109,7 +109,7 @@ BEGIN
     DECLARE @w_old_chgstamp             	    smallint
     DECLARE @w_taxing_country_code    	        char(02)
     DECLARE @w_curr_code              	        char(03)
-    DECLARE @w_eff_date                 	    datetime
+    --DECLARE @w_eff_date                 	    datetime
     DECLARE @w_curr_status              	    char(02)
     DECLARE @w_pos_eff_date           	        datetime
     DECLARE @w_assigned_to_code         	    char(01)    = 'P'   -- All assocs are code 'P' in VENUS and Ganymede
@@ -160,43 +160,43 @@ BEGIN
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                 int             = 0
     DECLARE @emp_id                                 char(15)        = @v_EMPTY_SPACE
-    DECLARE @eff_date                               char(10)        = '29991231'
-    DECLARE @first_name                      	char(25)
-    DECLARE @first_middle_name               	char(25)
-    DECLARE @last_name                       	char(30)
-    DECLARE @empl_id                         	char(10)
-    DECLARE @national_id_type_code           	char(05)
-    DECLARE @national_id                     	char(20)
-    DECLARE @organization_group_id           	char(05)
-    DECLARE @organization_chart_name         	varchar(64)
-    DECLARE @organization_unit_name          	varchar(240)
-    DECLARE @emp_status_classn_code          	char(02)
-    DECLARE @position_title                  	char(50)        -- DBShrpn..emp_assignment.user_text
-    DECLARE @employment_type_code            	varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt               	char(15)
-    DECLARE @begin_date                      	char(10)
-    DECLARE @end_date                        	char(10)
-    DECLARE @pay_status_code                 	char(01)
-    DECLARE @pay_group_id                    	char(10)
-    DECLARE @pay_element_ctrl_grp_id         	char(10)
-    DECLARE @time_reporting_meth_code        	char(01)
-    DECLARE @employment_info_chg_reason_cd   	char(05)
-    DECLARE @emp_location_code               	char(10)
-    DECLARE @emp_status_code                 	char(02)
-    DECLARE @reason_code                     	char(02)
-    DECLARE @emp_expected_return_date        	char(10)
-    DECLARE @pay_through_date                	char(10)
-    DECLARE @emp_death_date                  	char(10)
-    DECLARE @consider_for_rehire_ind         	char(01)
-    DECLARE @pay_element_id                  	char(10)
-    DECLARE @emp_calculation                 	char(15)
-    DECLARE @tax_flag                        	char(1)         -- individual_personal.ind_2
-    DECLARE @nic_flag                        	char(1)         -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                 	char(15)        -- employee.user_monetary_amt_1
-    DECLARE @labor_grp_code                  	char(5)         -- DBShrpn..emp_employment.labor_grp_code
-    DECLARE @file_source                     	char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
-    DECLARE @annual_hrs_per_fte                     varchar(255)
-    DECLARE @annual_rate                            varchar(255)
+    DECLARE @eff_date                               datetime
+    DECLARE @first_name                      	    char(25)
+    DECLARE @first_middle_name               	    char(25)
+    DECLARE @last_name                       	    char(30)
+    DECLARE @empl_id                         	    char(10)
+    DECLARE @national_id_type_code           	    char(05)
+    DECLARE @national_id                     	    char(20)
+    DECLARE @organization_group_id           	    int
+    DECLARE @organization_chart_name         	    varchar(64)
+    DECLARE @organization_unit_name          	    varchar(240)
+    DECLARE @emp_status_classn_code          	    char(02)
+    DECLARE @position_title                  	    char(50)        -- DBShrpn..emp_assignment.user_text
+    DECLARE @employment_type_code            	    varchar(70)     -- increased size to 70 from 5
+    DECLARE @annual_salary_amt               	    money
+    DECLARE @begin_date                      	    datetime
+    DECLARE @end_date                        	    datetime
+    DECLARE @pay_status_code                 	    char(01)
+    DECLARE @pay_group_id                    	    char(10)
+    DECLARE @pay_element_ctrl_grp_id         	    char(10)
+    DECLARE @time_reporting_meth_code        	    char(01)
+    DECLARE @employment_info_chg_reason_cd   	    char(05)
+    DECLARE @emp_location_code               	    char(10)
+    DECLARE @emp_status_code                 	    char(02)
+    DECLARE @reason_code                     	    char(02)
+    DECLARE @emp_expected_return_date        	    char(10)
+    DECLARE @pay_through_date                	    datetime
+    DECLARE @emp_death_date                  	    datetime
+    DECLARE @consider_for_rehire_ind         	    char(01)
+    --DECLARE @pay_element_id                  	    char(10)
+    --DECLARE @emp_calculation                 	    char(15)
+    DECLARE @tax_flag                        	    char(1)         -- individual_personal.ind_2
+    DECLARE @nic_flag                        	    char(1)         -- individual_personal.ind_1
+    DECLARE @tax_ceiling_amt                 	    money           -- employee.user_monetary_amt_1
+    DECLARE @labor_grp_code                  	    char(5)         -- DBShrpn..emp_employment.labor_grp_code
+    DECLARE @file_source                     	    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
+    DECLARE @annual_hrs_per_fte                     money
+    DECLARE @annual_rate                            money
     DECLARE @addr_fmt_code                          char(06)
     DECLARE @country_code                           varchar(255)
     DECLARE @addr_line_1                            varchar(255)
@@ -215,17 +215,6 @@ BEGIN
         (
           msg_id                                char(15)            NOT NULL
         , msg_desc                              varchar(255)        NOT NULL
-        )
-
-
-    -- Temp table stores error logging results for  job scheduler meesages queue
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id                                char(15)            NOT NULL
-        , severity_cd                           tinyint             NOT NULL
-        , msg_text                              varchar(255)        NOT NULL
-        , msg_text_2                            varchar(255)        NOT NULL
-        , msg_text_3                            varchar(255)        NOT NULL
         )
 
 
@@ -251,58 +240,6 @@ BEGIN
 
 
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
-
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00023'
-                        ,'U00009'
-                        ,'U00011'
-                        ,'U00019'
-                        --,'U00005'
-                        ,'U00039'
-                        ,'U00012'
-                        ,'U00024'
-                        ,'U00025'
-                        ,'U00026'
-                        ,'U00032'
-                        ,'U00033'
-                        ,'U00022'
-                        ,'U00036'
-                        ,'U00037'
-                        ,'U00042'
-                        ,'U00043'
-                        ,'U00010'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN (
-                         --'U00005'
-                         'U00039'
-                        ,'U00012'
-                        ,'U00024'
-                        ,'U00025'
-                        ,'U00026'
-                        ,'U00032'
-                        ,'U00033'
-                        ,'U00022'
-                        ,'U00036'
-                        ,'U00037'
-                        ,'U00042'
-                        ,'U00043'
-                        ))
-*/
 
        SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -338,8 +275,8 @@ BEGIN
              , t.pay_through_date
              , t.emp_death_date
              , t.consider_for_rehire_ind
-             , t.pay_element_id
-             , t.emp_calculation
+             --, t.pay_element_id
+             --, t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
@@ -359,10 +296,9 @@ BEGIN
              , t.postal_code
              , t.county_name
              , t.region_name
-
              , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
-      WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
+        WHERE (event_id = @v_EVENT_ID_STATUS_CHANGE)
 
         SET @v_step_position = 'Opening cursor crsrHR'
         OPEN crsrHR
@@ -399,8 +335,8 @@ BEGIN
             , @pay_through_date
             , @emp_death_date
             , @consider_for_rehire_ind
-            , @pay_element_id
-            , @emp_calculation
+            --, @pay_element_id
+            --, @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
@@ -449,7 +385,7 @@ BEGIN
                 -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -480,9 +416,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_eff_date = CONVERT(datetime, @eff_date)
 
 
 
@@ -589,7 +522,7 @@ BEGIN
                 SET @msg_id = 'U00037'
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
-                IF (@w_status_change_date >= @w_eff_date)
+                IF (@w_status_change_date >= @eff_date)
                     BEGIN
 
                         -- Convert date to string for log table
@@ -629,7 +562,7 @@ BEGIN
                 FROM DBShrpn.dbo.position
                 WHERE pos_id = '99999'
 
-                IF (@w_pos_eff_date > @w_eff_date)
+                IF (@w_pos_eff_date > @eff_date)
                     BEGIN
 
                         -- Convert date to string for log table
@@ -667,7 +600,7 @@ BEGIN
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
 
-                IF (@w_ee_eff_date >= @w_eff_date)
+                IF (@w_ee_eff_date >= @eff_date)
                     BEGIN
                         -- Convert date to string for log table
                         SET @w_msg_text_2 = CONVERT(char(8), @w_ee_eff_date, 112)
@@ -752,7 +685,7 @@ BEGIN
                 IF   @emp_status_code = 'RH'
                     BEGIN
                         IF (@w_curr_status = 'T') AND
-                        (@w_eff_date   <= @w_status_change_date)
+                        (@eff_date   <= @w_status_change_date)
                             BEGIN
 
                                 -- Convert date to string for log table
@@ -793,7 +726,7 @@ BEGIN
                 IF (@emp_status_code = 'RA')
                     BEGIN
                         IF (@w_curr_status = 'I') AND
-                        (@w_eff_date <= @w_status_change_date)
+                        (@eff_date <= @w_status_change_date)
                             BEGIN
 
                                 -- Convert date to string for log table
@@ -894,7 +827,7 @@ BEGIN
                                 , (', @p_status_change_date       = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)  + @v_single_quote)
                                 , (', @p_new_empl_id              = ' + @v_single_quote + RTRIM(@empl_id)                               + @v_single_quote)
                                 , (', @p_new_tax_entity_id        = ' + @v_single_quote + RTRIM(@tax_entity_id)                         + @v_single_quote)
-                                , (', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)            + @v_single_quote)
+                                , (', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)            + @v_single_quote)
                                 , (', @p_new_classn_cd            = ' + @v_single_quote + RTRIM(@emp_status_classn_code)                + @v_single_quote)
                                 , (', @p_new_reason_cd            = ' + @v_single_quote + @v_EMPTY_SPACE                                + @v_single_quote)
                                 , (', @p_new_assigned_to_code     = ' + @v_single_quote + RTRIM(@w_assigned_to_code)                    + @v_single_quote)
@@ -918,7 +851,7 @@ BEGIN
                                     , @p_status_change_date       = @w_status_change_date
                                     , @p_new_empl_id              = @empl_id
                                     , @p_new_tax_entity_id        = @tax_entity_id
-                                    , @p_new_hire_date            = @w_eff_date
+                                    , @p_new_hire_date            = @eff_date
                                     , @p_new_classn_cd            = @emp_status_classn_code
                                     , @p_new_reason_cd            = @v_EMPTY_SPACE
                                     , @p_new_assigned_to_code     = @w_assigned_to_code             -- Hardcoded to 'P'
@@ -945,7 +878,7 @@ BEGIN
                                 , (', @p_empl_id          = ' + @v_single_quote + RTRIM(@empl_id)                       + @v_single_quote)
                                 , (', @p_new_pay_group_id = ' + @v_single_quote + RTRIM(@pay_group_id)                  + @v_single_quote)
                                 , (', @p_new_pecg_id      = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id)       + @v_single_quote)
-                                , (', @p_as_of_date       = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)    + @v_single_quote)
+                                , (', @p_as_of_date       = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)    + @v_single_quote)
                                 , (' ');
                                 */
 
@@ -955,7 +888,7 @@ BEGIN
                                     , @p_empl_id          = @empl_id
                                     , @p_new_pay_group_id = @pay_group_id
                                     , @p_new_pecg_id      = @pay_element_ctrl_grp_id
-                                    , @p_as_of_date       = @w_eff_date
+                                    , @p_as_of_date       = @eff_date
 
 
                                 ---------------------------------------------------------------------------
@@ -1072,7 +1005,7 @@ BEGIN
                                 VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate')
                                 , ('@p_emp_id                           = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
                                 , (', @p_status_change_date             = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
-                                , (', @p_inactivate_date                = ' + @v_single_quote + CONVERT(char(8), @w_eff_date)                       + @v_single_quote)
+                                , (', @p_inactivate_date                = ' + @v_single_quote + CONVERT(char(8), @eff_date)                       + @v_single_quote)
                                 , (', @p_new_reason                     = ' + @v_single_quote + @v_EMPTY_SPACE                                      + @v_single_quote)
                                 , (', @p_new_loa_expd_date              = ' + @v_single_quote + CONVERT(char(8), @v_END_OF_TIME_DATE, 112)          + @v_single_quote)
                                 , (', @p_new_classification_cd          = ' + @v_single_quote + RTRIM(@emp_status_classn_code)                      + @v_single_quote)
@@ -1088,7 +1021,7 @@ BEGIN
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate
                                     @p_emp_id                    = @emp_id
                                     , @p_status_change_date        = @w_status_change_date
-                                    , @p_inactivate_date           = @w_eff_date
+                                    , @p_inactivate_date           = @eff_date
                                     , @p_new_reason                = @v_EMPTY_SPACE
                                     , @p_new_loa_expd_date         = @v_END_OF_TIME_DATE
                                     , @p_new_classification_cd     = @emp_status_classn_code
@@ -1153,11 +1086,11 @@ BEGIN
                                 VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate')
                                 , ('@p_emp_id                       = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
                                 , (', @p_status_change_date         = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
-                                , (', @p_termination_date           = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                  + @v_single_quote)
+                                , (', @p_termination_date           = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)                  + @v_single_quote)
                                 , (', @p_new_classn_cd              = ' + @v_single_quote + @emp_status_classn_code                             + @v_single_quote)
                                 , (', @p_date_of_death              = ' + @v_single_quote + CONVERT(char(8), @v_END_OF_TIME_DATE, 112)          + @v_single_quote)
                                 , (', @p_new_reason_code            = ' + @v_single_quote + RTRIM(@reason_code)                                 + @v_single_quote)
-                                , (', @p_new_pay_through_date       = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                  + @v_single_quote)
+                                , (', @p_new_pay_through_date       = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)                  + @v_single_quote)
                                 , (', @p_new_rehire_conson          = ' + @v_single_quote + @consider_for_rehire_ind                            + @v_single_quote)
                                 , (', @p_pay_status_code            = ' + @v_single_quote + RTRIM(pay_status_code)                              + @v_single_quote)
                                 , (', @p_last_day_paid              = ' + @v_single_quote + CONVERT(char(8), @v_BEG_OF_TIME_DATE, 112)          + @v_single_quote)
@@ -1172,11 +1105,11 @@ BEGIN
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate
                                     @p_emp_id                 = @emp_id
                                     , @p_status_change_date     = @w_status_change_date
-                                    , @p_termination_date       = @w_eff_date
+                                    , @p_termination_date       = @eff_date
                                     , @p_new_classn_cd          = @emp_status_classn_code
-                                    , @p_date_of_death          = @v_END_OF_TIME_DATE
+                                    , @p_date_of_death          = @emp_death_date
                                     , @p_new_reason_code        = @reason_code
-                                    , @p_new_pay_through_date   = @w_eff_date
+                                    , @p_new_pay_through_date   = @eff_date
                                     , @p_new_rehire_conson      = @consider_for_rehire_ind
                                     , @p_pay_status_code        = @pay_status_code
                                     , @p_last_day_paid          = @v_BEG_OF_TIME_DATE
@@ -1187,13 +1120,13 @@ BEGIN
                                 --  New Record Update to resolve conflict with the rehire date
                                 UPDATE DBShrpn.dbo.emp_employment
                                 SET pay_status_code = @pay_status_code
-                                , eff_date        = @w_eff_date
+                                , eff_date        = @eff_date
                                 WHERE (emp_id        = @emp_id)
                                 AND (next_eff_date = @v_END_OF_TIME_DATE)
 
                                 --  Update prior record to point to the new record.
                                 UPDATE DBShrpn.dbo.emp_employment
-                                SET next_eff_date = @w_eff_date
+                                SET next_eff_date = @eff_date
                                 WHERE (emp_id   = @emp_id)
                                 AND (eff_date = @old_eff_date)
 
@@ -1280,7 +1213,7 @@ BEGIN
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_reactivate
                                       @p_emp_id                    = @emp_id
                                     , @p_status_change_date        = @w_status_change_date
-                                    , @p_reactivate_date           = @w_eff_date
+                                    , @p_reactivate_date           = @eff_date
                                     , @p_new_reason                = @reason_code
                                     , @p_new_classification_cd     = @emp_status_classn_code
                                     , @p_allow_emp_pay_updates_ind = 'Y'
@@ -1460,8 +1393,8 @@ BYPASS_EMPLOYEE:
                 , @pay_through_date
                 , @emp_death_date
                 , @consider_for_rehire_ind
-                , @pay_element_id
-                , @emp_calculation
+                --, @pay_element_id
+                --, @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt

@@ -98,6 +98,8 @@ BEGIN
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
     --DECLARE @v_ACTIVITY_STATUS_UNPROCESSED  char(2)             = '99'
 
+    DECLARE @v_END_OF_TIME_DATE                     datetime            = '29991231'
+
     DECLARE @w_activity_date	            datetime
     DECLARE @w_status			            int
     DECLARE @w_userid			            varchar(30)
@@ -110,22 +112,22 @@ BEGIN
       aud_id                                int	IDENTITY(1,1)   NOT NULL
     , event_id                              char(02)            NULL
     , emp_id                                char(15)            NULL
-    , eff_date                              char(10)            NULL
+    , eff_date                              datetime            NULL    --char(10)            NULL
     , first_name                            char(25)            NULL
     , first_middle_name                     char(25)            NULL
     , last_name                             char(30)            NULL
     , empl_id                               char(10)            NULL
     , national_id_type_code                 char(05)            NULL
     , national_id                           char(20)            NULL
-    , organization_group_id                 char(05)            NULL
+    , organization_group_id                 int                 NOT NULL
     , organization_chart_name               varchar(64)         NULL
     , organization_unit_name                varchar(240)        NULL
     , emp_status_classn_code                char(02)            NULL
     , position_title                        char(50)            NULL    -- DBShrpn..emp_assignment.user_text_2
     , employment_type_code                  varchar(70)         NULL    -- increased size to 70 from 5
-    , annual_salary_amt                     char(15)            NULL
-    , begin_date                            char(10)            NULL
-    , end_date                              char(10)            NULL
+    , annual_salary_amt                     money               NULL    --char(15)            NULL
+    , begin_date                            datetime            NULL    --char(10)            NULL
+    , end_date                              datetime            NULL    --char(10)            NULL
     , pay_status_code                       char(01)            NULL
     , pay_group_id                          char(10)            NULL
     , pay_element_ctrl_grp_id               char(10)            NULL
@@ -135,20 +137,20 @@ BEGIN
     , emp_status_code                       char(02)            NULL
     , reason_code                           char(02)            NULL
     , emp_expected_return_date              char(10)            NULL
-    , pay_through_date                      char(10)            NULL
-    , emp_death_date                        char(10)            NULL
+    , pay_through_date                      datetime            NULL    --char(10)            NULL
+    , emp_death_date                        datetime            NULL    --char(10)            NULL
     , consider_for_rehire_ind               char(01)            NULL
     , pay_element_id                        char(10)            NULL
-    , emp_calculation                       char(15)            NULL
+    , emp_calculation                       money               NULL    --char(15)            NULL
     , tax_flag                              char(1)             NULL    -- individual_personal.user_ind_2
     , nic_flag                              char(1)             NULL    -- individual_personal.user_ind_1
     , tax_ceiling_amt                       char(15)            NULL    -- employee.user_monetary_amt_1
     , labor_grp_code                        char(50)            NULL    -- DBShrpn..emp_employment.labor_grp_code   char(5)
     , file_source                           char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
 
-    , annual_hrs_per_fte                    varchar(255)        NULL
-    , annual_rate                           varchar(255)        NULL
-    , birth_date                            varchar(255)        NULL
+    , annual_hrs_per_fte                    money               NULL    --varchar(255)        NULL
+    , annual_rate                           money               NULL    --varchar(255)        NULL
+    , birth_date                            datetime            NULL    --varchar(255)        NULL
     , gender                                varchar(255)        NULL
     , addr_fmt_code                         char(06)            NULL
     , country_code                          varchar(255)        NULL
@@ -202,24 +204,24 @@ BEGIN
         INSERT INTO #ghr_employee_events_temp
         SELECT t.event_id
             , t.emp_id
-            , t.eff_date
+            , COALESCE(TRY_CONVERT(datetime, t.eff_date), @v_END_OF_TIME_DATE) AS eff_date
             , t.first_name
             , t.first_middle_name
             , t.last_name
-            , UPPER(t.empl_id)
+            , UPPER(t.empl_id) AS empl_id
             , t.national_id_type_code
             , t.national_id
-            , t.organization_group_id
-            , ''    -- organization_chart_name  -- wrong value
-            , ''    -- organization_unit_name
+            , COALESCE(TRY_CONVERT(int, t.organization_group_id), 0) AS organization_group_id
+            , t.organization_chart_name  -- wrong value
+            , t.organization_unit_name
             , t.emp_status_classn_code
             , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
-            , UPPER(t.employment_type_code)
-            , t.annual_salary_amt
-            , t.begin_date
-            , t.end_date
+            , UPPER(t.employment_type_code) AS employment_type_code
+            , COALESCE(TRY_CONVERT(money, t.annual_salary_amt), 0.00) AS annual_salary_amt
+            , COALESCE(TRY_CONVERT(datetime, t.begin_date), @v_END_OF_TIME_DATE) AS begin_date
+            , COALESCE(TRY_CONVERT(datetime, t.end_date), @v_END_OF_TIME_DATE) AS end_date
             , t.pay_status_code
-            , UPPER(t.pay_group_id)
+            , UPPER(t.pay_group_id) AS pay_group_id
             , t.pay_element_ctrl_grp_id
             , t.time_reporting_meth_code
             , t.employment_info_chg_reason_cd
@@ -227,20 +229,20 @@ BEGIN
             , t.emp_status_code
             , t.reason_code
             , t.emp_expected_return_date
-            , t.pay_through_date
-            , t.emp_death_date
+            , COALESCE(TRY_CONVERT(datetime, t.pay_through_date), @v_END_OF_TIME_DATE) AS pay_through_date
+            , COALESCE(TRY_CONVERT(datetime, t.emp_death_date), @v_END_OF_TIME_DATE) AS emp_death_date
             , t.consider_for_rehire_ind
-            , UPPER(t.pay_element_id)
-            , t.emp_calculation
+            , UPPER(t.pay_element_id) AS pay_element_id
+            , COALESCE(TRY_CONVERT(money, t.emp_calculation), 0.00) AS emp_calculation
             , t.tax_flag        -- CASE t.tax_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE tax_flag END tax_flag
             , t.nic_flag        -- CASE t.nic_flag WHEN '1' THEN 'Y' WHEN '0' THEN 'N' ELSE nic_flag END nic_flag
-            , t.tax_ceiling_amt
+            , COALESCE(TRY_CONVERT(money, t.tax_ceiling_amt), 0.00) AS tax_ceiling_amt
             , t.labor_grp_code
             , t.file_source
 
-            , t.annual_hrs_per_fte
-            , t.annual_rate
-            , t.birth_date
+            , COALESCE(TRY_CONVERT(money, t.annual_hrs_per_fte), 0.00) AS annual_hrs_per_fte
+            , COALESCE(TRY_CONVERT(money, t.annual_rate), 0.00) AS annual_rate
+            , COALESCE(TRY_CONVERT(datetime, t.birth_date), @v_END_OF_TIME_DATE) AS birth_date
             , t.gender
             , t.country_code
             , t.addr_line_1

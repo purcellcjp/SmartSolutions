@@ -139,7 +139,7 @@ BEGIN
     DECLARE @cur_stat_emp_status_code           char(01)
     DECLARE @cur_stat_status_change_date        datetime
 
-    DECLARE @w_eff_date                         datetime
+    --DECLARE @w_eff_date                         datetime
     DECLARE @w_tm_pd_annualizing_factor         float
     DECLARE @w_tm_pd_hrs                        float
 	DECLARE @v_calc_fte							float
@@ -151,7 +151,7 @@ BEGIN
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                             int             = 0
     DECLARE @emp_id                             char(15)        = @v_EMPTY_SPACE
-    DECLARE @eff_date                           char(10)        = '29991231'
+    DECLARE @eff_date                           datetime
     DECLARE @empl_id                            char(10)
     DECLARE @file_source                        char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
     DECLARE @position_title				        char(50)        -- DBShrpn..emp_assignment.user_text_2
@@ -177,57 +177,8 @@ BEGIN
         )
 
 
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id                                char(15)            NOT NULL
-        , severity_cd                           tinyint             NOT NULL
-        , msg_text                              varchar(255)        NOT NULL
-        , msg_text_2                            varchar(255)        NOT NULL
-        , msg_text_3                            varchar(255)        NOT NULL
-        )
-
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
 
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN (
-                         'U00009'
-                        ,'U00010'
-                        ,'U00011'
-                        ,'U00012'
-                        ,'U00027'
-                        ,'U00102'
-                        ,'U00115'
-                        ,'U00116'
-                        ,'U00117'
-                        ,'U00118'
-                        ,'U00119'
-                        ,'U00120'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN (
-                          'U00012'
-                         ,'U00027'
-                         ,'U00102'
-                         ,'U00117'
-                         ,'U00118'
-                         ,'U00119'
-                         ,'U00120'
-                        ))
-*/
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -361,7 +312,7 @@ BEGIN
                 -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -391,9 +342,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_eff_date = CONVERT(datetime, @eff_date)
 
 
 
@@ -553,7 +501,7 @@ BEGIN
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                 IF (@w_fatal_error = 0) AND
-                (@w_eff_date < @cur_ea_eff_date)
+                (@eff_date < @cur_ea_eff_date)
                     BEGIN
 
                         -- Convert date to string for log table
@@ -561,7 +509,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
-                            , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
+                            , REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (t.msg_id = @msg_id)
 
@@ -630,7 +578,7 @@ BEGIN
                         , (', @asg_new_assign_to           = ' + @v_single_quote + @v_ASSIGNED_TO_CODE                                   + @v_single_quote)
                         , (', @asg_new_assign_id           = ' + @v_single_quote + RTRIM(@job_or_pos_id)                                 + @v_single_quote)
                         , (', @asg_new_assign_reason       = ' + @v_single_quote + @v_EMPTY_SPACE                                        + @v_single_quote)
-                        , (', @asg_new_beg_date            = ' + @v_single_quote + CONVERT(char(8), @w_eff_date, 112)                    + @v_single_quote)
+                        , (', @asg_new_beg_date            = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)                    + @v_single_quote)
                         , (', @asg_new_end_date            = ' + @v_single_quote + CONVERT(char(8), @v_END_OF_TIME_DATE, 112)            + @v_single_quote)
                         , (', @asg_fte_error_level         = ' + @v_single_quote + 'R'                                                   + @v_single_quote)
                         , (', @asg_incumbent_error_level   = ' + @v_single_quote + @v_EMPTY_SPACE                                        + @v_single_quote)    -- was 'R' in WTW
@@ -689,7 +637,7 @@ BEGIN
                             , @asg_new_assign_to           = @v_ASSIGNED_TO_CODE                        -- char(01)
                             , @asg_new_assign_id           = @job_or_pos_id                             -- char(10)
                             , @asg_new_assign_reason       = @v_EMPTY_SPACE                             -- char(05)
-                            , @asg_new_beg_date            = @w_eff_date                                -- datetime
+                            , @asg_new_beg_date            = @eff_date                                -- datetime
                             , @asg_new_end_date            = @v_END_OF_TIME_DATE                        -- datetime
                             , @asg_fte_error_level         = 'R'                                        -- char(01)
                             , @asg_incumbent_error_level   = @v_EMPTY_SPACE                             -- char(01)        -- was 'R' in WTW
@@ -781,7 +729,7 @@ BEGIN
                         WHERE   (emp_id             = @emp_id)
                             AND (assigned_to_code   = @v_ASSIGNED_TO_CODE)
                             AND (job_or_pos_id      = @job_or_pos_id)
-                            AND (eff_date           = @w_eff_date)
+                            AND (eff_date           = @eff_date)
                             AND (next_eff_date      = @v_END_OF_TIME_DATE)
 
 
@@ -795,7 +743,7 @@ BEGIN
                         -- DEBUG
                         INSERT DBShrpn.dbo.ghr_debug (text_line)
                         VALUES ('EXEC DBShrpn.dbo.usp_hsp_upd_hasg')
-                        , ('@use_eff_date                  = ' + @v_single_quote + CONVERT(varchar, @w_eff_date, 112)                                      + @v_single_quote)         -- datetime
+                        , ('@use_eff_date                  = ' + @v_single_quote + CONVERT(varchar, @eff_date, 112)                                      + @v_single_quote)         -- datetime
                         , (', @use_end_date                  = ' + @v_single_quote + CONVERT(varchar, @v_END_OF_TIME_DATE, 112)                              + @v_single_quote)         -- datetime
                         , (', @employee_identifier           = ' + @v_single_quote + RTRIM(@emp_id)                                                          + @v_single_quote)         -- char(15)
                         , (', @emp_asgmt_assigned_to_code    = ' + @v_single_quote + @v_ASSIGNED_TO_CODE                                                     + @v_single_quote)         -- char(01)
@@ -914,7 +862,7 @@ BEGIN
 
                         -- Update existing Emp Assignment Job/Position - Will create new eff date record
                         EXEC DBShrpn.dbo.usp_hsp_upd_hasg
-                              @use_eff_date                  = @w_eff_date                                    -- datetime
+                              @use_eff_date                  = @eff_date                                    -- datetime
                             , @use_end_date                  = @v_END_OF_TIME_DATE                            -- datetime
                             , @employee_identifier           = @emp_id                                        -- char(15)
                             , @emp_asgmt_assigned_to_code    = @v_ASSIGNED_TO_CODE                            -- char(01)

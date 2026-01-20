@@ -103,12 +103,12 @@ BEGIN
     --DECLARE @cur_tax_entity_id              char(10)
     DECLARE @cur_pay_group_id               char(10)
     DECLARE @cur_stat_emp_status_code       char(01)
-    DECLARE @w_eff_date                     datetime
+    --DECLARE @w_eff_date                     datetime
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                         int             = 0
     DECLARE @emp_id                         char(15)        = ''
-    DECLARE @eff_date                       char(10)        = '29991231'
+    DECLARE @eff_date                       datetime
     DECLARE @empl_id                        char(10)
     DECLARE @pay_group_id                   char(10)
     DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
@@ -120,15 +120,6 @@ BEGIN
         , msg_desc                          varchar(255)        NOT NULL
         )
 
-
-    CREATE TABLE #tbl_msg_master
-        (
-          msg_id                            char(15)            NOT NULL
-        , severity_cd                       tinyint             NOT NULL
-        , msg_text                          varchar(255)        NOT NULL
-        , msg_text_2                        varchar(255)        NOT NULL
-        , msg_text_3                        varchar(255)        NOT NULL
-        )
 
 
     -- work table for emp employment insert
@@ -214,46 +205,6 @@ BEGIN
 
 
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
-
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00104'
-                        ,'U00009'
-                        ,'U00010'
-                        ,'U00011'
-                        ,'U00012'
-                        ,'U00020'
-                        ,'U00027'
-                        ,'U00102'
-                        ,'U00105'
-                        ,'U00106'
-                        ,'U00119'
-                        ,'U00120'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN (
-                          'U00012'
-                         ,'U00020'
-                         ,'U00027'
-                         ,'U00102'
-                         ,'U00106'
-                         ,'U00119'
-                         ,'U00120'
-                        ))
-*/
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -355,7 +306,7 @@ BEGIN
                 -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (TRY_CONVERT(datetime, @eff_date) IS NULL)
+                IF (@eff_date = @v_END_OF_TIME_DATE))
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -384,11 +335,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-                ELSE
-                    -- Convert amount to money data type
-                    SELECT @w_eff_date = CONVERT(datetime, @eff_date)
-
-
 
 
                 ---------------------------------------------------------------------------
@@ -555,7 +501,7 @@ BEGIN
                 SET @v_step_position = 'Begin ' + RTRIM(@msg_id)
 
                 IF (@w_fatal_error = 0) AND
-                (@w_eff_date <= @cur_eempl_eff_date)
+                (@eff_date <= @cur_eempl_eff_date)
                     BEGIN
 
                         -- Convert date to string for log table
@@ -563,7 +509,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id As msg_id
-                            , REPLACE(REPLACE(t.msg_text, '@1', @w_eff_date), '@2', @emp_id) AS msg_desc
+                            , REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (t.msg_id = @msg_id)
 
@@ -598,15 +544,15 @@ BEGIN
 
                 -- Update current record date pointers
                 UPDATE DBShrpn.dbo.emp_employment
-                SET next_eff_date = @w_eff_date
+                SET next_eff_date = @eff_date
                 WHERE (emp_id = @emp_id)
-                AND (eff_date = @w_eff_date)
+                AND (eff_date = @eff_date)
 
 
                 -- Create new record
                 INSERT INTO #temp14
                 SELECT emp_id
-                    , @w_eff_date      -- eff_date
+                    , @eff_date      -- eff_date
                     , @v_END_OF_TIME_DATE      -- next_eff_date
                     , @cur_eempl_eff_date      -- prior_eff_date
                     , employment_type_code
@@ -770,7 +716,7 @@ BEGIN
                                 SELECT 1
                                 FROM DBShrpn.dbo.emp_employment t2
                                 WHERE (t2.emp_id = t14.emp_id)
-                                    AND (t2.eff_date = @w_eff_date)
+                                    AND (t2.eff_date = @eff_date)
                                 )
 
 

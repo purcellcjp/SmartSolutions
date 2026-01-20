@@ -60,9 +60,9 @@ BEGIN
     DECLARE @v_step_position                        varchar(255)        = 'Begin usp_ins_new_hire'
     DECLARE @v_DISPLAY_NAME_FORMAT                  char(33)            = 'LNMCOMSFXFNMFMNSMI'  -- Unique to client
     DECLARE @v_END_OF_TIME_DATE                     datetime            = '29991231'
+    DECLARE @v_EMPTY_STRING                         char(01)            = ''
 
     DECLARE @v_EVENT_ID_NEW_HIRE                    char(2)             = '01'
-
 
     DECLARE @v_ACTIVITY_STATUS_GOOD                 char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_WARNING              char(2)             = '01'
@@ -73,7 +73,7 @@ BEGIN
     DECLARE @ErrorSeverity                          int
     DECLARE @ErrorState                             int
 
-    DECLARE @v_ret_val                              int = 0
+    DECLARE @v_ret_val                              int                 = 0
     DECLARE @w_msg_text                             varchar(255)
     DECLARE @w_msg_text_2                           varchar(255)
     DECLARE @w_msg_text_3                           varchar(255)
@@ -106,51 +106,35 @@ BEGIN
     DECLARE @msg_id                                 char(10)
     DECLARE @individual_id                          char(10)
     DECLARE @pay_frequency_code                     char(05)
-    DECLARE @annualizing_factor                     float
+    DECLARE @annualizing_factor                     float           = 12    -- Hard code to monthly factor
 
-    DECLARE @w_preferred_name                       char(25)        = ''
-    DECLARE @w_name_suffix                          char(10)        = ''
-    DECLARE @w_emp_display_name                     char(45)        = ''
-    --DECLARE @w_birth_date                           datetime        = @v_END_OF_TIME_DATE
-    --DECLARE @w_sex_code                             char(01)        = ''
-    DECLARE @w_marital_status_code_1                char(05)        = ''
-    -- DECLARE @w_national_id_1_type_code              char(05)        = 'NIS'--'SSN'
-    -- DECLARE @w_national_id_1                        char(20)        = ''
+    DECLARE @w_preferred_name                       char(25)        = @v_EMPTY_STRING
+    DECLARE @w_name_suffix                          char(10)        = @v_EMPTY_STRING
+    DECLARE @w_emp_display_name                     char(45)        = @v_EMPTY_STRING
+    DECLARE @w_marital_status_code_1                char(05)        = @v_EMPTY_STRING
     DECLARE @w_addr_1_type_code                     char(05)        = '1'   -- Home
-    --DECLARE @w_addr_1_fmt_code                      char(06)        = 'EC1'--'US1'
-    --DECLARE @w_addr_1_line_1                        char(35)        = ''
-    --DECLARE @w_addr_1_line_2                        char(35)        = ''
-    --DECLARE @w_addr_1_line_3                        char(35)        = ''
-    --DECLARE @w_addr_1_line_4                        char(35)        = ''
-    --DECLARE @w_addr_1_line_5                        char(35)        = ''
-    --DECLARE @w_addr_1_street_or_pob_1               char(35)        = ''
-    --DECLARE @w_addr_1_street_or_pob_2               char(35)        = ''
-    --DECLARE @w_addr_1_street_or_pob_3               char(35)        = ''
-    --DECLARE @w_addr_1_city_name                     char(35)        = ''
-    --DECLARE @w_addr_1_ctry_sub_entity_code          char(09)        = ''
-    --DECLARE @w_addr_1_postal_code                   char(09)        = ''
-    --DECLARE @w_addr_1_country_code                  char(02)        = ''
     DECLARE @w_assigned_to_code                     char(01)        = 'P'
-    DECLARE @w_job_or_pos_id                        char(10)        = ''
+    DECLARE @w_job_or_pos_id                        char(10)        = @v_EMPTY_STRING
     DECLARE @w_organization_chart_name              char(64)        = 'HRGOSL'  -- not currently being used
-    -- DECLARE @w_organization_unit_name               char(240)       = '99999'
-    -- DECLARE @w_emp_status_classn_code               char(02)        = '01'
-    DECLARE @w_active_reason_code                   char(05)        = ''
-    -- DECLARE @w_employment_type_code                 char(05)        = ''
-    DECLARE @w_professional_cat_code                char(05)        = ''
-    --DECLARE @w_labor_grp_code                       char(05)        = ''
+    DECLARE @w_active_reason_code                   char(05)        = @v_EMPTY_STRING
+    DECLARE @w_professional_cat_code                char(05)        = @v_EMPTY_STRING
     DECLARE @w_non_employee_indicator               char(01)        = 'N'
     DECLARE @w_excluded_from_payroll_ind            char(01)        = 'N'
     DECLARE @w_pensioner_indicator                  char(01)        = 'N'
     DECLARE @w_provided_i_9_ind                     char(01)        = 'N'
-    DECLARE @w_base_rate_tbl_id                     char(10)        = ''
-    DECLARE @w_base_rate_tbl_entry_code             char(08)        = ''
+    DECLARE @w_base_rate_tbl_id                     char(10)        = @v_EMPTY_STRING
+    DECLARE @w_base_rate_tbl_entry_code             char(08)        = @v_EMPTY_STRING
     DECLARE @w_exception_rate_ind                   char(01)        = 'N'
 
     DECLARE @w_hourly_pay_rate                      float           = 0.00
     DECLARE @w_pd_salary_amt                        money           = 0.00
     DECLARE @w_pd_salary_tm_pd_id                   char(05)        = 'MONTH'
+
     DECLARE @w_annual_salary_amt                    money           = 0.00
+    DECLARE @w_annual_hrs_per_fte                   money           = 0.00
+    DECLARE @w_annual_rate                          money           = 0.00
+
+
     DECLARE @w_pay_basis_code                       char(01)        = '9'
     DECLARE @w_curr_code                            char(03)        = 'XCD'
     DECLARE @w_work_tm_code                         char(01)        = 'F'
@@ -159,42 +143,40 @@ BEGIN
     DECLARE @w_standard_work_pd_id                  char(05)        = 'WEEK'
     DECLARE @w_overtime_status_code                 char(02)        = '99'
     DECLARE @w_pay_on_reported_hrs_ind              char(01)        = 'N'
-    DECLARE @w_work_shift_code                      char(05)        = ''
-    DECLARE @w_tax_entity_id                        char(10)        = ''
-    -- DECLARE @w_time_reporting_meth_code             char(01)        = '1'
-    -- DECLARE @w_pay_group_id                         char(10)        = 'ADMP'
-    DECLARE @w_clock_nbr                            char(10)        = ''
-    DECLARE @w_prim_disbursal_loc_code              char(10)        = ''
-    DECLARE @w_alt_disbursal_loc_code               char(10)        = ''
+    DECLARE @w_work_shift_code                      char(05)        = @v_EMPTY_STRING
+    DECLARE @w_tax_entity_id                        char(10)        = @v_EMPTY_STRING
+    DECLARE @w_clock_nbr                            char(10)        = @v_EMPTY_STRING
+    DECLARE @w_prim_disbursal_loc_code              char(10)        = @v_EMPTY_STRING
+    DECLARE @w_alt_disbursal_loc_code               char(10)        = @v_EMPTY_STRING
     DECLARE @w_tax_marital_status_code              char(01)        = '1'
     DECLARE @w_fui_status_code                      char(01)        = '2'
     DECLARE @w_oasdi_status_code                    char(01)        = '2'
     DECLARE @w_medicare_status_code                 char(01)        = '2'
     DECLARE @w_income_tax_nbr_of_exemps             smallint        = 0
-    DECLARE @w_tax_authority_id                     char(10)        = ''
-    DECLARE @w_work_resident_status_code            char(01)        = ''
-    DECLARE @w_income_tax_calc_meth_cd              char(02)        = ''
-    DECLARE @w_tax_authority_2                      char(10)        = ''
-    DECLARE @w_tax_authority_3                      char(10)        = ''
-    DECLARE @w_tax_authority_4                      char(10)        = ''
-    DECLARE @w_tax_authority_5                      char(10)        = ''
-    DECLARE @w_work_resident_status_code_2          char(01)        = ''
-    DECLARE @w_work_resident_status_code_3          char(01)        = ''
-    DECLARE @w_work_resident_status_code_4          char(01)        = ''
-    DECLARE @w_work_resident_status_code_5          char(01)        = ''
+    DECLARE @w_tax_authority_id                     char(10)        = @v_EMPTY_STRING
+    DECLARE @w_work_resident_status_code            char(01)        = @v_EMPTY_STRING
+    DECLARE @w_income_tax_calc_meth_cd              char(02)        = @v_EMPTY_STRING
+    DECLARE @w_tax_authority_2                      char(10)        = @v_EMPTY_STRING
+    DECLARE @w_tax_authority_3                      char(10)        = @v_EMPTY_STRING
+    DECLARE @w_tax_authority_4                      char(10)        = @v_EMPTY_STRING
+    DECLARE @w_tax_authority_5                      char(10)        = @v_EMPTY_STRING
+    DECLARE @w_work_resident_status_code_2          char(01)        = @v_EMPTY_STRING
+    DECLARE @w_work_resident_status_code_3          char(01)        = @v_EMPTY_STRING
+    DECLARE @w_work_resident_status_code_4          char(01)        = @v_EMPTY_STRING
+    DECLARE @w_work_resident_status_code_5          char(01)        = @v_EMPTY_STRING
     DECLARE @w_user_amt_1                           float           = 0
     DECLARE @w_user_amt_2                           float           = 0
-    DECLARE @w_user_code_1                          char(05)        = ''
-    DECLARE @w_user_code_2                          char(05)        = ''
+    DECLARE @w_user_code_1                          char(05)        = @v_EMPTY_STRING
+    DECLARE @w_user_code_2                          char(05)        = @v_EMPTY_STRING
     DECLARE @w_user_date_1                          datetime        = @v_END_OF_TIME_DATE
     DECLARE @w_user_date_2                          datetime        = @v_END_OF_TIME_DATE
-    DECLARE @w_user_ind_1                           char(01)        = ''
-    DECLARE @w_user_ind_2                           char(01)        = ''
+    DECLARE @w_user_ind_1                           char(01)        = @v_EMPTY_STRING
+    DECLARE @w_user_ind_2                           char(01)        = @v_EMPTY_STRING
     DECLARE @w_user_monetary_amt_1                  money           = 0
     DECLARE @w_user_monetary_amt_2                  money           = 0
     DECLARE @w_user_monetary_curr_code              char(03)        = 'XCD'
-    DECLARE @w_user_text_1                          char(50)        = ''
-    DECLARE @w_user_text_2                          char(50)        = ''
+    DECLARE @w_user_text_1                          char(50)        = @v_EMPTY_STRING
+    DECLARE @w_user_text_2                          char(50)        = @v_EMPTY_STRING
     DECLARE @w_inc_tax_calc_method                  char(02)        = '2'
     DECLARE @w_ei_status_code                       char(01)        = '2'
     DECLARE @w_ppip_status_code                     char(01)        = '1'
@@ -202,60 +184,57 @@ BEGIN
     DECLARE @w_provincial_pp_stat_code              char(01)        = '1'
     DECLARE @w_income_tax_stat_code                 char(01)        = '2'
     DECLARE @w_pit_stat_code                        char(01)        = '1'
-    DECLARE @w_pay_element_ctrl_grp                 char(10)        = ''
-    DECLARE @w_emp_workers_comp_class               char(01)        = ''
+    DECLARE @w_pay_element_ctrl_grp                 char(10)        = @v_EMPTY_STRING
+    DECLARE @w_emp_workers_comp_class               char(01)        = @v_EMPTY_STRING
     DECLARE @w_empl_addr_fmt_code                   char(06)        = 'GN2'
     DECLARE @w_empl_phone_fmt_code                  char(06)        = 'L34'
     DECLARE @w_empl_phone_delimiter                 char(01)        = '-'
-    DECLARE @w_empl_recruitment_zone_code           char(05)        = ''
-    DECLARE @w_empl_cma_code                        char(02)        = ''
-    DECLARE @w_empl_industry_sector_code            char(05)        = ''
-    DECLARE @w_empl_province_terr_code              char(02)        = ''
+    DECLARE @w_empl_recruitment_zone_code           char(05)        = @v_EMPTY_STRING
+    DECLARE @w_empl_cma_code                        char(02)        = @v_EMPTY_STRING
+    DECLARE @w_empl_industry_sector_code            char(05)        = @v_EMPTY_STRING
+    DECLARE @w_empl_province_terr_code              char(02)        = @v_EMPTY_STRING
     DECLARE @w_eeo_4_agency_function_code           char(02)        = '99'
     DECLARE @w_eeo_establishment_id                 char(8)         = '0714'
     DECLARE @w_assignment_end_date                  datetime        = @v_END_OF_TIME_DATE
-    DECLARE @w_location_code                        char(10)        = ''
-    DECLARE @w_salary_structure_id                  char(10)        = ''
-    DECLARE @w_salary_incr_guideline_id             char(10)        = ''
+    DECLARE @w_location_code                        char(10)        = @v_EMPTY_STRING
+    DECLARE @w_salary_structure_id                  char(10)        = @v_EMPTY_STRING
+    DECLARE @w_salary_incr_guideline_id             char(10)        = @v_EMPTY_STRING
     DECLARE @w_pay_grade_code                       char(06)        = 'E40'
     DECLARE @w_job_evaluation_points_nbr            smallint        = 0
     DECLARE @w_salary_step_nbr                      smallint        = 0
     DECLARE @w_employer_taxing_ctry_code            char(02)        = 'LC'--'Gd'
     -- DECLARE @w_organization_group_id                int             = 5
-    DECLARE @w_wage_plan_code                       char(02)        = ''
-    DECLARE @w_emp_health_insurance_cvg_cd          char(02)        = ''
-    DECLARE @w_tax_auth_type_code                   char(01)        = ''
-    DECLARE @w_tax_auth_type_code_2                 char(01)        = ''
-    DECLARE @w_tax_auth_type_code_3                 char(01)        = ''
-    DECLARE @w_tax_auth_type_code_4                 char(01)        = ''
-    DECLARE @w_tax_auth_type_code_5                 char(01)        = ''
-    DECLARE @w_reg_reporting_unit_code              char(10)        = ''
-    DECLARE @w_emp_workers_comp_cvg_cd              char(01)        = ''
-
+    DECLARE @w_wage_plan_code                       char(02)        = @v_EMPTY_STRING
+    DECLARE @w_emp_health_insurance_cvg_cd          char(02)        = @v_EMPTY_STRING
+    DECLARE @w_tax_auth_type_code                   char(01)        = @v_EMPTY_STRING
+    DECLARE @w_tax_auth_type_code_2                 char(01)        = @v_EMPTY_STRING
+    DECLARE @w_tax_auth_type_code_3                 char(01)        = @v_EMPTY_STRING
+    DECLARE @w_tax_auth_type_code_4                 char(01)        = @v_EMPTY_STRING
+    DECLARE @w_tax_auth_type_code_5                 char(01)        = @v_EMPTY_STRING
+    DECLARE @w_reg_reporting_unit_code              char(10)        = @v_EMPTY_STRING
+    DECLARE @w_emp_workers_comp_cvg_cd              char(01)        = @v_EMPTY_STRING
     DECLARE @w_conv_employment_type_code            char(05)
-    DECLARE @w_eff_date                             datetime
-    DECLARE @w_begin_date                           datetime
-    DECLARE @w_end_date                             datetime
+
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                 int             = 0
-    DECLARE @emp_id                                 char(15)        = ''
-    DECLARE @eff_date                               char(10)        = '29991231'
+    DECLARE @emp_id                                 char(15)        = @v_EMPTY_STRING
+    DECLARE @eff_date                               datetime
     DECLARE @first_name                             char(25)
     DECLARE @first_middle_name                      char(25)
     DECLARE @last_name                              char(30)
     DECLARE @empl_id                                char(10)
     DECLARE @national_id_type_code                  char(05)
     DECLARE @national_id                            char(20)
-    DECLARE @organization_group_id                  char(05)
+    DECLARE @organization_group_id                  int
     DECLARE @organization_chart_name                varchar(64)
     DECLARE @organization_unit_name                 varchar(240)
     DECLARE @emp_status_classn_code                 char(02)
     DECLARE @position_title                         char(50)        -- DBShrpn..emp_assignment.user_text_2
     DECLARE @employment_type_code                   varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt                      char(15)
-    DECLARE @begin_date                             char(10)
-    DECLARE @end_date                               char(10)
+    DECLARE @annual_salary_amt                      money
+    DECLARE @begin_date                             datetime
+    DECLARE @end_date                               datetime
     DECLARE @pay_status_code                        char(01)
     DECLARE @pay_group_id                           char(10)
     DECLARE @pay_element_ctrl_grp_id                char(10)
@@ -265,20 +244,20 @@ BEGIN
     DECLARE @emp_status_code                        char(02)
     DECLARE @reason_code                            char(02)
     DECLARE @emp_expected_return_date               char(10)
-    DECLARE @pay_through_date                       char(10)
-    DECLARE @emp_death_date                         char(10)
+    DECLARE @pay_through_date                       datetime
+    DECLARE @emp_death_date                         datetime
     DECLARE @consider_for_rehire_ind                char(01)
     DECLARE @pay_element_id                         char(10)
-    DECLARE @emp_calculation                        char(15)
+    DECLARE @emp_calculation                        money
     DECLARE @tax_flag                               char(1)         -- individual_personal.ind_2
     DECLARE @nic_flag                               char(1)         -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                        char(15)        -- employee.user_monetary_amt_1
+    DECLARE @tax_ceiling_amt                        money           -- employee.user_monetary_amt_1
     DECLARE @labor_grp_code                         char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                            char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
-    DECLARE @annual_hrs_per_fte                     varchar(255)
-    DECLARE @annual_rate                            varchar(255)
-    DECLARE @birth_date                             varchar(255)
+    DECLARE @annual_hrs_per_fte                     money
+    DECLARE @annual_rate                            money
+    DECLARE @birth_date                             datetime
     DECLARE @gender                                 varchar(255)
     DECLARE @addr_fmt_code                          char(06)
     DECLARE @country_code                           varchar(255)
@@ -301,52 +280,7 @@ BEGIN
         )
 
 
-
     BEGIN TRY
-/*
-        SET @v_step_position = '#tbl_msg_master'
-
-        ---------------------------------------------------------------------------
-        -- Retrieve all error message templates
-        ---------------------------------------------------------------------------
-        INSERT INTO #tbl_msg_master
-        SELECT msg_id
-            , severity_cd
-            , msg_text
-            , msg_text_2
-            , msg_text_3
-        FROM DBSCOMMON.dbo.message_master
-        WHERE (msg_id IN ('U00000'
-                        ,'U00001'
-                        ,'U00003'
-                        ,'U00005'
-                        ,'U00006'
-                        ,'U00007'
-                        ,'U00008'
-                        ,'U00009'
-                        ,'U00010'
-                        ,'U00011'
-                        ,'U00020'
-                        ,'U00021'
-                        ,'U00031'
-                        ,'U00046'
-                        ,'U00100'
-                        ))
-
-        -- ID Message templates that need to loop through errors to add to log table
-        UPDATE #tbl_msg_master
-        SET loop_flag = 'Y'
-        WHERE (msg_id IN ('U00005'
-                        ,'U00006'
-                        ,'U00007'
-                        ,'U00008'
-                        ,'U00020'
-                        ,'U00021'
-                        ,'U00031'
-                        ,'U00046'
-                        ,'U00100'
-                        ))
-*/
 
         SET @v_step_position = 'Declaring cursor crsrHR'
 
@@ -368,22 +302,22 @@ BEGIN
              , LEFT(t.position_title, 50) AS position_title
              , t.employment_type_code
              , t.annual_salary_amt
-             , t.begin_date
-             , t.end_date
+             --, t.begin_date
+             --, t.end_date
              , t.pay_status_code
              , t.pay_group_id
              , t.pay_element_ctrl_grp_id
              , t.time_reporting_meth_code
-             , t.employment_info_chg_reason_cd
-             , t.emp_location_code
+             --, t.employment_info_chg_reason_cd
+             --, t.emp_location_code
              , t.emp_status_code
-             , t.reason_code
-             , t.emp_expected_return_date
-             , t.pay_through_date
-             , t.emp_death_date
-             , t.consider_for_rehire_ind
-             , t.pay_element_id
-             , t.emp_calculation
+             --, t.reason_code
+             --, t.emp_expected_return_date
+             --, t.pay_through_date
+             --, t.emp_death_date
+             --, t.consider_for_rehire_ind
+             --, t.pay_element_id
+             --, t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
@@ -405,7 +339,6 @@ BEGIN
              , t.postal_code
              , t.county_name
              , t.region_name
-
              , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
@@ -431,22 +364,22 @@ BEGIN
             , @position_title
             , @employment_type_code
             , @annual_salary_amt
-            , @begin_date
-            , @end_date
-            , @pay_status_code
+            --, @begin_date
+            --, @end_date
+            --, @pay_status_code
             , @pay_group_id
             , @pay_element_ctrl_grp_id
             , @time_reporting_meth_code
-            , @employment_info_chg_reason_cd
-            , @emp_location_code
-            , @emp_status_code
-            , @reason_code
-            , @emp_expected_return_date
-            , @pay_through_date
-            , @emp_death_date
-            , @consider_for_rehire_ind
-            , @pay_element_id
-            , @emp_calculation
+            --, @employment_info_chg_reason_cd
+            --, @emp_location_code
+            --, @emp_status_code
+            --, @reason_code
+            --, @emp_expected_return_date
+            --, @pay_through_date
+            --, @emp_death_date
+            --, @consider_for_rehire_ind
+            --, @pay_element_id
+            --, @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
@@ -516,9 +449,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @v_EMPTY_STRING
+                            , @p_msg_p2             = @v_EMPTY_STRING
                             , @p_msg_desc           = 'Employee id already exists'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -565,9 +498,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
-                                    , @p_msg_p1             = ''
-                                    , @p_msg_p2             = ''
+                                    , @p_pay_element_id     = @v_EMPTY_STRING
+                                    , @p_msg_p1             = @v_EMPTY_STRING
+                                    , @p_msg_p2             = @v_EMPTY_STRING
                                     , @p_msg_desc           = 'Invalid Employer id - defaulting to 99999'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                     , @p_activity_date      = @p_activity_date
@@ -581,7 +514,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Check to see if the national id is blank
                 ---------------------------------------------------------------------------
-                IF  (@national_id = '') OR
+                IF  (@national_id = @v_EMPTY_STRING) OR
                     (@national_id = NULL)
                     BEGIN
 
@@ -600,10 +533,10 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
-                            , @p_msg_desc           = 'National ID is blank - defaulting to ''99999'''
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @v_EMPTY_STRING
+                            , @p_msg_p2             = @v_EMPTY_STRING
+                            , @p_msg_desc           = 'National ID is blank - defaulting to @v_EMPTY_STRING99999@v_EMPTY_STRING'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -638,9 +571,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_STRING
                             , @p_msg_p1             = @pay_group_id
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_STRING
                             , @p_msg_desc           = 'Invalid pay group id'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -687,9 +620,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_STRING
                             , @p_msg_p1             = @w_msg_text
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_STRING
                             , @p_msg_desc           = 'Invalid Employment Type Code'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
@@ -726,15 +659,164 @@ BEGIN
                                 , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                                 , @p_emp_id             = @emp_id
                                 , @p_eff_date           = @eff_date
-                                , @p_pay_element_id     = ''
+                                , @p_pay_element_id     = @v_EMPTY_STRING
                                 , @p_msg_p1             = @w_msg_text
-                                , @p_msg_p2             = ''
+                                , @p_msg_p2             = @v_EMPTY_STRING
                                 , @p_msg_desc           = 'Invalid Employment Type Code'
                                 , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                                 , @p_activity_date      = @p_activity_date
                                 , @p_audit_id           = @aud_id
 
                         END
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Salary Amount
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Validate Annual Salary (PayRate)'
+
+                IF (@annual_salary_amt = 0.00)
+                    BEGIN
+
+                        SET @msg_id = 'U00041'
+                        SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @annual_salary_amt
+                            , @p_msg_p2             = @v_EMPTY_STRING
+                            , @p_msg_desc           = 'Annual salary amount (PayRate) cannot be zero.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Annual HoursPerFTE
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Validate Annual Hours per FTE'
+
+                IF (@annual_hrs_per_fte = 0.00)
+                    BEGIN
+
+                        SET @msg_id = 'U00124'
+                        SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @annual_hrs_per_fte
+                            , @p_msg_p2             = @v_EMPTY_STRING
+                            , @p_msg_desc           = 'Invalid annual hours per FTE.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Annual Rate
+                ---------------------------------------------------------------------------
+                SET @v_step_position = 'Validate Annual Rate'
+
+                IF (@annual_rate = 0.00)
+                    BEGIN
+
+                        SET @msg_id = 'U00124'
+                        SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @annual_rate
+                            , @p_msg_p2             = @v_EMPTY_STRING
+                            , @p_msg_desc           = 'Invalid annual hours per FTE.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Dates
+                ---------------------------------------------------------------------------
+                -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
+
+                -- Effective Date
+                IF (@eff_date = @v_END_OF_TIME_DATE)
+                    BEGIN
+
+                        SET @msg_id = 'U00102'  -- New code
+                        SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_NEW_HIRE) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @emp_calculation
+                            , @p_msg_p2             = ''
+                            , @p_msg_desc           = 'Invalid Effective Date'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                        SET @w_fatal_error = 1
+
+                    END
+
+
 
 
                 ---------------------------------------------------------------------------
@@ -778,54 +860,16 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Calculate Annual Salary'
 
-                -- GOSL will only provide hourly rate
-                --SET @w_hourly_pay_rate = CAST(@annual_salary AS MONEY)
-                -- GOSL does not use tm_pd_policy correctly
-                -- Calculate Annual Salary = hourly rate * 2080
-                --SET @w_annual_salary_amt = ROUND(@w_hourly_pay_rate * 2080.00, 2)
-
 
                 ---------------------------------------------------------------------------
-                -- Lookup Pay Frequency Code
+                -- Salary Setup
                 ---------------------------------------------------------------------------
-                -- GOSL not using tm_pd_policy
-                /*
-                SELECT @pay_frequency_code = pay_frequency_code
-                    , @annualizing_factor = annualizing_factor
-                FROM DBShrpn.dbo.pay_group
-                WHERE pay_group_id = @pay_group_id
-                */
+                -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
+                IF (@annual_salary_amt = @annual_rate)  -- Indicates that the associate is not paid hourly
+                    SET @w_pd_salary_amt = ROUND(@annual_salary_amt / 12, 2)
+                ELSE
+                    SET @w_pd_salary_amt = ROUND(@annual_rate * @annual_hrs_per_fte, 2)
 
-        /*  -- Disabling Salary Input for GOSL -- CJP 7/17/2025
-
-                IF (@pay_frequency_code = 'MONTH')
-                    IF (@pay_group_id = 'MONTHLY2')
-                        SELECT @w_pd_salary_amt                 = 0.00
-                            , @w_pd_salary_tm_pd_id            = ''
-                            , @w_standard_work_pd_id           = @pay_frequency_code
-                            , @w_standard_work_hrs             = 173.33     -- need a real default value
-                            , @w_standard_daily_work_hrs       = 8.0
-                    ELSE
-                        SELECT @w_pd_salary_amt                 = @annual_salary / @annualizing_factor
-                            , @w_pd_salary_tm_pd_id            = @pay_frequency_code
-                            , @w_standard_work_pd_id           = 'WEEK'
-                            , @w_standard_work_hrs             = 40.0
-                            , @w_standard_daily_work_hrs       = 8.0
-                ELSE    -- BIWK
-                    SELECT @w_pd_salary_amt                 = 0.00
-                        , @w_pd_salary_tm_pd_id            = ''
-                        , @w_standard_work_pd_id           = @pay_frequency_code
-                        , @w_standard_work_hrs             = 40.0
-                        , @w_standard_daily_work_hrs       = 8.0
-        */
-
-                -- Not Sending Salary Data
-                -- SS setup not compatible with HCM
-                SELECT @w_pd_salary_amt                    = 0.00
-                        , @w_pd_salary_tm_pd_id            = ''
-                        , @w_standard_work_pd_id           = ''
-                        , @w_standard_work_hrs             = 0.0
-                        , @w_standard_daily_work_hrs       = 0.0
 
                 ---------------------------------------------------------------------------
                 -- Create New Hire
@@ -853,12 +897,12 @@ BEGIN
                     , @p_addr_1_fmt_code                   = @addr_fmt_code
                     , @p_addr_1_line_1                     = @addr_line_1
                     , @p_addr_1_line_2                     = @addr_line_2
-                    , @p_addr_1_line_3                     = ''
-                    , @p_addr_1_line_4                     = ''
-                    , @p_addr_1_line_5                     = ''
+                    , @p_addr_1_line_3                     = @v_EMPTY_STRING
+                    , @p_addr_1_line_4                     = @v_EMPTY_STRING
+                    , @p_addr_1_line_5                     = @v_EMPTY_STRING
                     , @p_addr_1_street_or_pob_1            = @addr_line_3
                     , @p_addr_1_street_or_pob_2            = @addr_line_4
-                    , @p_addr_1_street_or_pob_3            = ''
+                    , @p_addr_1_street_or_pob_3            = @v_EMPTY_STRING
                     , @p_addr_1_city_name                  = @city_name
                     , @p_addr_1_ctry_sub_entity_code       = @state_prov
                     , @p_addr_1_postal_code                = @postal_code
@@ -883,7 +927,7 @@ BEGIN
                     , @p_hourly_pay_rate                   = @w_hourly_pay_rate
                     , @p_pd_salary_amt                     = @w_pd_salary_amt
                     , @p_pd_salary_tm_pd_id                = @w_pd_salary_tm_pd_id
-                    , @p_annual_salary_amt                 = @w_annual_salary_amt
+                    , @p_annual_salary_amt                 = @annual_salary_amt
                     , @p_pay_basis_code                    = @w_pay_basis_code
                     , @p_curr_code                         = @w_curr_code
                     , @p_work_tm_code                      = @w_work_tm_code
@@ -1044,9 +1088,9 @@ BEGIN
                     , @p_event_id           = @v_EVENT_ID_NEW_HIRE
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_pay_element_id     = @v_EMPTY_STRING
+                    , @p_msg_p1             = @v_EMPTY_STRING
+                    , @p_msg_p2             = @v_EMPTY_STRING
                     , @p_msg_desc           = @ErrorMessage
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
@@ -1076,22 +1120,22 @@ BYPASS_EMPLOYEE:
                 , @position_title
                 , @employment_type_code
                 , @annual_salary_amt
-                , @begin_date
-                , @end_date
-                , @pay_status_code
+                --, @begin_date
+                --, @end_date
+                --, @pay_status_code
                 , @pay_group_id
                 , @pay_element_ctrl_grp_id
                 , @time_reporting_meth_code
-                , @employment_info_chg_reason_cd
-                , @emp_location_code
-                , @emp_status_code
-                , @reason_code
-                , @emp_expected_return_date
-                , @pay_through_date
-                , @emp_death_date
-                , @consider_for_rehire_ind
-                , @pay_element_id
-                , @emp_calculation
+                --, @employment_info_chg_reason_cd
+                -- , @emp_location_code
+                -- , @emp_status_code
+                -- , @reason_code
+                -- , @emp_expected_return_date
+                -- , @pay_through_date
+                -- , @emp_death_date
+                -- , @consider_for_rehire_ind
+                -- , @pay_element_id
+                -- , @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
@@ -1113,7 +1157,6 @@ BYPASS_EMPLOYEE:
                 , @postal_code
                 , @county_name
                 , @region_name
-
                 , @w_job_or_pos_id
 
         END  -- Error Loop
@@ -1419,9 +1462,9 @@ BYPASS_EMPLOYEE:
             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
             , @p_emp_id             = @emp_id
             , @p_eff_date           = @eff_date
-            , @p_pay_element_id     = ''
-            , @p_msg_p1             = ''
-            , @p_msg_p2             = ''
+            , @p_pay_element_id     = @v_EMPTY_STRING
+            , @p_msg_p1             = @v_EMPTY_STRING
+            , @p_msg_p2             = @v_EMPTY_STRING
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date
