@@ -65,6 +65,7 @@ BEGIN
     DECLARE @v_EVENT_ID_TRANSFER                        char(2)             = '03'
     DECLARE @v_EVENT_ID_STATUS_CHANGE                   char(2)             = '05'
     DECLARE @v_END_OF_TIME_DATE                         datetime            = '29991231'
+    DECLARE @v_EMPTY_SPACE                              char(01)            = ''
 
     DECLARE @v_ACTIVITY_STATUS_GOOD                     char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_WARNING                  char(2)             = '01'
@@ -87,6 +88,8 @@ BEGIN
     DECLARE @maxx                                       char(06)
 
     DECLARE @new_annual_salary_amt    money
+
+
     DECLARE @new_emp_asgn_assigned_to_code              char(01)
     DECLARE @new_emp_asgn_job_or_pos_id                 char(10)
     DECLARE @new_emp_asgn_eff_date                      datetime
@@ -101,23 +104,40 @@ BEGIN
     DECLARE @new_emp_asgn_base_rate_tbl_entry_code      char(08)
     DECLARE @new_emp_asgn_pd_salary_tm_pd_id            char(05)
 
-    DECLARE @cur_ea_user_amt_1                  float
-    DECLARE @cur_ea_user_amt_2                  float
-    DECLARE @cur_ea_user_code_1                 char(05)
-    DECLARE @cur_ea_user_code_2                 char(05)
-    DECLARE @cur_ea_user_date_1                 datetime
-    DECLARE @cur_ea_user_date_2                 datetime
-    DECLARE @cur_ea_user_ind_1                  char(01)
-    DECLARE @cur_ea_user_ind_2                  char(01)
-    DECLARE @cur_ea_user_monetary_amt_1         money
-    DECLARE @cur_ea_user_monetary_amt_2         money
-    DECLARE @cur_ea_user_monetary_curr_code     char(03)
-    DECLARE @cur_ea_user_text_1                 char(50)
-    DECLARE @cur_ea_user_text_2                 char(50)
+
+    DECLARE @cur_ea_assigned_to_code                    char(01)
+    DECLARE @cur_ea_job_or_pos_id                       char(10)
+    DECLARE @cur_ea_eff_date                            datetime
+    DECLARE @cur_ea_begin_date                          datetime
+    DECLARE @cur_ea_end_date                            datetime
+    DECLARE @cur_ea_work_tm_code                        char(01)
+    DECLARE @cur_ea_standard_work_hrs                   float
+    DECLARE @cur_ea_standard_work_pd_id                 char(05)
+    DECLARE @cur_ea_salary_change_date                  datetime
+    DECLARE @cur_ea_pd_salary_amt                       money
+    DECLARE @cur_ea_hourly_pay_rate                     float
+    DECLARE @cur_ea_annual_salary_amt                   money
+    DECLARE @cur_ea_curr_code                           char(03)
+    DECLARE @cur_ea_pd_salary_tm_pd_id                  char(05)
+    DECLARE @cur_ea_pay_basis_code                      char(01)
+
+    DECLARE @cur_ea_user_amt_1                          float
+    DECLARE @cur_ea_user_amt_2                          float
+    DECLARE @cur_ea_user_code_1                         char(05)
+    DECLARE @cur_ea_user_code_2                         char(05)
+    DECLARE @cur_ea_user_date_1                         datetime
+    DECLARE @cur_ea_user_date_2                         datetime
+    DECLARE @cur_ea_user_ind_1                          char(01)
+    DECLARE @cur_ea_user_ind_2                          char(01)
+    DECLARE @cur_ea_user_monetary_amt_1                 money
+    DECLARE @cur_ea_user_monetary_amt_2                 money
+    DECLARE @cur_ea_user_monetary_curr_code             char(03)
+    DECLARE @cur_ea_user_text_1                         char(50)
+    DECLARE @cur_ea_user_text_2                         char(50)
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                                     int             = 0
-    DECLARE @emp_id                                     char(15)        = ''
+    DECLARE @emp_id                                     char(15)        = @v_EMPTY_SPACE
     DECLARE @eff_date                                   datetime
     DECLARE @first_name                                 char(25)
     DECLARE @first_middle_name                          char(25)
@@ -153,12 +173,15 @@ BEGIN
     DECLARE @tax_ceiling_amt                            money        -- employee.user_monetary_amt_1
     DECLARE @labor_grp_code                             char(5)         -- DBShrpn..emp_employment.labor_grp_code
     DECLARE @file_source                                char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
-    DECLARE @job_or_pos_id                              char(10)        = ''
+    DECLARE @w_annual_salary_amt                        money           = 0.00
+    DECLARE @w_annual_hrs_per_fte                       money           = 0.00
+
+    DECLARE @job_or_pos_id                              char(10)        = @v_EMPTY_SPACE
 
     --DECLARE @w_eff_date                                 datetime
     DECLARE @v_cal_year                                 smallint
 
-    -- Transfer Varaibles
+    -- Transfer Variables
     DECLARE @cur_empl_id                                char(10)
     DECLARE @cur_eempl_eff_date                         datetime
     DECLARE @cur_tax_entity_id                          char(10)
@@ -204,35 +227,15 @@ BEGIN
         SELECT t.aud_id
              , t.emp_id
              , t.eff_date
-             --, t.first_name
-             --, t.first_middle_name
-             --, t.last_name
              , t.empl_id
-             --, t.national_id_type_code
-             --, t.national_id
              , t.organization_group_id
              , t.organization_chart_name
              , t.organization_unit_name
-             --, t.emp_status_classn_code
              , t.position_title
-             --, t.employment_type_code
              , t.annual_salary_amt
-             --, t.begin_date
-             --, t.end_date
-             --, t.pay_status_code
              , t.pay_group_id
-             --, t.pay_element_ctrl_grp_id
-             --, t.time_reporting_meth_code
              , t.employment_info_chg_reason_cd
              , t.emp_location_code
-            --  , t.emp_status_code
-            --  , t.reason_code
-            --  , t.emp_expected_return_date
-            --  , t.pay_through_date
-            --  , t.emp_death_date
-            --  , t.consider_for_rehire_ind
-            --  , t.pay_element_id
-            --  , t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
@@ -250,35 +253,15 @@ BEGIN
         INTO  @aud_id
             , @emp_id
             , @eff_date
-            --, @first_name
-            --, @first_middle_name
-            --, @last_name
             , @empl_id
-            --, @national_id_type_code
-            --, @national_id
             , @organization_group_id
             , @organization_chart_name
             , @organization_unit_name
-            --, @emp_status_classn_code
             , @position_title
-            --, @employment_type_code
             , @annual_salary_amt
-            --, @begin_date
-            --, @end_date
-            --, @pay_status_code
             , @pay_group_id
-            --, @pay_element_ctrl_grp_id
-            --, @time_reporting_meth_code
             , @employment_info_chg_reason_cd
             , @emp_location_code
-            --, @emp_status_code
-            --, @reason_code
-            --, @emp_expected_return_date
-            --, @pay_through_date
-            --, @emp_death_date
-            --, @consider_for_rehire_ind
-            --, @pay_element_id
-            --, @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
@@ -299,17 +282,17 @@ BEGIN
                 BEGIN TRAN
 
                 --   Clear the fields:
-                SELECT @cur_empl_id                             = ''
-                    , @cur_tax_entity_id                       = ''
-                    , @cur_eempl_eff_date                      = ''
+                SELECT @cur_empl_id                             = @v_EMPTY_SPACE
+                    , @cur_tax_entity_id                       = @v_EMPTY_SPACE
+                    , @cur_eempl_eff_date                      = @v_EMPTY_SPACE
                     , @cur_emp_asgn_end_date                   = @v_END_OF_TIME_DATE
                     , @cur_emp_asgn_job_position_end_date      = @v_END_OF_TIME_DATE
-                    , @cur_emp_asgn_assigned_to_code           = ''
-                    --, @cur_emp_asgn_job_or_pos_id              = ''
-                    , @cur_emp_status_code                     = ''
-                    , @new_tax_entity                          = ''
-                    , @new_taxing_country_code                 = ''
-                    , @new_curr_code                           = ''
+                    , @cur_emp_asgn_assigned_to_code           = @v_EMPTY_SPACE
+                    --, @cur_emp_asgn_job_or_pos_id              = @v_EMPTY_SPACE
+                    , @cur_emp_status_code                     = @v_EMPTY_SPACE
+                    , @new_tax_entity                          = @v_EMPTY_SPACE
+                    , @new_taxing_country_code                 = @v_EMPTY_SPACE
+                    , @new_curr_code                           = @v_EMPTY_SPACE
                     , @w_fatal_error                           = 0
 
 
@@ -323,7 +306,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Validate Effective Date
                 ---------------------------------------------------------------------------
-                -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
+                -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
                 IF (@eff_date = @v_END_OF_TIME_DATE)
@@ -344,9 +327,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_TRANSFER
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Invalid Effective Date'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -370,8 +353,25 @@ BEGIN
                     , @cur_emp_asgn_end_date                    = ea.end_date
                     , @cur_emp_asgn_job_position_end_date       = ea.end_date
                     , @cur_emp_asgn_assigned_to_code            = ea.assigned_to_code
-                    --, @cur_emp_asgn_job_or_pos_id              = ea.job_or_pos_id
-
+                    ---------------------------------------------------------------------------
+                    -- Can remove block if salary comparison on new record is not necessary
+                    ---------------------------------------------------------------------------
+                    , @cur_ea_job_or_pos_id                     = ea.job_or_pos_id
+                    , @cur_ea_eff_date                          = ea.eff_date
+                    , @cur_ea_begin_date                        = ea.begin_date
+                    , @cur_ea_end_date                          = ea.end_date
+                    , @cur_ea_work_tm_code                      = ea.work_tm_code
+                    , @cur_ea_standard_work_hrs                 = ea.standard_work_hrs
+                    , @cur_ea_standard_work_pd_id               = ea.standard_work_pd_id
+                    , @cur_ea_salary_change_date                = ea.salary_change_date
+                    , @cur_ea_pd_salary_amt                     = ea.pd_salary_amt
+                    , @cur_ea_hourly_pay_rate                   = ea.hourly_pay_rate
+                    , @cur_ea_annual_salary_amt                 = ea.annual_salary_amt
+                    , @cur_ea_curr_code                         = ea.curr_code
+                    , @cur_ea_pd_salary_tm_pd_id                = ea.pd_salary_tm_pd_id
+                    , @cur_ea_pay_basis_code                    = ea.pay_basis_code
+                    ---------------------------------------------------------------------------
+                    ---------------------------------------------------------------------------
                     , @cur_ea_user_amt_1                        = ea.user_amt_1
                     , @cur_ea_user_amt_2                        = ea.user_amt_2
                     , @cur_ea_user_code_1                       = ea.user_code_1
@@ -416,9 +416,9 @@ BEGIN
                         , @p_event_id           = @v_EVENT_ID_TRANSFER
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
                         , @p_msg_desc           = 'Invalid employee id.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
@@ -463,9 +463,9 @@ BEGIN
                         , @p_event_id           = @v_EVENT_ID_TRANSFER
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
                         , @p_msg_desc           = 'Associate is currently terminated and has rehire record in current extract - bypassing transfer.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
@@ -508,9 +508,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_TRANSFER
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @w_msg_text_2
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'The new effective date for employee must be greater than the current employee employment effective date.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -550,9 +550,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_TRANSFER
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Existing payments have not been updated into the accumulator for this employee.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -599,9 +599,9 @@ BEGIN
                                 , @p_event_id           = @v_EVENT_ID_TRANSFER
                                 , @p_emp_id             = @emp_id
                                 , @p_eff_date           = @eff_date
-                                , @p_pay_element_id     = ''
+                                , @p_pay_element_id     = @v_EMPTY_SPACE
                                 , @p_msg_p1             = @empl_id
-                                , @p_msg_p2             = ''
+                                , @p_msg_p2             = @v_EMPTY_SPACE
                                 , @p_msg_desc           = 'Employer does not exist - bypassing record'
                                 , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                 , @p_activity_date      = @p_activity_date
@@ -653,7 +653,7 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_TRANSFER
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @empl_id
                                     , @p_msg_p2             = @cur_empl_id
                                     , @p_msg_desc           = 'Cannot transfer an employee to the same employer.'
@@ -695,9 +695,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_TRANSFER
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @empl_id
-                                    , @p_msg_p2             = ''
+                                    , @p_msg_p2             = @v_EMPTY_SPACE
                                     , @p_msg_desc           = 'Cannot transfer an employee to a pensioner employer'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
@@ -741,9 +741,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_TRANSFER
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @cur_emp_status_code
-                                    , @p_msg_p2             = ''
+                                    , @p_msg_p2             = @v_EMPTY_SPACE
                                     , @p_msg_desc           = 'Terminated employee cannot be transferred.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
@@ -761,9 +761,9 @@ BEGIN
                                     , @p_event_id           = @v_EVENT_ID_TRANSFER
                                     , @p_emp_id             = @emp_id
                                     , @p_eff_date           = @eff_date
-                                    , @p_pay_element_id     = ''
+                                    , @p_pay_element_id     = @v_EMPTY_SPACE
                                     , @p_msg_p1             = @cur_emp_status_code
-                                    , @p_msg_p2             = ''
+                                    , @p_msg_p2             = @v_EMPTY_SPACE
                                     , @p_msg_desc           = 'Terminated employee is a rehire in current extract - bypassing transfer.'
                                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                                     , @p_activity_date      = @p_activity_date
@@ -891,45 +891,9 @@ BEGIN
                     , @p_pay_group_id               = @pay_group_id
 
 
-                ---------------------------------------------------------------------------
-                --   Update the Salary in the Assignment Record
-                ---------------------------------------------------------------------------
-                SET @v_step_position = 'Lookup New Employee Assignment'
-
-                SELECT @new_emp_asgn_assigned_to_code = ea.assigned_to_code
-                    , @new_emp_asgn_job_or_pos_id    = ea.job_or_pos_id
-                    , @new_emp_asgn_eff_date         = ea.eff_date
-                FROM DBShrpn.dbo.uvu_emp_assignment_most_rec ea
-                WHERE (emp_id = @emp_id)
-
-
-                -- GOSL: HCM Salary data will not be interfaced to SS
-                -- Blank them out
-                SELECT @new_annual_salary_amt                   = 0.00
-                    , @new_emp_asgn_hourly_rate_amt            = 0.00
-                    , @new_emp_asgn_period_amt                 = 0.00
-                    , @new_emp_asgn_salary_change_type_code    = ''
-                    , @new_emp_asgn_work_tm_code               = ''
-                    , @new_emp_asgn_base_rate_tbl_id           = ''
-                    , @new_emp_asgn_base_rate_tbl_entry_code   = ''
-                    , @new_emp_asgn_standard_work_pd_id        = ''
-                    , @new_emp_asgn_standard_work_hrs          = 0.00
-                    , @new_emp_asgn_pd_salary_tm_pd_id         = ''
-
-
+                -- Carry forward the employee assignment user defined fields
                 UPDATE DBShrpn.dbo.emp_assignment
-                SET annual_salary_amt           = @new_annual_salary_amt
-                  , hourly_pay_rate             = @new_emp_asgn_hourly_rate_amt
-                  , pd_salary_amt               = @new_emp_asgn_period_amt
-                  , salary_change_type_code     = @new_emp_asgn_salary_change_type_code
-                  , work_tm_code                = @new_emp_asgn_work_tm_code
-                  , base_rate_tbl_id            = @new_emp_asgn_base_rate_tbl_id
-                  , base_rate_tbl_entry_code    = @new_emp_asgn_base_rate_tbl_entry_code
-                  , organization_group_id       = @organization_group_id
-                  , organization_chart_name     = @organization_chart_name
-                  , organization_unit_name      = @organization_unit_name
-
-                  , user_amt_1                  = @cur_ea_user_amt_1
+                SET user_amt_1                  = @cur_ea_user_amt_1
                   , user_amt_2                  = @cur_ea_user_amt_2
                   , user_code_1                 = @cur_ea_user_code_1
                   , user_code_2                 = @cur_ea_user_code_2
@@ -942,7 +906,6 @@ BEGIN
                   , user_monetary_curr_code     = @cur_ea_user_monetary_curr_code
                   , user_text_1                 = @cur_ea_user_text_1
                   , user_text_2                 = @position_title
-
                 WHERE   (emp_id           = @emp_id)
                     AND (assigned_to_code = @new_emp_asgn_assigned_to_code)
                     AND (job_or_pos_id    = @new_emp_asgn_job_or_pos_id)
@@ -1001,9 +964,9 @@ BEGIN
                     , @p_event_id           = @v_EVENT_ID_TRANSFER
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @ErrorMessage
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
@@ -1021,35 +984,15 @@ BYPASS_EMPLOYEE:
             INTO  @aud_id
                 , @emp_id
                 , @eff_date
-                --, @first_name
-                --, @first_middle_name
-                --, @last_name
                 , @empl_id
-                --, @national_id_type_code
-                --, @national_id
                 , @organization_group_id
                 , @organization_chart_name
                 , @organization_unit_name
-                --, @emp_status_classn_code
                 , @position_title
-                --, @employment_type_code
                 , @annual_salary_amt
-                --, @begin_date
-                --, @end_date
-                --, @pay_status_code
                 , @pay_group_id
-                --, @pay_element_ctrl_grp_id
-                --, @time_reporting_meth_code
                 , @employment_info_chg_reason_cd
                 , @emp_location_code
-                --, @emp_status_code
-                --, @reason_code
-                --, @emp_expected_return_date
-                --, @pay_through_date
-                --, @emp_death_date
-                --, @consider_for_rehire_ind
-                --, @pay_element_id
-                --, @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
@@ -1328,9 +1271,9 @@ BYPASS_EMPLOYEE:
             , @p_event_id           = @v_EVENT_ID_TRANSFER
             , @p_emp_id             = @emp_id
             , @p_eff_date           = @eff_date
-            , @p_pay_element_id     = ''
-            , @p_msg_p1             = ''
-            , @p_msg_p2             = ''
+            , @p_pay_element_id     = @v_EMPTY_SPACE
+            , @p_msg_p1             = @v_EMPTY_SPACE
+            , @p_msg_p2             = @v_EMPTY_SPACE
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date

@@ -306,7 +306,7 @@ BEGIN
                 -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (@eff_date = @v_END_OF_TIME_DATE))
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code

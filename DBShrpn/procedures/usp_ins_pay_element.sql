@@ -624,7 +624,7 @@ BEGIN
                         SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                         -- Convert date to string for log table
-                        SET @w_msg_text_2 = CONVERT(char(8), @pay_through_date, 112)
+                        SET @w_msg_text_2 = CONVERT(char(8), @cur_eempl_pay_through_date, 112)
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id                   AS msg_id

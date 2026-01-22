@@ -109,7 +109,6 @@ BEGIN
     DECLARE @cur_ea_eff_date                    datetime
     DECLARE @cur_ea_begin_date                  datetime
     DECLARE @cur_ea_end_date                    datetime
-
     DECLARE @cur_ea_work_tm_code                char(01)
     DECLARE @cur_ea_standard_work_hrs           float
     DECLARE @cur_ea_standard_work_pd_id         char(05)

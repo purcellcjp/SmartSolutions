@@ -72,6 +72,7 @@ BEGIN
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_EMPTY_SPACE                  char(01)            = ''
 
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
@@ -110,7 +111,7 @@ BEGIN
     -- This section declares the interface values from Global HR
 
     DECLARE @aud_id                         int             = 0
-    DECLARE @emp_id                         char(15)        = ''
+    DECLARE @emp_id                         char(15)        = @v_EMPTY_SPACE
     DECLARE @eff_date                       datetime
 
     DECLARE @first_name                     char(25)
@@ -119,7 +120,7 @@ BEGIN
     DECLARE @empl_id                        char(10)
     DECLARE @tax_flag                       char(1)         -- individual_personal.ind_2
     DECLARE @nic_flag                       char(1)         -- individual_personal.ind_1
-    DECLARE @tax_ceiling_amt                money        -- employee.user_monetary_amt_1
+    DECLARE @tax_ceiling_amt                money           -- employee.user_monetary_amt_1
     DECLARE @file_source                    char(50)        -- 'SS VENUS' or 'SS GANYMEDE'
 
 
@@ -217,9 +218,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Employee does not exist'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -298,9 +299,9 @@ BEGIN
                     , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @ErrorMessage
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
@@ -602,9 +603,9 @@ BYPASS_EMPLOYEE:
             , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
             , @p_emp_id             = @emp_id
             , @p_eff_date           = @eff_date
-            , @p_pay_element_id     = ''
-            , @p_msg_p1             = ''
-            , @p_msg_p2             = ''
+            , @p_pay_element_id     = @v_EMPTY_SPACE
+            , @p_msg_p1             = @v_EMPTY_SPACE
+            , @p_msg_p2             = @v_EMPTY_SPACE
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date

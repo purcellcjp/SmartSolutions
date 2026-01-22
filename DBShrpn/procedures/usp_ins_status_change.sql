@@ -953,7 +953,7 @@ BEGIN
                                   , addr_1_city_name               = @city_name
                                   , addr_1_country_sub_entity_code = @state_prov
                                   , addr_1_postal_code             = @postal_code
-                                  , addr_1_country_code            = @country
+                                  , addr_1_country_code            = @country_code
                                   , addr_1_fmt_code                = @addr_fmt_code
                                   , addr_1_type_code               = @w_addr_1_type_code
 

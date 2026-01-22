@@ -65,6 +65,7 @@ BEGIN
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_EMPTY_SPACE                  char(01)            = ''
 
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE       char(2)             = '02'
@@ -108,7 +109,7 @@ BEGIN
 
     -- This section declares the interface values from Global HR
     DECLARE @aud_id                         int             = 0
-    DECLARE @emp_id                         char(15)        = ''
+    DECLARE @emp_id                         char(15)        = @v_EMPTY_SPACE
     DECLARE @eff_date                       datetime
     DECLARE @empl_id                        char(10)
     DECLARE @labor_grp_code                 char(05)
@@ -286,9 +287,9 @@ BEGIN
                         , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
                         , @p_msg_desc           = 'Bypassing labor group record since update has either occurred in either new hire, transfer, or rehire status change event in this extract.'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                         , @p_activity_date      = @p_activity_date
@@ -316,9 +317,9 @@ BEGIN
                         , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                         , @p_emp_id             = @emp_id
                         , @p_eff_date           = @eff_date
-                        , @p_pay_element_id     = ''
-                        , @p_msg_p1             = ''
-                        , @p_msg_p2             = ''
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
                         , @p_msg_desc           = 'Labor group code is blank - bypassing record'
                         , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                         , @p_activity_date      = @p_activity_date
@@ -334,17 +335,17 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Validate Effective Date
                 ---------------------------------------------------------------------------
-                -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
+                -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (@eff_date = @v_END_OF_TIME_DATE))
+                IF (@eff_date = @v_END_OF_TIME_DATE)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
                         SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
 
                         INSERT INTO #tbl_ghr_msg
-                        SELECT @msg_id      AS msg_id
+                        SELECT @msg_id AS msg_id
                             , REPLACE(REPLACE(REPLACE(msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_LABOR_GROUP) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master
                         WHERE (msg_id = @msg_id)
@@ -355,9 +356,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Invalid Effective Date'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -367,8 +368,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-
-
 
 
                 ---------------------------------------------------------------------------
@@ -405,9 +404,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
-                            , @p_msg_p1             = ''
-                            , @p_msg_p2             = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Employee does not exist'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -441,9 +440,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_POSITION_TITLE
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @labor_grp_code
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Employee is terminated in SmartStream - bypassing record.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -477,7 +476,7 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @labor_grp_code
                             , @p_msg_p2             = @cur_labor_grp_code
                             , @p_msg_desc           = 'New labor group code is same as current labor group code - bypassing record.'
@@ -518,9 +517,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @labor_grp_code
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'Invalid labor group code.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -557,9 +556,9 @@ BEGIN
                             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
-                            , @p_pay_element_id     = ''
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
                             , @p_msg_p1             = @w_msg_text_2
-                            , @p_msg_p2             = ''
+                            , @p_msg_p2             = @v_EMPTY_SPACE
                             , @p_msg_desc           = 'New effective date must be greater or equal to current employee employment effective date.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                             , @p_activity_date      = @p_activity_date
@@ -783,7 +782,7 @@ BEGIN
                                     new_tax_entity_id, xfer_date, pay_through_date)
                                 VALUES
                                     (@W_ACTION_USER, 'ERTRANSFER', @W_ACTION_DATETIME, @emp_id,
-                                    @p_eff_date, '', '', @p_transfer_date, '', '', '', '')
+                                    @p_eff_date, @v_EMPTY_SPACE, @v_EMPTY_SPACE, @p_transfer_date, @v_EMPTY_SPACE, @v_EMPTY_SPACE, @v_EMPTY_SPACE, @v_EMPTY_SPACE)
 
                                 DELETE work_emp_employment_aud
                                 WHERE user_id = @W_ACTION_USER
@@ -821,9 +820,9 @@ BEGIN
                     , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
                     , @p_emp_id             = @emp_id
                     , @p_eff_date           = @eff_date
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @ErrorMessage
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @p_activity_date
@@ -1121,9 +1120,9 @@ BYPASS_EMPLOYEE:
             , @p_event_id           = @v_EVENT_ID_LABOR_GROUP
             , @p_emp_id             = @emp_id
             , @p_eff_date           = @eff_date
-            , @p_pay_element_id     = ''
-            , @p_msg_p1             = ''
-            , @p_msg_p2             = ''
+            , @p_pay_element_id     = @v_EMPTY_SPACE
+            , @p_msg_p1             = @v_EMPTY_SPACE
+            , @p_msg_p2             = @v_EMPTY_SPACE
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @p_activity_date

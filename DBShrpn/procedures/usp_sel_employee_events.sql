@@ -19,7 +19,7 @@ GO
 /*************************************************************************************
     SP Name:       usp_sel_employee_events
 
-    Description:   Parent procedure that executes the following procedures
+    Description:   Parent procedure that executes the following procedures`
                    organized by event code in the interface file.
 
     Event                       ID      Stored Procedure
@@ -70,12 +70,15 @@ BEGIN
 
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
+    DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_EMPTY_SPACE                  char(01)            = ''
+
     DECLARE @ErrorNumber                    varchar(10)
     DECLARE @ErrorMessage                   nvarchar(4000)
     DECLARE @ErrorSeverity                  int
     DECLARE @ErrorState                     int
     DECLARE @v_ret_val                      int                 = 0
-    DECLARE @v_msg                          varchar(255)        = ''
+    DECLARE @v_msg                          varchar(255)        = @v_EMPTY_SPACE
     DECLARE @v_count                        int                 = 0
 
     DECLARE @v_event_id                     char(2)             = '00'
@@ -97,8 +100,6 @@ BEGIN
     DECLARE @v_ACTIVITY_STATUS_GOOD         char(2)             = '00'
     DECLARE @v_ACTIVITY_STATUS_BAD          char(2)             = '02'
     --DECLARE @v_ACTIVITY_STATUS_UNPROCESSED  char(2)             = '99'
-
-    DECLARE @v_END_OF_TIME_DATE                     datetime            = '29991231'
 
     DECLARE @w_activity_date	            datetime
     DECLARE @w_status			            int
@@ -147,7 +148,6 @@ BEGIN
     , tax_ceiling_amt                       char(15)            NULL    -- employee.user_monetary_amt_1
     , labor_grp_code                        char(50)            NULL    -- DBShrpn..emp_employment.labor_grp_code   char(5)
     , file_source                           char(50)            NULL    -- 'SS VENUS' or 'SS GANYMEDE'
-
     , annual_hrs_per_fte                    money               NULL    --varchar(255)        NULL
     , annual_rate                           money               NULL    --varchar(255)        NULL
     , birth_date                            datetime            NULL    --varchar(255)        NULL
@@ -163,7 +163,6 @@ BEGIN
     , postal_code                           varchar(255)        NULL
     , county_name                           varchar(255)        NULL
     , region_name                           varchar(255)        NULL
-
     , job_or_pos_id                         char(10)            NULL    -- derived value based on file_source
     )
 
@@ -212,8 +211,8 @@ BEGIN
             , t.national_id_type_code
             , t.national_id
             , COALESCE(TRY_CONVERT(int, t.organization_group_id), 0) AS organization_group_id
-            , t.organization_chart_name  -- wrong value
-            , t.organization_unit_name
+            , @v_EMPTY_SPACE AS organization_chart_name     -- t.organization_chart_name  -- wrong value
+            , @v_EMPTY_SPACE AS organization_unit_name      -- t.organization_unit_name
             , t.emp_status_classn_code
             , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
             , UPPER(t.employment_type_code) AS employment_type_code
@@ -239,28 +238,21 @@ BEGIN
             , COALESCE(TRY_CONVERT(money, t.tax_ceiling_amt), 0.00) AS tax_ceiling_amt
             , t.labor_grp_code
             , t.file_source
-
             , COALESCE(TRY_CONVERT(money, t.annual_hrs_per_fte), 0.00) AS annual_hrs_per_fte
             , COALESCE(TRY_CONVERT(money, t.annual_rate), 0.00) AS annual_rate
             , COALESCE(TRY_CONVERT(datetime, t.birth_date), @v_END_OF_TIME_DATE) AS birth_date
             , t.gender
+            , CASE t.country_code WHEN 'SLA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code    -- derive address format code based on country code
             , t.country_code
             , t.addr_line_1
             , t.addr_line_2
-            , CASE t.country_code   -- combine line 3 and 4 if St Lucia
-                WHEN 'SLA' THEN t.addr_line_3 + ' ' + t.addr_line_4
-                ELSE t.addr_line_3
-              END addr_line_3
-            , CASE t.country_code
-                WHEN 'SLA' THEN ''
-                ELSE t.addr_line_4
-              END addr_line_4
+            , CASE t.country_code WHEN 'SLA' THEN t.addr_line_3 + ' ' + t.addr_line_4 ELSE t.addr_line_3 END addr_line_3        -- combine line 3 and 4 if St Lucia
+            , CASE t.country_code WHEN 'SLA' THEN @v_EMPTY_SPACE ELSE t.addr_line_4 END addr_line_4
             , t.city_name
             , t.state_prov
             , t.postal_code
             , t.county_name
             , t.region_name
-
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
 
         FROM DBShrpn.dbo.ghr_employee_events t
@@ -280,11 +272,11 @@ BEGIN
             EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                   @p_msg_id             = 'U00122'
                 , @p_event_id           = @v_event_id
-                , @p_emp_id             = ''
-                , @p_eff_date           = ''
-                , @p_pay_element_id     = ''
+                , @p_emp_id             = @v_EMPTY_SPACE
+                , @p_eff_date           = @v_EMPTY_SPACE
+                , @p_pay_element_id     = @v_EMPTY_SPACE
                 , @p_msg_p1             = @v_step_position
-                , @p_msg_p2             = ''
+                , @p_msg_p2             = @v_EMPTY_SPACE
                 , @p_msg_desc           = @ErrorMessage
                 , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                 , @p_activity_date      = @w_activity_date
@@ -297,7 +289,7 @@ BEGIN
         ---------------------------------------------------------------------------
         -- Ganymede Employee ID - Replace leading '4' to 'D'
         ---------------------------------------------------------------------------
-        SET @v_step_position = 'GANYMEDE Employee ID - Replace Leading ''4'' with ''D'''
+        SET @v_step_position = 'GANYMEDE Employee ID - Replace Leading @v_EMPTY_SPACE4@v_EMPTY_SPACE with @v_EMPTY_SPACED@v_EMPTY_SPACE'
 
         UPDATE #ghr_employee_events_temp
         SET emp_id = STUFF(emp_id, 1, 1, 'D')
@@ -348,12 +340,11 @@ BEGIN
             , t.tax_ceiling_amt
             , t.labor_grp_code
             , t.file_source
-
             , t.annual_hrs_per_fte
             , t.annual_rate
             , t.birth_date
             , t.gender
-            , CASE t.country_code WHEN 'SLA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code
+            , t.addr_fmt_code
             , t.country_code
             , t.addr_line_1
             , t.addr_line_2
@@ -364,7 +355,6 @@ BEGIN
             , t.postal_code
             , t.county_name
             , t.region_name
-
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
             , @w_activity_date                                              AS activity_date
             , t.aud_id
@@ -402,11 +392,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -468,11 +458,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -509,11 +499,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -551,11 +541,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -592,11 +582,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -634,11 +624,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -676,11 +666,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -718,11 +708,11 @@ BEGIN
                 EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
                       @p_msg_id             = '0'
                     , @p_event_id           = @v_event_id
-                    , @p_emp_id             = ''
-                    , @p_eff_date           = ''
-                    , @p_pay_element_id     = ''
-                    , @p_msg_p1             = ''
-                    , @p_msg_p2             = ''
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_EMPTY_SPACE
+                    , @p_msg_p2             = @v_EMPTY_SPACE
                     , @p_msg_desc           = @v_msg
                     , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
                     , @p_activity_date      = @w_activity_date
@@ -757,21 +747,21 @@ END_EXECUTION:
             , @msgno    = @ErrorNumber
             , @severity = 0
             , @text     = @ErrorMessage
-            , @text_2   = ''
-            , @text_3   = ''
+            , @text_2   = @v_EMPTY_SPACE
+            , @text_3   = @v_EMPTY_SPACE
 
 
         -- Log system error
-		SET @v_event_id = ISNULL(@v_event_id, '')
+		SET @v_event_id = ISNULL(@v_event_id, @v_EMPTY_SPACE)
 
         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
               @p_msg_id             = @ErrorNumber
             , @p_event_id           = @v_event_id
-            , @p_emp_id             = ''
-            , @p_eff_date           = ''
-            , @p_pay_element_id     = ''
+            , @p_emp_id             = @v_EMPTY_SPACE
+            , @p_eff_date           = @v_EMPTY_SPACE
+            , @p_pay_element_id     = @v_EMPTY_SPACE
             , @p_msg_p1             = @v_step_position
-            , @p_msg_p2             = ''
+            , @p_msg_p2             = @v_EMPTY_SPACE
             , @p_msg_desc           = @ErrorMessage
             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
             , @p_activity_date      = @w_activity_date

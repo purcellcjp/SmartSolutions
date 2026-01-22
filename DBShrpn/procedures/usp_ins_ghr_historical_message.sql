@@ -53,6 +53,7 @@ GO
    version  date        developer   SCR         description
    -------  ----------  ---------   -----       ------------------------------------
    1.0.00   08/27/2025  CJP                     - Created
+            01/20/2026                          - Changed param @p_eff_date to datetime from char(10)
 
 ************************************************************************************/
 
@@ -61,7 +62,7 @@ CREATE PROCEDURE dbo.usp_ins_ghr_historical_message
       @p_msg_id             char(15)
     , @p_event_id           char(02)
     , @p_emp_id             char(15)
-    , @p_eff_date           char(10)
+    , @p_eff_date           datetime
     , @p_pay_element_id     char(10)
     , @p_msg_p1             varchar(255)
     , @p_msg_p2             varchar(255)

@@ -58,6 +58,8 @@ BEGIN
     SET NOCOUNT ON
 
     DECLARE @v_step_position                        varchar(255)        = 'Begin usp_ins_new_hire'
+
+    DECLARE @v_date_time_stamp                      datetime            = GETDATE()
     DECLARE @v_DISPLAY_NAME_FORMAT                  char(33)            = 'LNMCOMSFXFNMFMNSMI'  -- Unique to client
     DECLARE @v_END_OF_TIME_DATE                     datetime            = '29991231'
     DECLARE @v_EMPTY_STRING                         char(01)            = ''
@@ -302,28 +304,15 @@ BEGIN
              , LEFT(t.position_title, 50) AS position_title
              , t.employment_type_code
              , t.annual_salary_amt
-             --, t.begin_date
-             --, t.end_date
-             , t.pay_status_code
              , t.pay_group_id
              , t.pay_element_ctrl_grp_id
              , t.time_reporting_meth_code
-             --, t.employment_info_chg_reason_cd
-             --, t.emp_location_code
              , t.emp_status_code
-             --, t.reason_code
-             --, t.emp_expected_return_date
-             --, t.pay_through_date
-             --, t.emp_death_date
-             --, t.consider_for_rehire_ind
-             --, t.pay_element_id
-             --, t.emp_calculation
              , t.tax_flag
              , t.nic_flag
              , t.tax_ceiling_amt
              , LEFT(t.labor_grp_code, 5) AS labor_grp_code
              , t.file_source
-
              , t.annual_hrs_per_fte
              , t.annual_rate
              , t.birth_date
@@ -364,28 +353,15 @@ BEGIN
             , @position_title
             , @employment_type_code
             , @annual_salary_amt
-            --, @begin_date
-            --, @end_date
-            --, @pay_status_code
             , @pay_group_id
             , @pay_element_ctrl_grp_id
             , @time_reporting_meth_code
-            --, @employment_info_chg_reason_cd
-            --, @emp_location_code
-            --, @emp_status_code
-            --, @reason_code
-            --, @emp_expected_return_date
-            --, @pay_through_date
-            --, @emp_death_date
-            --, @consider_for_rehire_ind
-            --, @pay_element_id
-            --, @emp_calculation
+            , @emp_status_code
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
-
             , @annual_hrs_per_fte
             , @annual_rate
             , @birth_date
@@ -401,7 +377,6 @@ BEGIN
             , @postal_code
             , @county_name
             , @region_name
-
             , @w_job_or_pos_id
 
 
@@ -685,7 +660,7 @@ BEGIN
                         SELECT @msg_id AS msg_id
                             , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
-                        WHERE (msg_id = @msg_id)
+                        WHERE (t.msg_id = @msg_id)
 
                         -- Historical Message for reporting purpose
                         EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
@@ -708,7 +683,7 @@ BEGIN
 
 
                 ---------------------------------------------------------------------------
-                -- Validate Annual HoursPerFTE
+                -- Validate Annual Hours Per FTE
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Validate Annual Hours per FTE'
 
@@ -720,7 +695,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id AS msg_id
-                            , REPLACE(REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (msg_id = @msg_id)
 
@@ -742,6 +717,35 @@ BEGIN
 
                     END
 
+                -- Log warning if annual hors are less than 2080
+                IF (@annual_hrs_per_fte > 0.00) AND
+                   (@annual_hrs_per_fte < 2080.00)
+                    BEGIN
+
+                        SET @msg_id = 'U00124'
+                        SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_STRING
+                            , @p_msg_p1             = @annual_hrs_per_fte
+                            , @p_msg_p2             = @v_EMPTY_STRING
+                            , @p_msg_desc           = 'Warning - annual hours per FTE less than 2080 hours.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                    END
 
 
                 ---------------------------------------------------------------------------
@@ -757,7 +761,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id AS msg_id
-                            , REPLACE(REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                            , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (msg_id = @msg_id)
 
@@ -794,7 +798,7 @@ BEGIN
 
                         INSERT INTO #tbl_ghr_msg
                         SELECT @msg_id AS msg_id
-                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', @eff_date), '@2', @emp_id), '@3', @v_EVENT_ID_NEW_HIRE) AS msg_desc
+                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', CONVERT(char(8), @eff_date, 112)), '@2', @emp_id), '@3', @v_EVENT_ID_NEW_HIRE) AS msg_desc
                         FROM DBSCOMMON.dbo.message_master t
                         WHERE (msg_id = @msg_id)
 
@@ -815,8 +819,6 @@ BEGIN
                         SET @w_fatal_error = 1
 
                     END
-
-
 
 
                 ---------------------------------------------------------------------------
@@ -866,9 +868,11 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
                 IF (@annual_salary_amt = @annual_rate)  -- Indicates that the associate is not paid hourly
-                    SET @w_pd_salary_amt = ROUND(@annual_salary_amt / 12, 2)
+                    SELECT @w_pd_salary_amt = ROUND(@annual_salary_amt / 12, 2)
+                         , @w_hourly_pay_rate = ROUND(@w_hourly_pay_rate / @annual_hrs_per_fte, 2)
                 ELSE
-                    SET @w_pd_salary_amt = ROUND(@annual_rate * @annual_hrs_per_fte, 2)
+                    SELECT @w_pd_salary_amt = ROUND((@annual_rate * @annual_hrs_per_fte) / 12, 2)
+                         , @w_hourly_pay_rate = @annual_rate
 
 
                 ---------------------------------------------------------------------------
@@ -1120,28 +1124,15 @@ BYPASS_EMPLOYEE:
                 , @position_title
                 , @employment_type_code
                 , @annual_salary_amt
-                --, @begin_date
-                --, @end_date
-                --, @pay_status_code
                 , @pay_group_id
                 , @pay_element_ctrl_grp_id
                 , @time_reporting_meth_code
-                --, @employment_info_chg_reason_cd
-                -- , @emp_location_code
-                -- , @emp_status_code
-                -- , @reason_code
-                -- , @emp_expected_return_date
-                -- , @pay_through_date
-                -- , @emp_death_date
-                -- , @consider_for_rehire_ind
-                -- , @pay_element_id
-                -- , @emp_calculation
+                , @emp_status_code
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
-
                 , @annual_hrs_per_fte
                 , @annual_rate
                 , @birth_date
@@ -1461,7 +1452,7 @@ BYPASS_EMPLOYEE:
               @p_msg_id             = @ErrorNumber
             , @p_event_id           = @v_EVENT_ID_NEW_HIRE
             , @p_emp_id             = @emp_id
-            , @p_eff_date           = @eff_date
+            , @p_eff_date           = @v_date_time_stamp
             , @p_pay_element_id     = @v_EMPTY_STRING
             , @p_msg_p1             = @v_EMPTY_STRING
             , @p_msg_p2             = @v_EMPTY_STRING
