@@ -73,7 +73,9 @@ BEGIN
     DECLARE @v_step_position                    varchar(255)        = 'Begin Procedure'
     DECLARE @v_single_quote                     char(01)            = char(39)
 
+    DECLARE @v_EVENT_ID_NEW_HIRE                char(2)             = '01'
     DECLARE @v_EVENT_ID_STATUS_CHANGE           char(2)             = '05'
+
     DECLARE @v_END_OF_TIME_DATE                 datetime            = '29991231'
     DECLARE @v_BEG_OF_TIME_DATE                 datetime            = '19000101'
     DECLARE @v_EMPTY_SPACE                      char(01)            = ''
@@ -380,9 +382,52 @@ BEGIN
 
 
                 ---------------------------------------------------------------------------
+                --Skip Record if associate has New Hire event
+                ---------------------------------------------------------------------------
+                IF EXISTS (
+                    SELECT 1
+                    FROM #ghr_employee_events_temp
+                    WHERE (emp_id = @emp_id)
+                    AND (event_id IN (
+                                        @v_EVENT_ID_NEW_HIRE
+                                    ))
+                )
+                BEGIN
+
+                    SET @msg_id = 'U00119'  -- New code
+                    SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains a new hire change event record'
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id      AS msg_id
+                        , REPLACE(REPLACE(t.msg_text, '@1', 'employee status change'), '@2', @emp_id) AS msg_desc
+                    FROM DBSCOMMON.dbo.message_master t
+                    WHERE (t.msg_id = @msg_id)
+
+                    -- Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_STATUS_CHANGE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
+                        , @p_msg_desc           = 'Bypassing employee status change since employee has a new hire update event in this extract.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
+                        , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
+
+                    -- Skip record and all other validations
+                    -- since labor group will be processed in the other events
+                    GOTO BYPASS_EMPLOYEE
+
+                END
+
+
+                ---------------------------------------------------------------------------
                 -- Validate Effective Date
                 ---------------------------------------------------------------------------
-                -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
+
 
                 -- Effective Date
                 IF (@eff_date = @v_END_OF_TIME_DATE)

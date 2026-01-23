@@ -61,6 +61,7 @@ BEGIN
     DECLARE @msg_id                                     char(10)
     DECLARE @v_single_quote                             char(01)            = char(39)
 
+    DECLARE @v_EVENT_ID_NEW_HIRE                        char(2)             = '01'
     DECLARE @v_EVENT_ID_SALARY_CHANGE                   char(2)             = '02'
     DECLARE @v_EVENT_ID_TRANSFER                        char(2)             = '03'
     DECLARE @v_EVENT_ID_STATUS_CHANGE                   char(2)             = '05'
@@ -302,6 +303,47 @@ BEGIN
                 ---------------------------------------------------------------------------
                 ---------------------------------------------------------------------------
 
+                ---------------------------------------------------------------------------
+                --Skip Record if associate has New Hire event
+                ---------------------------------------------------------------------------
+                IF EXISTS (
+                    SELECT 1
+                    FROM #ghr_employee_events_temp
+                    WHERE (emp_id = @emp_id)
+                    AND (event_id IN (
+                                        @v_EVENT_ID_NEW_HIRE
+                                    ))
+                )
+                BEGIN
+
+                    SET @msg_id = 'U00119'  -- New code
+                    SET @v_step_position = RTRIM(@msg_id) + 'Employee extract contains a new hire change event record'
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id      AS msg_id
+                        , REPLACE(REPLACE(t.msg_text, '@1', 'employee transfer'), '@2', @emp_id) AS msg_desc
+                    FROM DBSCOMMON.dbo.message_master t
+                    WHERE (t.msg_id = @msg_id)
+
+                    -- Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_TRANSFER
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = @v_EMPTY_SPACE
+                        , @p_msg_p1             = @v_EMPTY_SPACE
+                        , @p_msg_p2             = @v_EMPTY_SPACE
+                        , @p_msg_desc           = 'Bypassing employee transfer since employee has a new hire update event in this extract.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
+                        , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
+
+                    -- Skip record and all other validations
+                    -- since labor group will be processed in the other events
+                    GOTO BYPASS_EMPLOYEE
+
+                END
 
                 ---------------------------------------------------------------------------
                 -- Validate Effective Date

@@ -234,7 +234,7 @@ BEGIN
     DECLARE @emp_status_classn_code                 char(02)
     DECLARE @position_title                         char(50)        -- DBShrpn..emp_assignment.user_text_2
     DECLARE @employment_type_code                   varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt                      money
+    DECLARE @pay_rate                      money
     DECLARE @begin_date                             datetime
     DECLARE @end_date                               datetime
     DECLARE @pay_status_code                        char(01)
@@ -352,7 +352,7 @@ BEGIN
             , @emp_status_classn_code
             , @position_title
             , @employment_type_code
-            , @annual_salary_amt
+            , @pay_rate
             , @pay_group_id
             , @pay_element_ctrl_grp_id
             , @time_reporting_meth_code
@@ -650,7 +650,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Validate Annual Salary (PayRate)'
 
-                IF (@annual_salary_amt = 0.00)
+                IF (@pay_rate = 0.00)
                     BEGIN
 
                         SET @msg_id = 'U00041'
@@ -669,7 +669,7 @@ BEGIN
                             , @p_emp_id             = @emp_id
                             , @p_eff_date           = @eff_date
                             , @p_pay_element_id     = @v_EMPTY_STRING
-                            , @p_msg_p1             = @annual_salary_amt
+                            , @p_msg_p1             = @pay_rate
                             , @p_msg_p2             = @v_EMPTY_STRING
                             , @p_msg_desc           = 'Annual salary amount (PayRate) cannot be zero.'
                             , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
@@ -867,12 +867,14 @@ BEGIN
                 -- Salary Setup
                 ---------------------------------------------------------------------------
                 -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
-                IF (@annual_salary_amt = @annual_rate)  -- Indicates that the associate is not paid hourly
-                    SELECT @w_pd_salary_amt = ROUND(@annual_salary_amt / 12, 2)
-                         , @w_hourly_pay_rate = ROUND(@w_hourly_pay_rate / @annual_hrs_per_fte, 2)
+                IF (@pay_rate = @annual_rate)  -- Indicates that the associate is not paid hourly
+                    SELECT @w_annual_salary_amt = @pay_rate
+                         , @w_pd_salary_amt     = ROUND(@pay_rate / 12, 2)
+                         , @w_hourly_pay_rate   = ROUND(@annual_rate / @annual_hrs_per_fte, 2)
                 ELSE
-                    SELECT @w_pd_salary_amt = ROUND((@annual_rate * @annual_hrs_per_fte) / 12, 2)
-                         , @w_hourly_pay_rate = @annual_rate
+                    SELECT @w_annual_salary_amt = @annual_rate
+                         , @w_pd_salary_amt     = ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
+                         , @w_hourly_pay_rate   = @pay_rate
 
 
                 ---------------------------------------------------------------------------
@@ -931,7 +933,7 @@ BEGIN
                     , @p_hourly_pay_rate                   = @w_hourly_pay_rate
                     , @p_pd_salary_amt                     = @w_pd_salary_amt
                     , @p_pd_salary_tm_pd_id                = @w_pd_salary_tm_pd_id
-                    , @p_annual_salary_amt                 = @annual_salary_amt
+                    , @p_annual_salary_amt                 = @w_annual_salary_amt
                     , @p_pay_basis_code                    = @w_pay_basis_code
                     , @p_curr_code                         = @w_curr_code
                     , @p_work_tm_code                      = @w_work_tm_code
@@ -1025,6 +1027,35 @@ BEGIN
                     , @ee_prior_eff_date = eempl.prior_eff_date
                 FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
                 WHERE (emp_id = @emp_id)
+
+                IF (@@ROWCOUNT = 0)
+                -- New hire update failed
+                BEGIN
+
+                    SET @msg_id = 'U00126'
+                    SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id AS msg_id
+                        , REPLACE(t.msg_text, '@1', @emp_id) AS msg_desc
+                    FROM DBSCOMMON.dbo.message_master t
+                    WHERE (msg_id = @msg_id)
+
+                    -- Historical Message for reporting purpose
+                    EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                        @p_msg_id             = @msg_id
+                        , @p_event_id           = @v_EVENT_ID_NEW_HIRE
+                        , @p_emp_id             = @emp_id
+                        , @p_eff_date           = @eff_date
+                        , @p_pay_element_id     = @v_EMPTY_STRING
+                        , @p_msg_p1             = @emp_calculation
+                        , @p_msg_p2             = ''
+                        , @p_msg_desc           = 'New hire update failed.'
+                        , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                        , @p_activity_date      = @p_activity_date
+                        , @p_audit_id           = @aud_id
+
+                END
 
 
                 -- Make sure new record end date = end of time date
@@ -1123,7 +1154,7 @@ BYPASS_EMPLOYEE:
                 , @emp_status_classn_code
                 , @position_title
                 , @employment_type_code
-                , @annual_salary_amt
+                , @pay_rate
                 , @pay_group_id
                 , @pay_element_ctrl_grp_id
                 , @time_reporting_meth_code

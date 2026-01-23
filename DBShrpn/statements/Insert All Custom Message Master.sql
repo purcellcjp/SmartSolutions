@@ -84,7 +84,7 @@ VALUES
 , (N'U00117', 1, 0, N'New position title, (@1) is same as current position title, for employee @2 - bypassing record.', N'Y', N'', 0, N'', 0, 0)
 , (N'U00118', 1, 0, N'New position title is blank, for employee @1 - bypassing record.', N'Y', N'', 0, N'', 0, 0)
 -- U00119 @1 = 'position title' or 'pay group' or 'labor group'
-, (N'U00119', 1, 0, N'@1 update, employee @1: New hire, transfer, or rehire status change event is present in this extract. Bypassing record since update would have occurred in one of those events.', N'Y', N'', 0, N'', 0, 0)
+, (N'U00119', 1, 0, N'@1 update, employee @2: New hire, transfer, or rehire status change event is present in this extract. Bypassing record since update would have occurred in one of those events.', N'Y', N'', 0, N'', 0, 0)
 
 , (N'U00120', 1, 0, N'Bypassing @1 record since employee (@2) is terminated in SmartStream.', N'Y', N'', 0, N'', 0, 0)
 
@@ -95,6 +95,8 @@ VALUES
 --, (N'U00123', 1, 0, N'Invalid annual salary amount, ''@1'', for employee, @2.', N'', N'', 0, N'', 0, 0)
 , (N'U00124', 1, 0, N'Invalid annual hours per FTE value for employee, @1.', N'', N'', 0, N'', 0, 0)
 , (N'U00125', 1, 0, N'Invalid annual rate value, for employee, @1.', N'', N'', 0, N'', 0, 0)
+
+, (N'U00126', 1, 0, N'New hire update failed for employee, @1.', N'', N'', 0, N'', 0, 0)
 GO
 
 select *
