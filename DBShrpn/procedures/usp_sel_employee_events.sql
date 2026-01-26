@@ -242,12 +242,12 @@ BEGIN
             , COALESCE(TRY_CONVERT(money, t.annual_rate), 0.00) AS annual_rate
             , COALESCE(TRY_CONVERT(datetime, t.birth_date), @v_END_OF_TIME_DATE) AS birth_date
             , t.gender
-            , CASE t.country_code WHEN 'SLA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code    -- derive address format code based on country code
+            , CASE t.country_code WHEN 'LCA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code    -- derive address format code based on country code
             , t.country_code
             , t.addr_line_1
             , t.addr_line_2
-            , CASE t.country_code WHEN 'SLA' THEN t.addr_line_3 + ' ' + t.addr_line_4 ELSE t.addr_line_3 END addr_line_3        -- combine line 3 and 4 if St Lucia
-            , CASE t.country_code WHEN 'SLA' THEN @v_EMPTY_SPACE ELSE t.addr_line_4 END addr_line_4
+            , CASE t.country_code WHEN 'LCA' THEN t.addr_line_3 + ' ' + t.addr_line_4 ELSE t.addr_line_3 END addr_line_3        -- combine line 3 and 4 if St Lucia
+            , CASE t.country_code WHEN 'LCA' THEN @v_EMPTY_SPACE ELSE t.addr_line_4 END addr_line_4
             , t.city_name
             , t.state_prov
             , t.postal_code

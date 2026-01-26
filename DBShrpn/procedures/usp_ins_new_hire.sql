@@ -868,13 +868,24 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
                 IF (@pay_rate = @annual_rate)  -- Indicates that the associate is not paid hourly
-                    SELECT @w_annual_salary_amt = @pay_rate
-                         , @w_pd_salary_amt     = ROUND(@pay_rate / 12, 2)
-                         , @w_hourly_pay_rate   = ROUND(@annual_rate / @annual_hrs_per_fte, 2)
+                    SELECT @w_annual_salary_amt       = @pay_rate
+                         , @w_pay_basis_code          = '2'     -- Period Salary
+                         , @w_pd_salary_amt           = ROUND(@pay_rate / 12, 2)
+                         , @w_hourly_pay_rate         = ROUND(@annual_rate / @annual_hrs_per_fte, 2)
+                         , @w_work_tm_code            = 'F'     -- Fulltime
+                         , @w_pay_on_reported_hrs_ind = 'N'     -- Pay Based on Standard Hours Checkbox
+                         , @w_standard_work_hrs       = 40.0
+                         , @w_standard_work_pd_id     = 'WEEK'
                 ELSE
-                    SELECT @w_annual_salary_amt = @annual_rate
-                         , @w_pd_salary_amt     = ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
-                         , @w_hourly_pay_rate   = @pay_rate
+                    SELECT @w_annual_salary_amt       = @annual_rate
+                         , @w_pay_basis_code          = '9'     -- Not Applicable
+                         , @w_pd_salary_amt           = ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
+                         , @w_hourly_pay_rate         = @pay_rate
+                         , @w_work_tm_code            = 'U'     -- Unspecified
+                         , @w_pay_on_reported_hrs_ind = 'Y'     -- Pay Based on Standard Hours Checkbox
+                         , @w_standard_work_hrs       = 80.0
+                         , @w_standard_work_pd_id     = 'BI-WK'
+
 
 
                 ---------------------------------------------------------------------------

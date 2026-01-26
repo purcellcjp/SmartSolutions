@@ -1,13 +1,4 @@
-select ea.emp_id
-, stat.emp_status_code
-, ea.eff_date
-, ea.annual_salary_amt
-, ea.pd_salary_amt
-, ea.pd_salary_tm_pd_id
-, ea.hourly_pay_rate
-, ea.standard_work_pd_id
-, ea.standard_work_hrs
-, ea.work_tm_code
+select ea.*
 , ee.pay_group_id
 , pg.pay_frequency_code
 , tm.annualizing_factor
@@ -24,4 +15,4 @@ join DBShrpn.dbo.tm_pd_policy tm ON
 	(pg.pay_frequency_code = tm.tm_pd_id)
 
 WHERE (stat.emp_status_code =  'A')
-and ea.standard_work_pd_id <> 'MONTH'
+--and ea.standard_work_pd_id <> 'MONTH'
