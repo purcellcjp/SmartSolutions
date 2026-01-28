@@ -717,7 +717,7 @@ BEGIN
 
                     END
 
-                -- Log warning if annual hors are less than 2080
+                -- Log warning if annual hours are less than 2080
                 IF (@annual_hrs_per_fte > 0.00) AND
                    (@annual_hrs_per_fte < 2080.00)
                     BEGIN
@@ -756,7 +756,7 @@ BEGIN
                 IF (@annual_rate = 0.00)
                     BEGIN
 
-                        SET @msg_id = 'U00124'
+                        SET @msg_id = 'U00125'
                         SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
 
                         INSERT INTO #tbl_ghr_msg
@@ -860,32 +860,46 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Calculate Annual Salary from Pay rate
                 ---------------------------------------------------------------------------
-                SET @v_step_position = 'Calculate Annual Salary'
+                SET @v_step_position = 'Configure New Hire Salary'
 
 
                 ---------------------------------------------------------------------------
                 -- Salary Setup
                 ---------------------------------------------------------------------------
                 -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
-                IF (@pay_rate = @annual_rate)  -- Indicates that the associate is not paid hourly
+                -- Indicates that the associate is setup as annually
+                IF (@pay_rate = @annual_rate)
                     SELECT @w_annual_salary_amt       = @pay_rate
                          , @w_pay_basis_code          = '2'     -- Period Salary
                          , @w_pd_salary_amt           = ROUND(@pay_rate / 12, 2)
+                         , @w_pd_salary_tm_pd_id      = 'MONTH'
                          , @w_hourly_pay_rate         = ROUND(@annual_rate / @annual_hrs_per_fte, 2)
                          , @w_work_tm_code            = 'F'     -- Fulltime
                          , @w_pay_on_reported_hrs_ind = 'N'     -- Pay Based on Standard Hours Checkbox
                          , @w_standard_work_hrs       = 40.0
                          , @w_standard_work_pd_id     = 'WEEK'
                 ELSE
-                    SELECT @w_annual_salary_amt       = @annual_rate
-                         , @w_pay_basis_code          = '9'     -- Not Applicable
-                         , @w_pd_salary_amt           = ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
-                         , @w_hourly_pay_rate         = @pay_rate
-                         , @w_work_tm_code            = 'U'     -- Unspecified
-                         , @w_pay_on_reported_hrs_ind = 'Y'     -- Pay Based on Standard Hours Checkbox
-                         , @w_standard_work_hrs       = 80.0
-                         , @w_standard_work_pd_id     = 'BI-WK'
+                    -- Hourly setup
+                    BEGIN
+                        -- unique settings based on environment
+                        IF (@file_source = 'SS VENUS')
+                            SELECT @w_standard_work_hrs   = 188.0
+                                , @w_standard_work_pd_id = 'MONTH'
+                        ELSE
+                            -- SS GANYMEDE
+                            SELECT @w_standard_work_hrs  = 80.0
+                                , @w_standard_work_pd_id = 'BI-WK'
 
+                        -- Universal hourly rate setup
+                        SELECT @w_annual_salary_amt      = @annual_rate
+                            , @w_pay_basis_code          = '9'      -- Not Applicable
+                            , @w_pd_salary_amt           = 0.00     -- ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
+                            , @w_pd_salary_tm_pd_id      = @v_EMPTY_STRING
+                            , @w_hourly_pay_rate         = @pay_rate
+                            , @w_work_tm_code            = 'U'      -- Unspecified
+                            , @w_pay_on_reported_hrs_ind = 'Y'      -- Pay Based on Standard Hours Checkbox
+
+                    END
 
 
                 ---------------------------------------------------------------------------
