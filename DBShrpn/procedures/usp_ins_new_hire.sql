@@ -83,20 +83,6 @@ BEGIN
     DECLARE @w_fatal_error                          bit     = 0         --char(01)
     DECLARE @w_trace_sw                             char(01)
 
-    DECLARE @special_value_exists                   int
-    DECLARE @i_emp_id                               char(15)
-    DECLARE @i_assigned_to_code                     char(01)
-    DECLARE @i_job_or_pos_id                        char(10)
-    DECLARE @i_eff_date                             datetime
-    DECLARE @i_next_eff_date                        datetime
-    DECLARE @i_prior_eff_date                       datetime
-    DECLARE @i_standard_work_pd_id                  char(5)
-    DECLARE @i_standard_work_hrs                    float
-    DECLARE @i_yearly_std_work_hrs                  float
-    DECLARE @i_hourly_rate_amt                      money
-    DECLARE @i_period_amt                           money
-
-    DECLARE @ee_emp_id                              char(15)
     DECLARE @ee_eff_date                            datetime
     DECLARE @ee_next_eff_date                       datetime
     DECLARE @ee_prior_eff_date                      datetime
@@ -107,8 +93,6 @@ BEGIN
     DECLARE @tax_entity_id                          char(10)
     DECLARE @msg_id                                 char(10)
     DECLARE @individual_id                          char(10)
-    DECLARE @pay_frequency_code                     char(05)
-    DECLARE @annualizing_factor                     float           = 12    -- Hard code to monthly factor
 
     DECLARE @w_preferred_name                       char(25)        = @v_EMPTY_STRING
     DECLARE @w_name_suffix                          char(10)        = @v_EMPTY_STRING
@@ -127,16 +111,10 @@ BEGIN
     DECLARE @w_base_rate_tbl_id                     char(10)        = @v_EMPTY_STRING
     DECLARE @w_base_rate_tbl_entry_code             char(08)        = @v_EMPTY_STRING
     DECLARE @w_exception_rate_ind                   char(01)        = 'N'
-
     DECLARE @w_hourly_pay_rate                      float           = 0.00
     DECLARE @w_pd_salary_amt                        money           = 0.00
     DECLARE @w_pd_salary_tm_pd_id                   char(05)        = 'MONTH'
-
     DECLARE @w_annual_salary_amt                    money           = 0.00
-    DECLARE @w_annual_hrs_per_fte                   money           = 0.00
-    DECLARE @w_annual_rate                          money           = 0.00
-
-
     DECLARE @w_pay_basis_code                       char(01)        = '9'
     DECLARE @w_curr_code                            char(03)        = 'XCD'
     DECLARE @w_work_tm_code                         char(01)        = 'F'
@@ -205,7 +183,6 @@ BEGIN
     DECLARE @w_job_evaluation_points_nbr            smallint        = 0
     DECLARE @w_salary_step_nbr                      smallint        = 0
     DECLARE @w_employer_taxing_ctry_code            char(02)        = 'LC'--'Gd'
-    -- DECLARE @w_organization_group_id                int             = 5
     DECLARE @w_wage_plan_code                       char(02)        = @v_EMPTY_STRING
     DECLARE @w_emp_health_insurance_cvg_cd          char(02)        = @v_EMPTY_STRING
     DECLARE @w_tax_auth_type_code                   char(01)        = @v_EMPTY_STRING
@@ -218,7 +195,7 @@ BEGIN
     DECLARE @w_conv_employment_type_code            char(05)
 
 
-    -- This section declares the interface values from Global HR
+    -- This section declares the interface column variables
     DECLARE @aud_id                                 int             = 0
     DECLARE @emp_id                                 char(15)        = @v_EMPTY_STRING
     DECLARE @eff_date                               datetime
@@ -234,7 +211,7 @@ BEGIN
     DECLARE @emp_status_classn_code                 char(02)
     DECLARE @position_title                         char(50)        -- DBShrpn..emp_assignment.user_text_2
     DECLARE @employment_type_code                   varchar(70)     -- increased size to 70 from 5
-    DECLARE @pay_rate                      money
+    DECLARE @pay_rate                               money
     DECLARE @begin_date                             datetime
     DECLARE @end_date                               datetime
     DECLARE @pay_status_code                        char(01)
@@ -511,7 +488,7 @@ BEGIN
                             , @p_pay_element_id     = @v_EMPTY_STRING
                             , @p_msg_p1             = @v_EMPTY_STRING
                             , @p_msg_p2             = @v_EMPTY_STRING
-                            , @p_msg_desc           = 'National ID is blank - defaulting to @v_EMPTY_STRING99999@v_EMPTY_STRING'
+                            , @p_msg_desc           = 'National ID is blank - defaulting to '''''
                             , @p_activity_status    = @v_ACTIVITY_STATUS_WARNING
                             , @p_activity_date      = @p_activity_date
                             , @p_audit_id           = @aud_id
@@ -832,19 +809,21 @@ BEGIN
                 -- Lookup tax entity
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Lookup Tax Entity'
+
                 SELECT @w_tax_entity_id = tax_entity_id
                 FROM DBShrpn.dbo.empl_tax_entity
                 WHERE (empl_id = @empl_id)
 
 
                 ---------------------------------------------------------------------------
-                -- Lookup next individual id
+                -- Lookup Next individual id
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Lookup Individual ID'
 
                 -- Needed for proc usp_ins_hemp
                 SELECT @ind_idx = CONVERT(char(10),gen_indiv_id_last_nbr + 1)
                 FROM DBSentp.dbo.entp_human_resources_plcy  with (holdlock)
+                WHERE (display_name_format = @v_DISPLAY_NAME_FORMAT)    -- Unique value for client
 
     --select @ind_idx as ind_idx
 
@@ -1046,8 +1025,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Lookup emp_employment'
 
-                SELECT @ee_emp_id = eempl.emp_id
-                    , @ee_eff_date = eempl.eff_date
+                SELECT @ee_eff_date = eempl.eff_date
                     , @ee_next_eff_date = eempl.next_eff_date
                     , @ee_prior_eff_date = eempl.prior_eff_date
                 FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
@@ -1089,7 +1067,7 @@ BEGIN
                 IF (@ee_next_eff_date <> @v_END_OF_TIME_DATE)
                     UPDATE DBShrpn.dbo.emp_employment
                     SET  next_eff_date = @v_END_OF_TIME_DATE
-                    WHERE (emp_id = @ee_emp_id)
+                    WHERE (emp_id = @emp_id)
                     AND (eff_date = @ee_eff_date)
 
 
