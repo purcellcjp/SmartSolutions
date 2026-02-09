@@ -122,6 +122,21 @@ BEGIN
     DECLARE @pay_frequency_code         	    char(05) = @v_EMPTY_SPACE
     DECLARE @rehire_override            	    CHAR(01)
 
+    DECLARE @w_hourly_pay_rate                      float           = 0.00
+    DECLARE @w_pd_salary_amt                        money           = 0.00
+    DECLARE @w_pd_salary_tm_pd_id                   char(05)        = 'MONTH'
+    DECLARE @w_annual_salary_amt                    money           = 0.00
+    DECLARE @w_pay_basis_code                       char(01)        = '9'
+    DECLARE @w_curr_code                            char(03)        = 'XCD'
+    DECLARE @w_work_tm_code                         char(01)        = 'F'
+    DECLARE @w_standard_daily_work_hrs              float           = 8
+    DECLARE @w_standard_work_hrs                    float           = 40
+    DECLARE @w_standard_work_pd_id                  char(05)        = 'WEEK'
+    DECLARE @w_overtime_status_code                 char(02)        = '99'
+    DECLARE @w_pay_on_reported_hrs_ind              char(01)        = 'N'
+
+
+/*
     DECLARE @i_empl_id                  	    char(10)
     DECLARE @i_emp_assignment_exists    	    char(01)
     DECLARE @i_work_tm_code             	    char(01)
@@ -141,7 +156,7 @@ BEGIN
     DECLARE @i_yearly_std_work_hrs     		    float
     DECLARE @i_hourly_rate_amt         		    money
     DECLARE @i_period_amt              		    money
-
+*/
     DECLARE @w_ee_eff_date             		    datetime
 
     DECLARE @max            			        int
@@ -175,7 +190,7 @@ BEGIN
     DECLARE @emp_status_classn_code          	    char(02)
     DECLARE @position_title                  	    char(50)        -- DBShrpn..emp_assignment.user_text
     DECLARE @employment_type_code            	    varchar(70)     -- increased size to 70 from 5
-    DECLARE @annual_salary_amt               	    money
+    DECLARE @pay_rate               	            money
     DECLARE @begin_date                      	    datetime
     DECLARE @end_date                        	    datetime
     DECLARE @pay_status_code                 	    char(01)
@@ -262,7 +277,7 @@ BEGIN
              , t.emp_status_classn_code
              , t.position_title
              , t.employment_type_code
-             , t.annual_salary_amt
+             , t.pay_rate
              , t.begin_date
              , t.end_date
              , t.pay_status_code
@@ -322,7 +337,7 @@ BEGIN
             , @emp_status_classn_code
             , @position_title
             , @employment_type_code
-            , @annual_salary_amt
+            , @pay_rate
             , @begin_date
             , @end_date
             , @pay_status_code
@@ -347,6 +362,7 @@ BEGIN
 
             , @annual_hrs_per_fte
             , @annual_rate
+            -- Address is included for re-hires
             , @addr_fmt_code
             , @country_code
             , @addr_line_1
@@ -872,7 +888,7 @@ BEGIN
                                 , (', @p_status_change_date       = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)  + @v_single_quote)
                                 , (', @p_new_empl_id              = ' + @v_single_quote + RTRIM(@empl_id)                               + @v_single_quote)
                                 , (', @p_new_tax_entity_id        = ' + @v_single_quote + RTRIM(@tax_entity_id)                         + @v_single_quote)
-                                , (', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)            + @v_single_quote)
+                                , (', @p_new_hire_date            = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)              + @v_single_quote)
                                 , (', @p_new_classn_cd            = ' + @v_single_quote + RTRIM(@emp_status_classn_code)                + @v_single_quote)
                                 , (', @p_new_reason_cd            = ' + @v_single_quote + @v_EMPTY_SPACE                                + @v_single_quote)
                                 , (', @p_new_assigned_to_code     = ' + @v_single_quote + RTRIM(@w_assigned_to_code)                    + @v_single_quote)
@@ -948,6 +964,44 @@ BEGIN
                                 WHERE (ea.emp_id = @emp_id)
 
 
+                                ---------------------------------------------------------------------------
+                                -- Salary Setup
+                                ---------------------------------------------------------------------------
+                                -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
+                                -- Indicates that the associate is setup as annually
+                                IF (@pay_rate = @annual_rate)
+                                    SELECT @w_annual_salary_amt       = @pay_rate
+                                        , @w_pay_basis_code          = '2'     -- Period Salary
+                                        , @w_pd_salary_amt           = ROUND(@pay_rate / 12, 2)
+                                        , @w_pd_salary_tm_pd_id      = 'MONTH'
+                                        , @w_hourly_pay_rate         = ROUND(@annual_rate / @annual_hrs_per_fte, 2)
+                                        , @w_work_tm_code            = 'F'     -- Fulltime
+                                        , @w_pay_on_reported_hrs_ind = 'N'     -- Pay Based on Standard Hours Checkbox
+                                        , @w_standard_work_hrs       = 40.0
+                                        , @w_standard_work_pd_id     = 'WEEK'
+                                ELSE
+                                    -- Hourly setup
+                                    BEGIN
+                                        -- unique settings based on environment
+                                        IF (@file_source = 'SS VENUS')
+                                            SELECT @w_standard_work_hrs   = 188.0
+                                                , @w_standard_work_pd_id = 'MONTH'
+                                        ELSE
+                                            -- SS GANYMEDE
+                                            SELECT @w_standard_work_hrs  = 80.0
+                                                , @w_standard_work_pd_id = 'BI-WK'
+
+                                        -- Universal hourly rate setup
+                                        SELECT @w_annual_salary_amt      = @annual_rate
+                                            , @w_pay_basis_code          = '9'      -- Not Applicable
+                                            , @w_pd_salary_amt           = 0.00     -- ROUND((@pay_rate * @annual_hrs_per_fte) / 12, 2)
+                                            , @w_pd_salary_tm_pd_id      = @v_EMPTY_SPACE
+                                            , @w_hourly_pay_rate         = @pay_rate
+                                            , @w_work_tm_code            = 'U'      -- Unspecified
+                                            , @w_pay_on_reported_hrs_ind = 'Y'      -- Pay Based on Standard Hours Checkbox
+
+                                    END
+                                /*
                                 -- GOSL: HCM Salary data will not be extracted to SS
                                 -- Blank them out
                                 SELECT @annual_salary               = 0.00
@@ -960,23 +1014,22 @@ BEGIN
                                     , @i_standard_work_pd_id        = @v_EMPTY_SPACE
                                     , @i_standard_work_hrs          = 0.00
                                     , @i_pd_salary_tm_pd_id         = @v_EMPTY_SPACE
+                                */
 
-
-                                -- Update Employee Assignemnt record post Rehire
+                                -- Update Employee Assignment record post Rehire
                                 UPDATE DBShrpn.dbo.emp_assignment
-                                SET   annual_salary_amt        = CAST(@annual_salary_amt AS money)
-                                    , hourly_pay_rate          = @i_hourly_rate_amt
-                                    , pd_salary_amt            = @i_period_amt
-                                    , salary_change_type_code  = @i_salary_change_type_code
-                                    , work_tm_code             = @i_work_tm_code
-                                    , base_rate_tbl_id         = @i_base_rate_tbl_id
-                                    , base_rate_tbl_entry_code = @i_base_rate_tbl_entry_code
-                                    , pd_salary_tm_pd_id       = @pay_frequency_code
-                                    , standard_work_pd_id      = @i_standard_work_pd_id
-                                    , standard_work_hrs        = @i_standard_work_hrs
+                                SET   hourly_pay_rate          = @w_hourly_pay_rate
+                                    , pd_salary_amt            = @w_pd_salary_amt
+                                    --, salary_change_type_code  = @i_salary_change_type_code
+                                    , work_tm_code             = @w_work_tm_code
+                                    --, base_rate_tbl_id         = @i_base_rate_tbl_id
+                                    --, base_rate_tbl_entry_code = @i_base_rate_tbl_entry_code
+                                    , pd_salary_tm_pd_id       = @w_pd_salary_tm_pd_id
+                                    , standard_work_pd_id      = @w_standard_work_pd_id
+                                    , standard_work_hrs        = @w_standard_work_hrs
                                     , organization_group_id    = CAST(@organization_group_id AS int)
-                                    , organization_chart_name  = @organization_chart_name
-                                    , organization_unit_name   = @organization_unit_name
+                                    , organization_chart_name  = @v_EMPTY_SPACE
+                                    , organization_unit_name   = @v_EMPTY_SPACE
                                     , user_text_2              = @position_title
                                 WHERE (emp_id           = @emp_id)
                                   AND (assigned_to_code = @i_assigned_to_code)
@@ -1265,6 +1318,10 @@ BEGIN
                                     , @p_pay_status_code           = @pay_status_code
                                     , @p_old_chgstamp              = @w_old_chgstamp
 
+                                -- UPDATE SALARY ??????????
+
+
+
                             END  --2
                         ELSE
                             -- Terminated Associate
@@ -1423,7 +1480,7 @@ BYPASS_EMPLOYEE:
                 , @emp_status_classn_code
                 , @position_title
                 , @employment_type_code
-                , @annual_salary_amt
+                , @pay_rate
                 , @begin_date
                 , @end_date
                 , @pay_status_code
