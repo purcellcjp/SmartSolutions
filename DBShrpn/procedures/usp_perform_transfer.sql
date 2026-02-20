@@ -66,6 +66,8 @@ BEGIN
     DECLARE @v_EVENT_ID_TRANSFER                        char(2)             = '03'
     DECLARE @v_EVENT_ID_STATUS_CHANGE                   char(2)             = '05'
     DECLARE @v_END_OF_TIME_DATE                         datetime            = '29991231'
+    DECLARE @v_BAD_DATE_INDICATOR                       datetime            = '99991231'    -- value used to populate datetime column with value from HCM that is not a valid date after conversion
+
     DECLARE @v_EMPTY_SPACE                              char(01)            = ''
 
     DECLARE @v_ACTIVITY_STATUS_GOOD                     char(2)             = '00'
@@ -351,7 +353,7 @@ BEGIN
                 -- Invalid date value from HCM, @v_EMPTY_SPACE@1@v_EMPTY_SPACE, for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (@eff_date = @v_END_OF_TIME_DATE)
+                IF (@eff_date = @v_BAD_DATE_INDICATOR)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code

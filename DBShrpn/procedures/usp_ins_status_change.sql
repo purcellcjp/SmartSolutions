@@ -78,6 +78,8 @@ BEGIN
 
     DECLARE @v_END_OF_TIME_DATE                 datetime            = '29991231'
     DECLARE @v_BEG_OF_TIME_DATE                 datetime            = '19000101'
+    DECLARE @v_BAD_DATE_INDICATOR               datetime            = '99991231'    -- value used to populate datetime column with value from HCM that is not a valid date after conversion
+
     DECLARE @v_EMPTY_SPACE                      char(01)            = ''
 
     DECLARE @v_ACTIVITY_STATUS_GOOD             char(2)             = '00'
@@ -110,13 +112,13 @@ BEGIN
     DECLARE @w_todays_date              	    char(12)
     DECLARE @w_old_chgstamp             	    smallint
     DECLARE @w_taxing_country_code    	        char(02)
-    DECLARE @w_curr_code              	        char(03)
+    --DECLARE @w_curr_code              	        char(03)
     --DECLARE @w_eff_date                 	    datetime
     DECLARE @w_curr_status              	    char(02)
     DECLARE @w_pos_eff_date           	        datetime
     DECLARE @w_assigned_to_code         	    char(01)    = 'P'   -- All assocs are code 'P' in VENUS and Ganymede
     DECLARE @w_job_or_pos_id            	    char(10)
-    DECLARE @w_pd_salary_tm_pd_id       	    char(05)
+    --DECLARE @w_pd_salary_tm_pd_id       	    char(05)
     DECLARE @old_eff_date               	    datetime
 
     DECLARE @pay_frequency_code         	    char(05) = @v_EMPTY_SPACE
@@ -146,17 +148,19 @@ BEGIN
     DECLARE @i_salary_change_type_code  	    char(05)
 
     DECLARE @i_emp_id                  		    char(15)
-    DECLARE @i_assigned_to_code        		    char(01)
-    DECLARE @i_job_or_pos_id           		    char(10)
-    DECLARE @i_eff_date                		    datetime
-    DECLARE @i_next_eff_date           		    datetime
-    DECLARE @i_prior_eff_date          		    datetime
     DECLARE @i_standard_work_pd_id     		    char(5)
     DECLARE @i_standard_work_hrs       		    float
     DECLARE @i_yearly_std_work_hrs     		    float
     DECLARE @i_hourly_rate_amt         		    money
     DECLARE @i_period_amt              		    money
 */
+    DECLARE @i_assigned_to_code        		    char(01)
+    DECLARE @i_job_or_pos_id           		    char(10)
+    DECLARE @i_eff_date                		    datetime
+    DECLARE @i_next_eff_date           		    datetime
+    DECLARE @i_prior_eff_date          		    datetime
+
+
     DECLARE @w_ee_eff_date             		    datetime
 
     DECLARE @max            			        int
@@ -277,7 +281,7 @@ BEGIN
              , t.emp_status_classn_code
              , t.position_title
              , t.employment_type_code
-             , t.pay_rate
+             , t.annual_salary_amt
              , t.begin_date
              , t.end_date
              , t.pay_status_code
@@ -446,7 +450,7 @@ BEGIN
 
 
                 -- Effective Date
-                IF (@eff_date = @v_END_OF_TIME_DATE)
+                IF (@eff_date = @v_BAD_DATE_INDICATOR)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code

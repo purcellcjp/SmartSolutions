@@ -72,6 +72,8 @@ BEGIN
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_BAD_DATE_INDICATOR           datetime            = '99991231'    -- value used to populate datetime column with value from HCM that is not a valid date after conversion
+
     DECLARE @v_EMPTY_SPACE                  char(01)            = ''
 
     DECLARE @v_EVENT_ID_NEW_HIRE            char(2)             = '01'
@@ -186,6 +188,41 @@ BEGIN
                 ---------------------------------------------------------------------------
                 ---------------------------------------------------------------------------
                 SET @v_step_position = 'Begin Validation'
+
+
+                ---------------------------------------------------------------------------
+                -- Validate Effective Date
+                ---------------------------------------------------------------------------
+                IF (@eff_date = @v_BAD_DATE_INDICATOR)
+                    BEGIN
+
+                        SET @msg_id = 'U00102'  -- New code
+                        SET @v_step_position = 'Validation Effective Date - ' + RTRIM(@msg_id)
+
+                        INSERT INTO #tbl_ghr_msg
+                        SELECT @msg_id AS msg_id
+                            , REPLACE(REPLACE(REPLACE(t.msg_text, '@1', CONVERT(char(8), @eff_date, 112)), '@2', @emp_id), '@3', @v_EVENT_ID_NAME_CHANGE) AS msg_desc
+                        FROM DBSCOMMON.dbo.message_master t
+                        WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_NAME_CHANGE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @v_EMPTY_SPACE
+                            , @p_msg_p1             = @v_EMPTY_SPACE
+                            , @p_msg_p2             = @v_EMPTY_SPACE
+                            , @p_msg_desc           = 'Invalid Effective Date'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                        SET @w_fatal_error = 1
+
+                    END
+
 
                 ---------------------------------------------------------------------------
                 -- Check to see if the employee exists

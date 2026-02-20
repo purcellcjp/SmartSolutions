@@ -71,6 +71,7 @@ BEGIN
     DECLARE @v_step_position                varchar(255)        = 'Begin Procedure'
 
     DECLARE @v_END_OF_TIME_DATE             datetime            = '29991231'
+    DECLARE @v_BAD_DATE_INDICATOR           datetime            = '99991231'    -- value used to populate datetime column with value from HCM that is not a valid date after conversion
     DECLARE @v_EMPTY_SPACE                  char(01)            = ''
 
     DECLARE @ErrorNumber                    varchar(10)
@@ -203,7 +204,10 @@ BEGIN
         INSERT INTO #ghr_employee_events_temp
         SELECT t.event_id
             , t.emp_id
-            , COALESCE(TRY_CONVERT(datetime, t.eff_date), @v_END_OF_TIME_DATE) AS eff_date
+            , CASE
+                WHEN LEN(RTRIM(t.eff_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.eff_date), @v_BAD_DATE_INDICATOR)
+              END AS eff_date
             , t.first_name
             , t.first_middle_name
             , t.last_name
@@ -217,8 +221,14 @@ BEGIN
             , LEFT(t.position_title, 50) AS position_title    -- trim value since HCM sends it over as char(60)
             , UPPER(t.employment_type_code) AS employment_type_code
             , COALESCE(TRY_CONVERT(money, t.annual_salary_amt), 0.00) AS annual_salary_amt
-            , COALESCE(TRY_CONVERT(datetime, t.begin_date), @v_END_OF_TIME_DATE) AS begin_date
-            , COALESCE(TRY_CONVERT(datetime, t.end_date), @v_END_OF_TIME_DATE) AS end_date
+            , CASE
+                WHEN LEN(RTRIM(t.begin_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.begin_date), @v_BAD_DATE_INDICATOR)
+                END AS begin_date
+            , CASE
+                WHEN LEN(RTRIM(t.end_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.end_date), @v_BAD_DATE_INDICATOR)
+                END AS end_date
             , t.pay_status_code
             , UPPER(t.pay_group_id) AS pay_group_id
             , t.pay_element_ctrl_grp_id
@@ -228,8 +238,14 @@ BEGIN
             , t.emp_status_code
             , t.reason_code
             , t.emp_expected_return_date
-            , COALESCE(TRY_CONVERT(datetime, t.pay_through_date), @v_END_OF_TIME_DATE) AS pay_through_date
-            , COALESCE(TRY_CONVERT(datetime, t.emp_death_date), @v_END_OF_TIME_DATE) AS emp_death_date
+            , CASE
+                WHEN LEN(RTRIM(t.pay_through_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.pay_through_date), @v_BAD_DATE_INDICATOR)
+              END AS pay_through_date
+            , CASE
+                WHEN LEN(RTRIM(t.emp_death_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.emp_death_date), @v_BAD_DATE_INDICATOR)
+              END AS emp_death_date
             , t.consider_for_rehire_ind
             , UPPER(t.pay_element_id) AS pay_element_id
             , COALESCE(TRY_CONVERT(money, t.emp_calculation), 0.00) AS emp_calculation
@@ -240,7 +256,10 @@ BEGIN
             , t.file_source
             , COALESCE(TRY_CONVERT(money, t.annual_hrs_per_fte), 0.00) AS annual_hrs_per_fte
             , COALESCE(TRY_CONVERT(money, t.annual_rate), 0.00) AS annual_rate
-            , COALESCE(TRY_CONVERT(datetime, t.birth_date), @v_END_OF_TIME_DATE) AS birth_date
+            , CASE
+                WHEN LEN(RTRIM(t.birth_date)) < 8 THEN @v_BAD_DATE_INDICATOR
+                ELSE COALESCE(TRY_CONVERT(datetime, t.birth_date), @v_BAD_DATE_INDICATOR)
+              END AS birth_date
             , t.gender
             , CASE t.country_code WHEN 'LCA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code    -- derive address format code based on country code
             , t.country_code
@@ -256,7 +275,7 @@ BEGIN
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
 
         FROM DBShrpn.dbo.ghr_employee_events t
-        --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
+        WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
 
         ---------------------------------------------------------------------------

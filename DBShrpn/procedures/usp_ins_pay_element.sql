@@ -70,6 +70,7 @@ BEGIN
 
     DECLARE @v_BEG_OF_TIME_DATE                 datetime                = '19000101'
     DECLARE @v_END_OF_TIME_DATE                 datetime                = '29991231'
+    DECLARE @v_BAD_DATE_INDICATOR               datetime                = '99991231'    -- value used to populate datetime column with value from HCM that is not a valid date after conversion
 
     DECLARE @ErrorNumber                        varchar(10)
     DECLARE @ErrorMessage                       nvarchar(4000)
@@ -313,7 +314,7 @@ BEGIN
                 -- Invalid date value from HCM, ''@1'', for employee, @2, and event id, @3.
 
                 -- Effective Date
-                IF (@eff_date = @v_END_OF_TIME_DATE)
+                IF (@eff_date = @v_BAD_DATE_INDICATOR)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -345,7 +346,7 @@ BEGIN
 
 
                 -- Begin Date
-                IF (@begin_date = @v_END_OF_TIME_DATE)
+                IF (@begin_date = @v_BAD_DATE_INDICATOR)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
@@ -377,7 +378,7 @@ BEGIN
 
 
                 -- End Date
-                IF (@end_date = @v_END_OF_TIME_DATE)
+                IF (@end_date = @v_BAD_DATE_INDICATOR)
                     BEGIN
 
                         SET @msg_id = 'U00102'  -- New code
