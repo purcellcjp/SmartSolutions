@@ -91,9 +91,9 @@ BEGIN
     DECLARE @msg_id                             char(10)
 
     DECLARE @i_stop_date_1                      char(12)
-    DECLARE @i_emp_id                           char(15)
-    DECLARE @i_empl_id                          char(10)
-    DECLARE @i_pay_element_id                   char(10)
+    -- DECLARE @i_emp_id                           char(15)
+    -- DECLARE @i_empl_id                          char(10)
+    -- DECLARE @i_pay_element_id                   char(10)
     DECLARE @i_eff_date                         datetime
     DECLARE @i_stop_date                        datetime
     DECLARE @i_pay_element_exists               char(01)
@@ -101,8 +101,8 @@ BEGIN
 
     -- Declare
     DECLARE @w_emp_id                           char(15)                = '000325'
-    DECLARE @w_empl_id                          char(10)                = '5001'
-    DECLARE @w_pay_element_id                   char(10)                = 'ACTI'
+    DECLARE @w_cur_empl_id                      char(10)                = '5001'
+    -- DECLARE @w_pay_element_id                   char(10)                = 'ACTI'
     DECLARE @w_prior_eff_date                   datetime                = '19000101'
     DECLARE @w_next_eff_date                    datetime                = '19000101'
     DECLARE @w_inact_by_pay_element_ind         char(1)                 = 'N'
@@ -412,11 +412,13 @@ BEGIN
                 ---------------------------------------------------------------------------
                 -- Check to see if the employee exists
                 ---------------------------------------------------------------------------
-                IF NOT EXISTS (
-                            SELECT 1
-                            FROM DBShrpn.dbo.employee
-                            WHERE (emp_id = @emp_id)
-                            )
+                -- Lookup current employer id to compare to extract
+
+                SELECT @w_cur_empl_id = eempl.empl_id
+                FROM DBShrpn.dbo.uvu_emp_employment_most_rec eempl
+                WHERE (eempl.emp_id = @emp_id)
+
+                IF (@@ROWCOUNT = 0)
                     BEGIN
 
                         SET @msg_id = 'U00012'
@@ -486,6 +488,40 @@ BEGIN
 
 
                 ---------------------------------------------------------------------------
+                -- Does extract employer id match SS employer id?
+                ---------------------------------------------------------------------------
+                IF (@w_cur_empl_id <> @empl_id)
+                BEGIN
+
+                    SET @msg_id = 'U00039'
+                    SET @v_step_position = 'Validation - ' + RTRIM(@msg_id)
+
+                    INSERT INTO #tbl_ghr_msg
+                    SELECT @msg_id AS msg_id
+                        , REPLACE(t.msg_text, '@1', RTRIM(@empl_id   )) AS msg_desc
+                    FROM DBSCOMMON.dbo.message_master t
+                    WHERE (msg_id = @msg_id)
+
+                        -- Historical Message for reporting purpose
+                        EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                            @p_msg_id             = @msg_id
+                            , @p_event_id           = @v_EVENT_ID_PAY_ELE
+                            , @p_emp_id             = @emp_id
+                            , @p_eff_date           = @eff_date
+                            , @p_pay_element_id     = @pay_element_id
+                            , @p_msg_p1             = @empl_id
+                            , @p_msg_p2             = @w_cur_empl_id
+                            , @p_msg_desc           = 'Employer id from HCM does not match associate''s current employer id in SmartStream.'
+                            , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                            , @p_activity_date      = @p_activity_date
+                            , @p_audit_id           = @aud_id
+
+                    SET @w_fatal_error = 1
+
+                END
+
+
+                ---------------------------------------------------------------------------
                 -- Validate Pay Element ID
                 ---------------------------------------------------------------------------
                 -- Lookup base pay element setting
@@ -545,11 +581,7 @@ BEGIN
                 ---------------------------------------------------------------------------
                 SELECT   @i_pay_element_exists   =   'N'
 
-
-                SELECT @i_emp_id             = epe.emp_id         --don't need
-                    , @i_empl_id            = epe.empl_id        --don't need
-                    , @i_pay_element_id     = epe.pay_element_id -- don't need
-                    , @i_eff_date           = epe.eff_date
+                SELECT @i_eff_date           = epe.eff_date
                     , @i_stop_date          = epe.stop_date
                     , @i_pay_element_exists = 'Y'
                     , @i_calc_meth_code     = epe.calc_meth_code   -- employee's calc method
@@ -743,9 +775,9 @@ BEGIN
                             , @p_standard_calc_factor_1      = @emp_calculation
                             , @p_standard_calc_factor_2      = @w_standard_calc_factor_2
                             , @p_special_calc_factor_1       = @w_special_calc_factor_1
-                            , @p_special_calc_factor_2       = @w_special_calc_factor_1
-                            , @p_special_calc_factor_3       = @w_special_calc_factor_1
-                            , @p_special_calc_factor_4       = @w_special_calc_factor_1
+                            , @p_special_calc_factor_2       = @w_special_calc_factor_2
+                            , @p_special_calc_factor_3       = @w_special_calc_factor_3
+                            , @p_special_calc_factor_4       = @w_special_calc_factor_4
                             , @p_rate_tbl_id                 = @w_rate_tbl_id
                             , @p_rate_code                   = @w_rate_code
                             , @p_payee_name                  = @w_payee_name

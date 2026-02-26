@@ -24,9 +24,6 @@ GO
                     Creates a csv report of the most recent execution
                     of the GHR Interfaces job scheduler job.
 
-
-
-
     Event                       ID
     -----------------------     ---
     Update New Hires            01
@@ -106,6 +103,8 @@ BEGIN
     , position_title                        varchar(255)            NOT NULL
     , pay_element_id                        varchar(255)            NOT NULL
     , emp_calculation                       varchar(255)            NOT NULL
+    , begin_date                            varchar(255)            NOT NULL
+    , end_date                              varchar(255)            NOT NULL
     , proc_flag                             varchar(255)            NOT NULL
     , msg_id                                varchar(255)            NOT NULL
     , msg_desc                              varchar(255)            NOT NULL
@@ -152,6 +151,8 @@ BEGIN
            , 'Position Title'                                           -- position_title
            , 'Pay Element ID'                                           -- pay_element_id
            , 'Pay Element Amount'                                       -- emp_calculation
+           , 'Begin Date'
+           , 'End Date'
            , 'Process Flag'                                             -- proc_flag
            , 'Error Message ID'                                         -- msg_id
            , 'Error Message Description'                                -- msg_desc
@@ -177,6 +178,8 @@ BEGIN
          , ''                                                           -- position_title
          , ''                                                           -- pay_element_id
          , '0.00'                                                       -- emp_calculation
+         , '29991231'
+         , '29991231'
          , ''                                                           -- proc_flag
          , msg.msg_id                                                   -- msg_id
          , msg.msg_desc                                                 -- msg_desc
@@ -234,6 +237,8 @@ BEGIN
          , aud.position_title
          , aud.pay_element_id
          , CONVERT(varchar(20), CAST(aud.emp_calculation AS money), 1) AS emp_calculation
+         , CONVERT(char, aud.begin_date, 121) AS begin_date
+         , CONVERT(char, aud.end_date, 121) AS end_date
 		 , aud.proc_flag
          , ISNULL(msg.msg_id, '') AS msg_id
          , ISNULL(msg.msg_desc, '') AS msg_desc
@@ -264,6 +269,8 @@ BEGIN
          , position_title
          , pay_element_id
          , emp_calculation
+         , begin_date
+         , end_date
          , proc_flag
          , msg_id
          , msg_desc
