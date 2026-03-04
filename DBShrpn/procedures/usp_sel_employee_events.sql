@@ -81,6 +81,7 @@ BEGIN
     DECLARE @v_ret_val                      int                 = 0
     DECLARE @v_msg                          varchar(255)        = @v_EMPTY_SPACE
     DECLARE @v_count                        int                 = 0
+    DECLARE @v_msg_id                         char(10)
 
     DECLARE @v_event_id                     char(2)             = '00'
 
@@ -105,8 +106,7 @@ BEGIN
     DECLARE @w_activity_date	            datetime
     DECLARE @w_status			            int
     DECLARE @w_userid			            varchar(30)
-    DECLARE @v_time_stamp                   char(17)
-    DECLARE @v_vhcmrpt_file_name            varchar(255)
+
 
 
     CREATE TABLE #ghr_employee_events_temp
@@ -275,34 +275,55 @@ BEGIN
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
 
         FROM DBShrpn.dbo.ghr_employee_events t
-        WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
+        --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
 
         ---------------------------------------------------------------------------
         -- Check to see if any records were imported in bulk copy step
         ---------------------------------------------------------------------------
         -- Note: There could be just salary change records but those records are not processed in GOSL
+        SET @v_step_position = 'Validate Bulk Copy Count'
 
-        IF (@@ROWCOUNT = 0)
-        BEGIN
-            SET @v_step_position = 'Validate existence of imported records'
-            SET @ErrorMessage = 'No records were imported in the bulkcopy step - ending job execution.'
+        SET @v_count = @@ROWCOUNT
 
-            EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                  @p_msg_id             = 'U00122'
-                , @p_event_id           = @v_event_id
-                , @p_emp_id             = @v_EMPTY_SPACE
-                , @p_eff_date           = @v_EMPTY_SPACE
-                , @p_pay_element_id     = @v_EMPTY_SPACE
-                , @p_msg_p1             = @v_step_position
-                , @p_msg_p2             = @v_EMPTY_SPACE
-                , @p_msg_desc           = @ErrorMessage
-                , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
-                , @p_activity_date      = @w_activity_date
+        IF (@v_count = 0)
+            BEGIN
+                SET @v_msg_id = 'U00122'
+                SET @ErrorMessage = 'No records were imported in the bulkcopy step - ending job execution.'
 
-            GOTO END_EXECUTION
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @v_msg_id
+                    , @p_event_id           = @v_event_id
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @w_activity_date
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_step_position
+                    , @p_msg_p2             = @v_EMPTY_SPACE
+                    , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                    , @p_activity_date      = @w_activity_date
 
-        END
+                GOTO END_EXECUTION
+
+            END
+        ELSE    -- log record count to audit table
+            BEGIN
+                SET @v_msg_id = 'U00123'    -- Interface Statistics
+                SET @ErrorMessage = CONVERT(varchar, @v_count)
+
+                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
+                      @p_msg_id             = @v_msg_id
+                    , @p_event_id           = @v_event_id
+                    , @p_emp_id             = @v_EMPTY_SPACE
+                    , @p_eff_date           = @v_EMPTY_SPACE
+                    , @p_pay_element_id     = @v_EMPTY_SPACE
+                    , @p_msg_p1             = @v_step_position
+                    , @p_msg_p2             = 'Imported records:'
+                    , @p_msg_desc           = @ErrorMessage
+                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
+                    , @p_activity_date      = @w_activity_date
+
+            END
 
 
         ---------------------------------------------------------------------------
@@ -382,12 +403,15 @@ BEGIN
         FROM #ghr_employee_events_temp t
 
 
+
+
+
         ---------------------------------------------------------------------------
         -- New Hires (Event 01)
         ---------------------------------------------------------------------------
         SELECT @v_step_position = 'Execute DBShrpn.dbo.usp_ins_new_hire'
-        SET @v_event_id = @v_EVENT_ID_NEW_HIRE
-        SET @w_status = 0   -- reset return code
+             , @v_event_id      = @v_EVENT_ID_NEW_HIRE
+             , @w_status        = 0   -- reset return code
 
         IF  EXISTS (
                     SELECT event_id

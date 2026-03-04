@@ -37,7 +37,8 @@ GO
     Employee Position Title     10
 
     Parameters:
-        None
+        @p_activity_date = Activity Date (i.e. '2026-02-25 12:01:09.467')
+        @p_emp_id        = Employee ID (i.e. '10242')
 
     Tables:
         DBShrpn.dbo.ghr_historical_message
@@ -46,7 +47,10 @@ GO
 
     Example:
         EXEC DBShrpn.dbo.usp_verification_rpt_csv
-
+		'Debug Examples
+		EXEC DBShrpn.dbo.usp_verification_rpt_csv
+			  @p_activity_date = '2026-02-27 18:47:44.817'
+			, @p_emp_id        = '82000'
 
    Revision history:
    version  date        developer   SCR         description
@@ -55,6 +59,10 @@ GO
 
 ************************************************************************************/
 CREATE procedure dbo.usp_verification_rpt_csv
+    (
+        @p_activity_date    datetime    = NULL
+    ,   @p_emp_id           char(15)    = NULL
+    )
 AS
 
 BEGIN
@@ -120,13 +128,15 @@ BEGIN
     ---------------------------------------------------------------------------
     -- Lookup date of last job scheduler bulkcopy import
     ---------------------------------------------------------------------------
-	SELECT @w_activity_date = psc_last_comp_date
-    FROM DBSpscb.dbo.psc_step
-    WHERE psc_userid = @w_user_id
-      AND psc_batchname = @v_PSC_BATCHNAME
-      AND psc_qualifier = @w_PSC_QUALIFIER
-      AND psc_pgm_parms = @w_PSC_PSC_PGM_PARMS     -- bulkcopy step
-
+    IF (@p_activity_date IS NULL)
+        SELECT @w_activity_date = psc_last_comp_date
+        FROM DBSpscb.dbo.psc_step
+        WHERE psc_userid = @w_user_id
+        AND psc_batchname = @v_PSC_BATCHNAME
+        AND psc_qualifier = @w_PSC_QUALIFIER
+        AND psc_pgm_parms = @w_PSC_PSC_PGM_PARMS     -- bulkcopy step
+    ELSE
+        SET @w_activity_date = @p_activity_date
 
 	--SET @w_activity_date = '2025-10-13 10:18:14.127'
 
@@ -178,8 +188,8 @@ BEGIN
          , ''                                                           -- position_title
          , ''                                                           -- pay_element_id
          , '0.00'                                                       -- emp_calculation
-         , '29991231'
-         , '29991231'
+         , '29991231'                                                   -- begin_date
+         , '29991231'                                                   -- end_date
          , ''                                                           -- proc_flag
          , msg.msg_id                                                   -- msg_id
          , msg.msg_desc                                                 -- msg_desc
@@ -247,8 +257,55 @@ BEGIN
             (aud.activity_date = msg.activity_date) AND
             (aud.aud_id        = msg.aud_id)
     WHERE (aud.activity_date    = @w_activity_date)
+     AND (  -- employee id
+          (@p_emp_id IS NULL) OR
+          (
+           (@p_emp_id IS NOT NULL) AND
+           (aud.emp_id = @p_emp_id)
+          )
+         )
     ORDER BY aud.event_id
            , msg.emp_id
+
+
+        ---------------------------------------------------------------------------
+        -- Log Interface Statistics (i.e. event type counts)
+        ---------------------------------------------------------------------------
+        INSERT INTO #tbl_vhcmrpt
+        SELECT CONVERT(char, @w_activity_date, 121) AS activity_date        -- activity_date
+             , aud.event_id                                                 -- event_id
+             , CASE aud.event_id
+                 WHEN @v_EVENT_ID_NEW_HIRE       THEN 'New Hire'
+                 WHEN @v_EVENT_ID_SALARY_CHANGE  THEN 'Salary Change'
+                 WHEN @v_EVENT_ID_TRANSFER       THEN 'Transfer'
+                 WHEN @v_EVENT_ID_NAME_CHANGE    THEN 'Name Change'
+                 WHEN @v_EVENT_ID_STATUS_CHANGE  THEN 'Status Change'
+                 WHEN @v_EVENT_ID_PAY_ELE        THEN 'Pay Allowance'
+                 WHEN @v_EVENT_ID_PAY_GROUP      THEN 'Pay Group'
+                 WHEN @v_EVENT_ID_LABOR_GROUP    THEN 'Labor Group'
+                 WHEN @v_EVENT_ID_POSITION_TITLE THEN 'Position Title'
+                 ELSE ''
+               END + ' Import Count:' AS event_desc                         -- event_desc
+             , ''                                                           -- activity_status
+             , ''                                                           -- activity_status_desc
+             , ''                                                           -- emp_id
+             , CONVERT(char, @w_activity_date, 121) AS eff_date             -- eff_date
+             , ''                                                           -- first_name
+             , ''                                                           -- last_name
+             , ''                                                           -- empl_id
+             , ''                                                           -- pay_group_id
+             , ''                                                           -- job_or_pos_id
+             , ''                                                           -- position_title
+             , ''                                                           -- pay_element_id
+             , '0.00'                                                       -- emp_calculation
+             , '29991231'                                                   -- begin_date
+             , '29991231'                                                   -- end_date
+             , ''                                                           -- proc_flag
+             , 'U00123'                                                     -- msg_id
+             , CONVERT(varchar, count(*))                                   -- msg_desc
+        FROM DBShrpn.dbo.ghr_employee_events_aud aud
+        WHERE (aud.activity_date = @w_activity_date)
+        GROUP BY aud.event_id
 
 
     ---------------------------------------------------------------------------
