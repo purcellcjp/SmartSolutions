@@ -277,7 +277,7 @@ BEGIN
         FROM DBShrpn.dbo.ghr_employee_events t
         --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
-
+/*
         ---------------------------------------------------------------------------
         -- Check to see if any records were imported in bulk copy step
         ---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ BEGIN
                     , @p_activity_date      = @w_activity_date
 
             END
-
+*/
 
         ---------------------------------------------------------------------------
         -- Ganymede Employee ID - Replace leading '4' to 'D'

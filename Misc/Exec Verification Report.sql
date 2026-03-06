@@ -1,9 +1,9 @@
 SELECT @@SERVERNAME as servername
 GO
 
-SELECT DISTINCT aud.activity_date
-FROM DBShrpn.dbo.ghr_employee_events_aud aud
-ORDER BY aud.activity_date DESC
+SELECT DISTINCT activity_date
+FROM DBShrpn.dbo.ghr_historical_message
+ORDER BY activity_date DESC
 GO
 
 
