@@ -134,6 +134,7 @@ required to implement this program.
 Job Scheduler Class: WIN10CLS
 
 Program INTERFACE
+
 ![alt text](images/JobSchedulerAliasConfigInterface.png)
 
 
@@ -142,6 +143,7 @@ Program INTERFACE
 Job Scheduler Class: WIN10CLS
 
 Program UPLOAD
+
 ![alt text](images/JobSchedulerAliasConfigUpload.png)
 
 
@@ -1606,74 +1608,74 @@ the SmartStream Job Scheduler.
 <td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="annual_hrs_per_fte">annual_hrs_per_fte</h5></td>
-<td colspan="2"><h5 id="varchar255">varchar(255)</h5></td>
-<td><h5 id="null">NULL</h5></td>
+<td colspan="2">annual_hrs_per_fte</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="annual_rate">annual_rate</h5></td>
-<td colspan="2"><h5 id="varchar255-1">varchar(255)</h5></td>
-<td><h5 id="null-1">NULL</h5></td>
+<td colspan="2">annual_rate</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="birth_date">birth_date</h5></td>
-<td colspan="2"><h5 id="varchar255-2">varchar(255)</h5></td>
-<td><h5 id="null-2">NULL</h5></td>
+<td colspan="2">birth_date</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="gender">gender</h5></td>
-<td colspan="2"><h5 id="varchar255-3">varchar(255)</h5></td>
-<td><h5 id="null-3">NULL</h5></td>
+<td colspan="2">gender</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="country_code">country_code</h5></td>
-<td colspan="2"><h5 id="varchar255-4">varchar(255)</h5></td>
-<td><h5 id="null-4">NULL</h5></td>
+<td colspan="2">country_code</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="addr_line_1">addr_line_1</h5></td>
-<td colspan="2"><h5 id="varchar255-5">varchar(255)</h5></td>
-<td><h5 id="null-5">NULL</h5></td>
+<td colspan="2">addr_line_1</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="addr_line_2">addr_line_2</h5></td>
-<td colspan="2"><h5 id="varchar255-6">varchar(255)</h5></td>
-<td><h5 id="null-6">NULL</h5></td>
+<td colspan="2">addr_line_2</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="addr_line_3">addr_line_3</h5></td>
-<td colspan="2"><h5 id="varchar255-7">varchar(255)</h5></td>
-<td><h5 id="null-7">NULL</h5></td>
+<td colspan="2">addr_line_3</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="addr_line_4">addr_line_4</h5></td>
-<td colspan="2"><h5 id="varchar255-8">varchar(255)</h5></td>
-<td><h5 id="null-8">NULL</h5></td>
+<td colspan="2">addr_line_4</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="city_name">city_name</h5></td>
-<td colspan="2"><h5 id="varchar255-9">varchar(255)</h5></td>
-<td><h5 id="null-9">NULL</h5></td>
+<td colspan="2">city_name</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="state_prov">state_prov</h5></td>
-<td colspan="2"><h5 id="varchar255-10">varchar(255)</h5></td>
-<td><h5 id="null-10">NULL</h5></td>
+<td colspan="2">state_prov</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="postal_code">postal_code</h5></td>
-<td colspan="2"><h5 id="varchar255-11">varchar(255)</h5></td>
-<td><h5 id="null-11">NULL</h5></td>
+<td colspan="2">postal_code</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="even">
-<td><h5 id="county_name">county_name</h5></td>
-<td colspan="2"><h5 id="varchar255-12">varchar(255)</h5></td>
-<td><h5 id="null-12">NULL</h5></td>
+<td colspan="2">county_name</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 <tr class="odd">
-<td><h5 id="region_name">region_name</h5></td>
-<td colspan="2"><h5 id="varchar255-13">varchar(255)</h5></td>
-<td><h5 id="null-13">NULL</h5></td>
+<td colspan="2">region_name</td>
+<td>varchar(255)</td>
+<td>NULL</td>
 </tr>
 </tbody>
 </table>
