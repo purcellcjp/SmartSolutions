@@ -320,8 +320,7 @@ are set in the Mail… action button on the job scheduler activity. The
 email distribution is set in the Distribute To section on the form. A
 list of multiple email addresses are delimited by a semicolon.
 
-<img src="media/image10.png" style="width:3.92in;height:2.18in"
-alt="A screenshot of a computer AI-generated content may be incorrect." />
+![alt text](images/JobSchedulerSSMsgSys.png)
 
 Error records are logged to table DBSpscb.dbo.psc_messages via executing
 stored procedure DBSpscb.dbo.psp_ins_psc_putmsg_2. These records are
@@ -2230,5 +2229,4 @@ Used in step 6 - SNDRPT of Job Scheduler GHR INTERFACES
 
 ## Status Change Flow Chart
 
-<img src="media/image15.png" style="width:7.85998in;height:6.95208in"
-alt="A screenshot of a video game AI-generated content may be incorrect." />
+![alt text](images/StatusChangeFlowChart.png)
