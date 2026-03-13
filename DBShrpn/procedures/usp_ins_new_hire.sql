@@ -241,14 +241,14 @@ BEGIN
     DECLARE @birth_date                             datetime
     DECLARE @gender                                 varchar(255)
     DECLARE @addr_fmt_code                          char(06)
-    DECLARE @country_code                           varchar(255)
-    DECLARE @addr_line_1                            varchar(255)
-    DECLARE @addr_line_2                            varchar(255)
-    DECLARE @addr_line_3                            varchar(255)
-    DECLARE @addr_line_4                            varchar(255)
-    DECLARE @city_name                              varchar(255)
-    DECLARE @state_prov                             varchar(255)
-    DECLARE @postal_code                            varchar(255)
+    DECLARE @country_code                           char(02)
+    DECLARE @addr_line_1                            varchar(35)
+    DECLARE @addr_line_2                            varchar(35)
+    DECLARE @addr_line_3                            varchar(35)
+    DECLARE @addr_line_4                            varchar(35)
+    DECLARE @city_name                              varchar(35)
+    DECLARE @state_prov                             char(09)
+    DECLARE @postal_code                            char(09)
     DECLARE @county_name                            varchar(255)
     DECLARE @region_name                            varchar(255)
 
@@ -913,7 +913,7 @@ BEGIN
                     , @p_addr_1_street_or_pob_2            = @addr_line_4
                     , @p_addr_1_street_or_pob_3            = @v_EMPTY_SPACE
                     , @p_addr_1_city_name                  = @city_name
-                    , @p_addr_1_ctry_sub_entity_code       = @state_prov
+                    , @p_addr_1_ctry_sub_entity_code       = @v_EMPTY_SPACE     -- @state_prov  -- Parrish Drop Down is not being used by St Lucia
                     , @p_addr_1_postal_code                = @postal_code
                     , @p_addr_1_country_code               = @country_code
 

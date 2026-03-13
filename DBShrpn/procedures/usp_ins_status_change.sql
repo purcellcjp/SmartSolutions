@@ -112,13 +112,12 @@ BEGIN
     DECLARE @w_todays_date              	    char(12)
     DECLARE @w_old_chgstamp             	    smallint
     DECLARE @w_taxing_country_code    	        char(02)
-    --DECLARE @w_curr_code              	        char(03)
-    --DECLARE @w_eff_date                 	    datetime
+
+    DECLARE @w_eff_date                 	    datetime
     DECLARE @w_curr_status              	    char(02)
     DECLARE @w_pos_eff_date           	        datetime
     DECLARE @w_assigned_to_code         	    char(01)    = 'P'   -- All assocs are code 'P' in VENUS and Ganymede
     DECLARE @w_job_or_pos_id            	    char(10)
-    --DECLARE @w_pd_salary_tm_pd_id       	    char(05)
     DECLARE @old_eff_date               	    datetime
 
     DECLARE @pay_frequency_code         	    char(05) = @v_EMPTY_SPACE
@@ -137,44 +136,11 @@ BEGIN
     DECLARE @w_overtime_status_code                 char(02)        = '99'
     DECLARE @w_pay_on_reported_hrs_ind              char(01)        = 'N'
 
+    DECLARE @w_ee_eff_date             				datetime
+    DECLARE @maxx           						char(06)
+    DECLARE @tax_entity_id  						char(10)
+    DECLARE @msg_id         						char(10)
 
-/*
-    DECLARE @i_empl_id                  	    char(10)
-    DECLARE @i_emp_assignment_exists    	    char(01)
-    DECLARE @i_work_tm_code             	    char(01)
-    DECLARE @i_base_rate_tbl_id         	    char(10)
-    DECLARE @i_base_rate_tbl_entry_code 	    char(08)
-    DECLARE @i_pd_salary_tm_pd_id       	    char(05)
-    DECLARE @i_salary_change_type_code  	    char(05)
-
-    DECLARE @i_emp_id                  		    char(15)
-    DECLARE @i_standard_work_pd_id     		    char(5)
-    DECLARE @i_standard_work_hrs       		    float
-    DECLARE @i_yearly_std_work_hrs     		    float
-    DECLARE @i_hourly_rate_amt         		    money
-    DECLARE @i_period_amt              		    money
-*/
-    DECLARE @i_assigned_to_code        		    char(01)
-    DECLARE @i_job_or_pos_id           		    char(10)
-    DECLARE @i_eff_date                		    datetime
-    DECLARE @i_next_eff_date           		    datetime
-    DECLARE @i_prior_eff_date          		    datetime
-
-
-    DECLARE @w_ee_eff_date             		    datetime
-
-    DECLARE @max            			        int
-    DECLARE @maxx           			        char(06)
-    DECLARE @cnt            			        int
-    DECLARE @ind_id         			        int
-    DECLARE @ind_idx        			        char(10)
-    DECLARE @annual_salary  			        money
-    DECLARE @tax_entity_id  			        char(10)
-    DECLARE @display_name   			        char(45)
-    DECLARE @msg_id         			        char(10)
-    DECLARE @msg_p1         			        char(15)
-    DECLARE @msg_p2         			        char(15)
-    DECLARE @msg_cnt        			        int
 
 
 
@@ -219,14 +185,14 @@ BEGIN
     DECLARE @annual_hrs_per_fte                     money
     DECLARE @annual_rate                            money
     DECLARE @addr_fmt_code                          char(06)
-    DECLARE @country_code                           varchar(255)
-    DECLARE @addr_line_1                            varchar(255)
-    DECLARE @addr_line_2                            varchar(255)
-    DECLARE @addr_line_3                            varchar(255)
-    DECLARE @addr_line_4                            varchar(255)
-    DECLARE @city_name                              varchar(255)
-    DECLARE @state_prov                             varchar(255)
-    DECLARE @postal_code                            varchar(255)
+    DECLARE @country_code                           char(02)
+    DECLARE @addr_line_1                            varchar(35)
+    DECLARE @addr_line_2                            varchar(35)
+    DECLARE @addr_line_3                            varchar(35)
+    DECLARE @addr_line_4                            varchar(35)
+    DECLARE @city_name                              varchar(35)
+    DECLARE @state_prov                             char(09)
+    DECLARE @postal_code                            char(09)
     DECLARE @county_name                            varchar(255)
     DECLARE @region_name                            varchar(255)
 
@@ -356,18 +322,14 @@ BEGIN
             , @pay_through_date
             , @emp_death_date
             , @consider_for_rehire_ind
-            --, @pay_element_id
-            --, @emp_calculation
             , @tax_flag
             , @nic_flag
             , @tax_ceiling_amt
             , @labor_grp_code
             , @file_source
-
             , @annual_hrs_per_fte
             , @annual_rate
-            -- Address is included for re-hires
-            , @addr_fmt_code
+            , @addr_fmt_code                -- Address is included for re-hires
             , @country_code
             , @addr_line_1
             , @addr_line_2
@@ -882,11 +844,13 @@ BEGIN
                         IF (@w_curr_status = 'T')
                             BEGIN
 
-                                /*
+
                                 -- Debug
-                                SET @v_step_position = 'Rehire RH ' + @w_curr_status + ' DEBUG'
+                                SET @v_step_position = 'Rehire RH usp_upd_hmpl_rehire DEBUG'
+
+
                                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire')
+                                VALUES('EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire')
                                 , ( ' @p_emp_id =                 = ' + @v_single_quote + RTRIM(@emp_id)                                + @v_single_quote)
                                 , (', @p_previous_emp_id          = ' + @v_single_quote + RTRIM(@w_previous_emp_id)                     + @v_single_quote)
                                 , (', @p_status_change_date       = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)  + @v_single_quote)
@@ -904,11 +868,12 @@ BEGIN
                                 , (', @p_taxing_country           = ' + @v_single_quote + RTRIM(@w_taxing_country_code)                 + @v_single_quote)
                                 , (', @p_new_pay_elem_ctrl_grp_id = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id)               + @v_single_quote)
                                 , (', @p_allow_pay_updates_ind    = ' + @v_single_quote + 'Y'                                           + @v_single_quote)
-                                , (', @p_old_chgstamp             = ' + @v_single_quote + CONVERT(varchar, @w_old_chgstamp, 0)         + @v_single_quote)
+                                , (', @p_old_chgstamp             = ' + @v_single_quote + CONVERT(varchar, @w_old_chgstamp, 0)          + @v_single_quote)
                                 , (' ');
-                                */
 
-                                SET @v_step_position = 'Rehire RH ' + @w_curr_status
+
+
+                                SET @v_step_position = 'Rehire RH usp_upd_hmpl_rehire'
 
                                 EXECUTE DBShrpn.dbo.usp_upd_hmpl_rehire
                                       @p_emp_id                   = @emp_id
@@ -932,22 +897,24 @@ BEGIN
 
 
 
-
                                 ---------------------------------------------------------------------------
                                 -- Updates associate's pay elements
                                 ---------------------------------------------------------------------------
-                                /*
+                                SET @v_step_position = 'Rehire RH - Update Pay Elements Debug'
+
                                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES()'EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy')
+                                VALUES('EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy')
                                 , ('@p_emp_id             = ' + @v_single_quote + RTRIM(@emp_id)                        + @v_single_quote)
                                 , (', @p_empl_id          = ' + @v_single_quote + RTRIM(@empl_id)                       + @v_single_quote)
                                 , (', @p_new_pay_group_id = ' + @v_single_quote + RTRIM(@pay_group_id)                  + @v_single_quote)
                                 , (', @p_new_pecg_id      = ' + @v_single_quote + RTRIM(@pay_element_ctrl_grp_id)       + @v_single_quote)
                                 , (', @p_as_of_date       = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)    + @v_single_quote)
                                 , (' ');
-                                */
+
 
                                 -- Builds pay elements for rehired associate
+                                SET @v_step_position = 'Rehire RH - Update Pay Elements'
+
                                 EXECUTE DBShrpn.dbo.usp_ins_hpcg_hepy
                                       @p_emp_id           = @emp_id
                                     , @p_empl_id          = @empl_id
@@ -957,13 +924,13 @@ BEGIN
 
 
                                 ---------------------------------------------------------------------------
-                                --   Update the Salary and Position Title in the Assignment Record
+                                --   Lookup the pointers to the new employee assignment record
                                 ---------------------------------------------------------------------------
-                                SELECT @i_assigned_to_code = ea.assigned_to_code
-                                     , @i_job_or_pos_id    = ea.job_or_pos_id
-                                     , @i_eff_date         = ea.eff_date
-                                     , @i_next_eff_date    = ea.next_eff_date
-                                     , @i_prior_eff_date   = ea.prior_eff_date
+                                SET @v_step_position = 'Rehire RH Emp Asgn Pointer Lookup'
+
+                                SELECT @w_assigned_to_code = ea.assigned_to_code
+                                     , @w_job_or_pos_id    = ea.job_or_pos_id
+                                     , @w_eff_date         = ea.eff_date
                                 FROM DBShrpn.dbo.uvu_emp_assignment_most_rec ea
                                 WHERE (ea.emp_id = @emp_id)
 
@@ -973,6 +940,8 @@ BEGIN
                                 ---------------------------------------------------------------------------
                                 -- Universally setup all associates as monthly; 8 hrs/day; 40 hrs/week
                                 -- Indicates that the associate is setup as annually
+                                SET @v_step_position = 'Rehire RH Salary Setup'
+
                                 IF (@pay_rate = @annual_rate)
                                     SELECT @w_annual_salary_amt       = @pay_rate
                                         , @w_pay_basis_code          = '2'     -- Period Salary
@@ -1005,29 +974,18 @@ BEGIN
                                             , @w_pay_on_reported_hrs_ind = 'Y'      -- Pay Based on Standard Hours Checkbox
 
                                     END
-                                /*
-                                -- GOSL: HCM Salary data will not be extracted to SS
-                                -- Blank them out
-                                SELECT @annual_salary               = 0.00
-                                    , @i_hourly_rate_amt            = 0.00
-                                    , @i_period_amt                 = 0.00
-                                    , @i_salary_change_type_code    = @v_EMPTY_SPACE
-                                    , @i_work_tm_code               = @v_EMPTY_SPACE
-                                    , @i_base_rate_tbl_id           = @v_EMPTY_SPACE
-                                    , @i_base_rate_tbl_entry_code   = @v_EMPTY_SPACE
-                                    , @i_standard_work_pd_id        = @v_EMPTY_SPACE
-                                    , @i_standard_work_hrs          = 0.00
-                                    , @i_pd_salary_tm_pd_id         = @v_EMPTY_SPACE
-                                */
 
+
+                                ---------------------------------------------------------------------------
                                 -- Update Employee Assignment record post Rehire
+                                ---------------------------------------------------------------------------
+                                SET @v_step_position = 'Rehire RH Salary Update'
+
                                 UPDATE DBShrpn.dbo.emp_assignment
-                                SET   hourly_pay_rate          = @w_hourly_pay_rate
+                                SET   annual_salary_amt        = @w_annual_salary_amt
+                                    , hourly_pay_rate          = @w_hourly_pay_rate
                                     , pd_salary_amt            = @w_pd_salary_amt
-                                    --, salary_change_type_code  = @i_salary_change_type_code
                                     , work_tm_code             = @w_work_tm_code
-                                    --, base_rate_tbl_id         = @i_base_rate_tbl_id
-                                    --, base_rate_tbl_entry_code = @i_base_rate_tbl_entry_code
                                     , pd_salary_tm_pd_id       = @w_pd_salary_tm_pd_id
                                     , standard_work_pd_id      = @w_standard_work_pd_id
                                     , standard_work_hrs        = @w_standard_work_hrs
@@ -1036,14 +994,17 @@ BEGIN
                                     , organization_unit_name   = @v_EMPTY_SPACE
                                     , user_text_2              = @position_title
                                 WHERE (emp_id           = @emp_id)
-                                  AND (assigned_to_code = @i_assigned_to_code)
-                                  AND (job_or_pos_id    = @i_job_or_pos_id)
-                                  AND (eff_date         = @i_eff_date)
-                                  AND (next_eff_date    = @i_next_eff_date)
-                                  AND (prior_eff_date   = @i_prior_eff_date)
+                                  AND (assigned_to_code = @w_assigned_to_code)
+                                  AND (job_or_pos_id    = @w_job_or_pos_id)
+                                  AND (eff_date         = @w_eff_date)
 
+
+                                ---------------------------------------------------------------------------
                                 -- Update home address
-                                UPDATE DBShrpn.individual
+                                ---------------------------------------------------------------------------
+                                SET @v_step_position = 'Rehire RH Address Update'
+
+                                UPDATE DBShrpn.dbo.individual
                                 SET addr_1_line_1                  = @addr_line_1
                                   , addr_1_line_2                  = @addr_line_2
                                   , addr_1_line_3                  = ''
@@ -1053,12 +1014,12 @@ BEGIN
                                   , addr_1_street_or_pob_2         = @addr_line_4
                                   , addr_1_street_or_pob_3         = ''
                                   , addr_1_city_name               = @city_name
-                                  , addr_1_country_sub_entity_code = @state_prov
+                                  --, addr_1_country_sub_entity_code = -- @state_prov  -- Parrish Drop Down is not being used by St Lucia
                                   , addr_1_postal_code             = @postal_code
                                   , addr_1_country_code            = @country_code
                                   , addr_1_fmt_code                = @addr_fmt_code
                                   , addr_1_type_code               = @w_addr_1_type_code
-
+                                WHERE (individual_id = @individual_id)
 
 
                             END
@@ -1104,7 +1065,7 @@ BEGIN
                                 /*
                                 SET @v_step_position = @v_step_position + ' - Active DEBUG'
                                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate')
+                                VALUES('EXECUTE DBShrpn.dbo.usp_upd_hmpl_inactivate')
                                 , ('@p_emp_id                           = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
                                 , (', @p_status_change_date             = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
                                 , (', @p_inactivate_date                = ' + @v_single_quote + CONVERT(char(8), @eff_date)                       + @v_single_quote)
@@ -1185,7 +1146,7 @@ BEGIN
                                 /*
                                 SET @v_step_position = @v_step_position + ' (''A'' or ''I'') - DEBUG'
                                 INSERT DBShrpn.dbo.ghr_debug (text_line)
-                                VALUES()'EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate')
+                                VALUES('EXECUTE DBShrpn.dbo.usp_upd_hmpl_terminate')
                                 , ('@p_emp_id                       = ' + @v_single_quote + RTRIM(@emp_id)                                      + @v_single_quote)
                                 , (', @p_status_change_date         = ' + @v_single_quote + CONVERT(char(8), @w_status_change_date, 112)        + @v_single_quote)
                                 , (', @p_termination_date           = ' + @v_single_quote + CONVERT(char(8), @eff_date, 112)                  + @v_single_quote)
@@ -1262,21 +1223,7 @@ BEGIN
 
                     END  -- End of Terminate Logic
 
-/*
-                ---------------------------------------------------------------------------
-                -- Override the message if this cycle contains an employee rehire record
-                ---------------------------------------------------------------------------
-                IF  EXISTS (
-                            SELECT *
-                            FROM #ghr_employee_events_temp ee
-                            WHERE event_id = @v_EVENT_ID_STATUS_CHANGE
-                            AND ee.emp_id = @emp_id
-                            AND emp_status_code = 'RH'
-                        )
-                    SET @rehire_override = '1'
-                ELSE
-                    SET @rehire_override = '0'
-*/
+
 
                 ---------------------------------------------------------------------------
                 -- Set Rehire Override Flag
@@ -1335,7 +1282,7 @@ BEGIN
                                     BEGIN  --4
 
                                         SET @msg_id = 'U00025'
-                                        SET @v_step_position = 'Rehire Overide - @v_EMPTY_SPACE0@v_EMPTY_SPACE - ' + @msg_id
+                                        SET @v_step_position = 'Rehire Overide - ''0'' - ' + @msg_id
 
                                         INSERT INTO #tbl_ghr_msg
                                         SELECT @msg_id As msg_id
@@ -1499,14 +1446,11 @@ BYPASS_EMPLOYEE:
                 , @pay_through_date
                 , @emp_death_date
                 , @consider_for_rehire_ind
-                --, @pay_element_id
-                --, @emp_calculation
                 , @tax_flag
                 , @nic_flag
                 , @tax_ceiling_amt
                 , @labor_grp_code
                 , @file_source
-
                 , @annual_hrs_per_fte
                 , @annual_rate
                 , @addr_fmt_code

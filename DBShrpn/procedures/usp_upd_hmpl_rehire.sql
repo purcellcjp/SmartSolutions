@@ -1126,7 +1126,7 @@ Delete work_emp_employment_aud
 commit transaction
 --select @w_error_26267,
 --       @w_st_complete,
---       @w_error
+--      @w_error
 
 
 

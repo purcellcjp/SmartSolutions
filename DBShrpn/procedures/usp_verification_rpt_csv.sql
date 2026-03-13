@@ -94,6 +94,7 @@ BEGIN
     , activity_status                       varchar(255)            NOT NULL
     , activity_status_desc                  varchar(255)            NOT NULL
     , emp_id                                varchar(255)            NOT NULL
+    , aud_id                                varchar(255)            NOT NULL
     , eff_date                              varchar(255)            NOT NULL
     , first_name                            varchar(255)            NOT NULL
     , last_name                             varchar(255)            NOT NULL
@@ -101,6 +102,7 @@ BEGIN
     , pay_group_id                          varchar(255)            NOT NULL
     , job_or_pos_id                         varchar(255)            NOT NULL
     , position_title                        varchar(255)            NOT NULL
+    , emp_status_code                       varchar(255)            NOT NULL
     , pay_element_id                        varchar(255)            NOT NULL
     , emp_calculation                       varchar(255)            NOT NULL
     , begin_date                            varchar(255)            NOT NULL
@@ -119,7 +121,7 @@ BEGIN
     , event_seq_id                          smallint                NOT NULL
     )
 
-
+    -- Load event translation table
     INSERT INTO #tbl_event
     VALUES
       ('01', 'New Hire', 1)
@@ -166,6 +168,7 @@ BEGIN
            , 'Activity Status'                                          -- activity_status
            , 'Activity Status Description'                              -- activity_status_desc
            , 'Emp ID'                                                   -- emp_id
+           , 'Audit ID'                                                 -- aud_id
            , 'Effective Date'                                           -- eff_date
            , 'First Name'                                               -- first_name
            , 'Last Name'                                                -- last_name
@@ -173,6 +176,7 @@ BEGIN
            , 'Pay Group ID'                                             -- pay_group_id
            , 'Job/Position ID'                                          -- job_or_pos_id
            , 'Position Title'                                           -- position_title
+           , 'Employee Status Code'                                     -- emp_status_code
            , 'Pay Element ID'                                           -- pay_element_id
            , 'Pay Element Amount'                                       -- emp_calculation
            , 'Begin Date'                                               -- begin_date
@@ -193,6 +197,7 @@ BEGIN
          , msg.activity_status                                          -- activity_status
          , ''                                                           -- activity_status_desc
          , msg.emp_id                                                   -- emp_id
+         , msg.aud_id                                                   -- aud_id
          , CONVERT(char, msg.eff_date, 121)                             -- eff_date
          , ''                                                           -- first_name
          , ''                                                           -- last_name
@@ -200,6 +205,7 @@ BEGIN
          , ''                                                           -- pay_group_id
          , ''                                                           -- job_or_pos_id
          , ''                                                           -- position_title
+         , ''                                                           -- emp_status_code
          , ''                                                           -- pay_element_id
          , '0.00'                                                       -- emp_calculation
          , @v_END_OF_TIME_STR                                           -- begin_date
@@ -216,7 +222,7 @@ BEGIN
 
 
     ---------------------------------------------------------------------------
-    -- Retireve imported records with errors
+    -- Retrieve imported records with errors
     ---------------------------------------------------------------------------
     INSERT INTO #tbl_vhcmrpt
     SELECT CONVERT(char, aud.activity_date, 121) AS activity_date
@@ -241,6 +247,7 @@ BEGIN
                   END
            END activity_status_desc
          , DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) AS emp_id
+         , aud.aud_id
          , CONVERT(char, aud.eff_date, 121) AS eff_date
          , aud.first_name
          , aud.last_name
@@ -248,6 +255,7 @@ BEGIN
          , aud.pay_group_id
          , aud.job_or_pos_id
          , aud.position_title
+         , aud.emp_status_code
          , aud.pay_element_id
          , CONVERT(varchar(20), CAST(aud.emp_calculation AS money), 1) AS emp_calculation
          , CONVERT(char, aud.begin_date, 121) AS begin_date
@@ -279,10 +287,11 @@ BEGIN
     INSERT INTO #tbl_vhcmrpt
     SELECT CONVERT(char, @w_activity_date, 121)                            -- activity_date
             , evt.event_id                                                 -- event_id
-            , evt.event_desc + ' Import Count:'                            -- event_desc
+            , evt.event_desc + ' Statistics'                            -- event_desc
             , ''                                                           -- activity_status
             , ''                                                           -- activity_status_desc
             , ''                                                           -- emp_id
+            , ''                                                           -- aud_id
             , CONVERT(char, @w_activity_date, 121)                         -- eff_date
             , ''                                                           -- first_name
             , ''                                                           -- last_name
@@ -290,18 +299,20 @@ BEGIN
             , ''                                                           -- pay_group_id
             , ''                                                           -- job_or_pos_id
             , ''                                                           -- position_title
+            , ''                                                           -- emp_status_code
             , ''                                                           -- pay_element_id
             , '0.00'                                                       -- emp_calculation
             , @v_END_OF_TIME_STR                                           -- begin_date
             , @v_END_OF_TIME_STR                                           -- end_date
             , ''                                                           -- proc_flag
             , 'U00123'                                                     -- msg_id
-            , CONVERT(varchar, count(laud.event_id))                                   -- msg_desc
+            , evt.event_desc + ' Import Count: ' + CONVERT(varchar, count(laud.event_id)) -- msg_desc
     FROM #tbl_event evt
-    LEFT JOIN (SELECT aud.event_id
+    LEFT JOIN (
+               SELECT aud.event_id
 	           FROM DBShrpn.dbo.ghr_employee_events_aud aud
 			   WHERE (aud.activity_date = @w_activity_date)
-			 ) laud ON
+			  ) laud ON
         (evt.event_id = laud.event_id)
     GROUP BY evt.event_seq_id
            , evt.event_id
@@ -313,12 +324,13 @@ BEGIN
     -- Log total records imported
     ---------------------------------------------------------------------------
     INSERT INTO #tbl_vhcmrpt
-    SELECT CONVERT(char, @w_activity_date, 121)                         -- activity_date
+    SELECT CONVERT(char, @w_activity_date, 121)                            -- activity_date
             , ''                                                           -- event_id
-            , ''                                                           -- event_desc
+            , 'Statistics'                                                 -- event_desc
             , ''                                                           -- activity_status
             , ''                                                           -- activity_status_desc
             , ''                                                           -- emp_id
+            , ''                                                           -- aud_id
             , CONVERT(char, @w_activity_date, 121)                         -- eff_date
             , ''                                                           -- first_name
             , ''                                                           -- last_name
@@ -326,6 +338,7 @@ BEGIN
             , ''                                                           -- pay_group_id
             , ''                                                           -- job_or_pos_id
             , ''                                                           -- position_title
+            , ''                                                           -- emp_status_code
             , ''                                                           -- pay_element_id
             , '0.00'                                                       -- emp_calculation
             , @v_END_OF_TIME_STR                                           -- begin_date
@@ -346,6 +359,7 @@ BEGIN
          , activity_status
          , activity_status_desc
          , emp_id
+         , aud_id
          , eff_date
          , first_name
          , last_name
@@ -353,6 +367,7 @@ BEGIN
          , pay_group_id
          , job_or_pos_id
          , position_title
+         , emp_status_code
          , pay_element_id
          , emp_calculation
          , begin_date

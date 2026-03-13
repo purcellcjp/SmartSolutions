@@ -152,16 +152,16 @@ BEGIN
     , annual_hrs_per_fte                    money               NULL    --varchar(255)        NULL
     , annual_rate                           money               NULL    --varchar(255)        NULL
     , birth_date                            datetime            NULL    --varchar(255)        NULL
-    , gender                                varchar(255)        NULL
+    , gender                                char(01)        NULL
     , addr_fmt_code                         char(06)            NULL
-    , country_code                          varchar(255)        NULL
-    , addr_line_1                           varchar(255)        NULL
-    , addr_line_2                           varchar(255)        NULL
-    , addr_line_3                           varchar(255)        NULL
-    , addr_line_4                           varchar(255)        NULL
-    , city_name                             varchar(255)        NULL
-    , state_prov                            varchar(255)        NULL
-    , postal_code                           varchar(255)        NULL
+    , country_code                          char(02)        NULL
+    , addr_line_1                           varchar(35)        NULL
+    , addr_line_2                           varchar(35)        NULL
+    , addr_line_3                           varchar(35)        NULL
+    , addr_line_4                           varchar(35)        NULL
+    , city_name                             varchar(35)        NULL
+    , state_prov                            char(09)        NULL
+    , postal_code                           char(09)        NULL
     , county_name                           varchar(255)        NULL
     , region_name                           varchar(255)        NULL
     , job_or_pos_id                         char(10)            NULL    -- derived value based on file_source
@@ -262,14 +262,14 @@ BEGIN
               END AS birth_date
             , t.gender
             , CASE t.country_code WHEN 'LCA' THEN 'EC1' ELSE 'GN4' END addr_fmt_code    -- derive address format code based on country code
-            , t.country_code
-            , t.addr_line_1
-            , t.addr_line_2
-            , CASE t.country_code WHEN 'LCA' THEN t.addr_line_3 + ' ' + t.addr_line_4 ELSE t.addr_line_3 END addr_line_3        -- combine line 3 and 4 if St Lucia
+            , LEFT(t.country_code, 2) AS country_code
+            , LEFT(t.addr_line_1, 35) AS addr_line_1
+            , LEFT(t.addr_line_2, 35) AS addr_line_2
+            , CASE t.country_code WHEN 'LCA' THEN LTRIM(RTRIM(t.addr_line_3 + ' ' + t.addr_line_4)) ELSE t.addr_line_3 END addr_line_3        -- combine line 3 and 4 if St Lucia
             , CASE t.country_code WHEN 'LCA' THEN @v_EMPTY_SPACE ELSE t.addr_line_4 END addr_line_4
-            , t.city_name
-            , t.state_prov
-            , t.postal_code
+            , LEFT(t.city_name, 35) AS city_name
+            , LEFT(t.state_prov, 9) AS state_prov
+            , LEFT(t.postal_code, 9) AS postal_code
             , t.county_name
             , t.region_name
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
@@ -277,59 +277,12 @@ BEGIN
         FROM DBShrpn.dbo.ghr_employee_events t
         --WHERE (t.event_id <> @v_EVENT_ID_SALARY_CHANGE)  -- Exclude Salary Changes
 
-/*
-        ---------------------------------------------------------------------------
-        -- Check to see if any records were imported in bulk copy step
-        ---------------------------------------------------------------------------
-        -- Note: There could be just salary change records but those records are not processed in GOSL
-        SET @v_step_position = 'Validate Bulk Copy Count'
 
-        SET @v_count = @@ROWCOUNT
-
-        IF (@v_count = 0)
-            BEGIN
-                SET @v_msg_id = 'U00122'
-                SET @ErrorMessage = 'No records were imported in the bulkcopy step - ending job execution.'
-
-                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                      @p_msg_id             = @v_msg_id
-                    , @p_event_id           = @v_event_id
-                    , @p_emp_id             = @v_EMPTY_SPACE
-                    , @p_eff_date           = @w_activity_date
-                    , @p_pay_element_id     = @v_EMPTY_SPACE
-                    , @p_msg_p1             = @v_step_position
-                    , @p_msg_p2             = @v_EMPTY_SPACE
-                    , @p_msg_desc           = @ErrorMessage
-                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
-                    , @p_activity_date      = @w_activity_date
-
-                GOTO END_EXECUTION
-
-            END
-        ELSE    -- log record count to audit table
-            BEGIN
-                SET @v_msg_id = 'U00123'    -- Interface Statistics
-                SET @ErrorMessage = CONVERT(varchar, @v_count)
-
-                EXEC DBShrpn.dbo.usp_ins_ghr_historical_message
-                      @p_msg_id             = @v_msg_id
-                    , @p_event_id           = @v_event_id
-                    , @p_emp_id             = @v_EMPTY_SPACE
-                    , @p_eff_date           = @v_EMPTY_SPACE
-                    , @p_pay_element_id     = @v_EMPTY_SPACE
-                    , @p_msg_p1             = @v_step_position
-                    , @p_msg_p2             = 'Imported records:'
-                    , @p_msg_desc           = @ErrorMessage
-                    , @p_activity_status    = @v_ACTIVITY_STATUS_BAD
-                    , @p_activity_date      = @w_activity_date
-
-            END
-*/
 
         ---------------------------------------------------------------------------
         -- Ganymede Employee ID - Replace leading '4' to 'D'
         ---------------------------------------------------------------------------
-        SET @v_step_position = 'GANYMEDE Employee ID - Replace Leading @v_EMPTY_SPACE4@v_EMPTY_SPACE with @v_EMPTY_SPACED@v_EMPTY_SPACE'
+        SET @v_step_position = 'GANYMEDE Employee ID - Replace Leading ''4'' with ''D'''
 
         UPDATE #ghr_employee_events_temp
         SET emp_id = STUFF(emp_id, 1, 1, 'D')
