@@ -246,7 +246,7 @@ BEGIN
                     ELSE 'None'
                   END
            END activity_status_desc
-         , DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) AS emp_id
+         , DBShrpn.dbo.ufn_ret_ganymede_to_hcm_emp_id (aud.file_source, aud.emp_id) AS emp_id
          , aud.aud_id
          , CONVERT(char, aud.eff_date, 121) AS eff_date
          , aud.first_name

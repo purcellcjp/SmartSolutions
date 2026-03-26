@@ -1,19 +1,19 @@
 USE DBShrpn
 GO
 
-IF OBJECT_ID('dbo.unf_ret_ganymede_to_hcm_emp_id') IS NOT NULL
+IF OBJECT_ID('dbo.ufn_ret_ganymede_to_hcm_emp_id') IS NOT NULL
 BEGIN
-    DROP FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id
-    IF OBJECT_ID('dbo.unf_ret_ganymede_to_hcm_emp_id') IS NOT NULL
-        PRINT '<<< FAILED DROPPING FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id >>>'
+    DROP FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id
+    IF OBJECT_ID('dbo.ufn_ret_ganymede_to_hcm_emp_id') IS NOT NULL
+        PRINT '<<< FAILED DROPPING FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id >>>'
     ELSE
-        PRINT '<<< DROPPED FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id >>>'
+        PRINT '<<< DROPPED FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id >>>'
 END
 GO
 
 /****************************************************************************************
 
-  Function:     unf_ret_ganymede_to_hcm_emp_id
+  Function:     ufn_ret_ganymede_to_hcm_emp_id
   Author:       Chris Purcell
 
   Description:  Converts ganymede employee id to HCM employee id
@@ -25,7 +25,7 @@ GO
 
 
    Example:
-      SELECT dbo.unf_ret_ganymede_to_hcm_emp_id ('SS GANYMEDE','D3929')
+      SELECT dbo.ufn_ret_ganymede_to_hcm_emp_id ('SS GANYMEDE','D3929')
 
    Revision history:
       version  date        developer   SCR      description
@@ -35,7 +35,7 @@ GO
 ****************************************************************************************/
 
 
-CREATE FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id
+CREATE FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id
 (
   @p_file_source    varchar(50)
 , @p_emp_id         char(15)
@@ -61,14 +61,14 @@ BEGIN
 END
 GO
 
-ALTER AUTHORIZATION ON dbo.unf_ret_ganymede_to_hcm_emp_id TO  SCHEMA OWNER
+ALTER AUTHORIZATION ON dbo.ufn_ret_ganymede_to_hcm_emp_id TO  SCHEMA OWNER
 GO
 
-GRANT  REFERENCES ,  EXECUTE  ON dbo.unf_ret_ganymede_to_hcm_emp_id  TO [public];
+GRANT  REFERENCES ,  EXECUTE  ON dbo.ufn_ret_ganymede_to_hcm_emp_id  TO [public];
 GO
 
-IF OBJECT_ID('dbo.unf_ret_ganymede_to_hcm_emp_id') IS NOT NULL
-    PRINT '<<< CREATED FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id >>>'
+IF OBJECT_ID('dbo.ufn_ret_ganymede_to_hcm_emp_id') IS NOT NULL
+    PRINT '<<< CREATED FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id >>>'
 ELSE
-    PRINT '<<< FAILED CREATING FUNCTION dbo.unf_ret_ganymede_to_hcm_emp_id >>>'
+    PRINT '<<< FAILED CREATING FUNCTION dbo.ufn_ret_ganymede_to_hcm_emp_id >>>'
 GO
