@@ -251,7 +251,7 @@ BEGIN
     DECLARE @postal_code                            char(09)
     DECLARE @county_name                            varchar(255)
     DECLARE @region_name                            varchar(255)
-
+    DECLARE @pay_frequency_code                     varchar(255)
 
 
     CREATE TABLE #tbl_ghr_msg
@@ -307,6 +307,7 @@ BEGIN
              , t.postal_code
              , t.county_name
              , t.region_name
+             , t.pay_frequency_code
              , t.job_or_pos_id
         FROM #ghr_employee_events_temp t
         WHERE (event_id = @v_EVENT_ID_NEW_HIRE)
@@ -356,6 +357,7 @@ BEGIN
             , @postal_code
             , @county_name
             , @region_name
+            , @pay_frequency_code
             , @w_job_or_pos_id
 
 
@@ -1181,6 +1183,7 @@ BYPASS_EMPLOYEE:
                 , @postal_code
                 , @county_name
                 , @region_name
+                , @pay_frequency_code
                 , @w_job_or_pos_id
 
         END  -- Error Loop

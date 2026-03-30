@@ -272,6 +272,9 @@ BEGIN
             , LEFT(t.postal_code, 9) AS postal_code
             , t.county_name
             , t.region_name
+
+            , t.pay_frequency_code
+
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
 
         FROM DBShrpn.dbo.ghr_employee_events t
@@ -348,6 +351,9 @@ BEGIN
             , t.postal_code
             , t.county_name
             , t.region_name
+
+            , t.pay_frequency_code
+
             , DBShrpn.dbo.ufn_ret_job_or_pos_id(t.file_source, t.empl_id) AS job_or_pos_id
             , @w_activity_date                                              AS activity_date
             , t.aud_id

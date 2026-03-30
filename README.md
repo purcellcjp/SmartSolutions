@@ -57,15 +57,31 @@ organized into the following change events:
 
 ## SQL Server Tables
 
-| DBShrpn.dbo.employee_events         |
+||
 |-------------------------------------|
+| DBShrpn.dbo.employee_events         |
 | DBShrpn.dbo.employee_events_aud     |
 | DBShrpn.dbo.ghr_historical_messages |
 
+<!--
+<table>
+    <tr>
+        <td>DBShrpn.dbo.employee_events</td>
+    </tr>
+    <tr>
+        <td>DBShrpn.dbo.employee_events_aud</td>
+    </tr>
+    <tr>
+        <td>DBShrpn.dbo.ghr_historical_messages</td>
+    </tr>
+</table>
+-->
+
 ## SQL Server Stored Procedures
 
-| DBShrpn.dbo.usp_sel_employee_events        |
+||
 |--------------------------------------------|
+| DBShrpn.dbo.usp_sel_employee_events        |
 | DBShrpn.dbo.usp_ins_new_hire               |
 | DBShrpn.dbo.usp_ins_perform_transfer       |
 | DBShrpn.dbo.usp_ins_name_change            |
@@ -82,21 +98,24 @@ organized into the following change events:
 
 ## SQL Server Views
 
-| DBShrpn.dbo.uvu_emp_assignment_most_rec |
+||
 |-----------------------------------------|
+| DBShrpn.dbo.uvu_emp_assignment_most_rec |
 | DBShrpn.dbo.uvu_emp_employment_most_rec |
 | DBShrpn.dbo.uvu_emp_status_most_rec     |
 
 ## SQL Server Functions
 
-| DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id |
+||
 |--------------------------------------------|
+| DBShrpn.dbo.unf_ret_ganymede_to_hcm_emp_id |
 | DBShrpn.dbo.ufn_ret_job_or_pos_id          |
 
 ## SmartStream SQL Server Stored Procedures
 
-| DBShrpn.dbo.usp_ins_hemp_02         |
+||
 |-------------------------------------|
+| DBShrpn.dbo.usp_ins_hemp_02         |
 | DBShrpn.dbo.usp_ins_hemp_03         |
 | DBShrpn.dbo.usp_ins_hemp_04         |
 | DBShrpn.dbo.usp_ins_hemp            |
